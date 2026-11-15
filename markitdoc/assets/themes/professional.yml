@@ -1,0 +1,28 @@
+name: professional
+brand: ""
+tagline: ""
+logo: null
+cover: light
+fonts:
+  heading: fonts/Inter-Bold.ttf
+  body: fonts/Inter-Regular.ttf
+  italic: fonts/Inter-Italic.ttf
+colors:
+  primary: "1E3A8A"
+  accent: "2563EB"
+  ink: "111827"
+  body: "374151"
+  muted: "6B7280"
+  paper: "FFFFFF"
+  surface: "F3F4F6"
+  night: "0F172A"
+  rule: "E5E7EB"
+  success: "047857"
+  danger: "B91C1C"
+moods:
+  calm: "0F766E"
+  urgent: "B91C1C"
+  optimistic: "15803D"
+  analytical: "2563EB"
+  instructional: "7C3AED"
+  strategic: "B45309"

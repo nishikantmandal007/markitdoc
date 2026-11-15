@@ -1,0 +1,28 @@
+name: editorial
+brand: ""
+tagline: ""
+logo: null
+cover: photo
+fonts:
+  heading: fonts/Inter-Bold.ttf
+  body: fonts/Inter-Regular.ttf
+  italic: fonts/Inter-Italic.ttf
+colors:
+  primary: "203C8C"
+  accent: "E8A317"
+  ink: "141622"
+  body: "343846"
+  muted: "626878"
+  paper: "FAF8F3"
+  surface: "F1EDE4"
+  night: "0B1126"
+  rule: "E0DCD2"
+  success: "0F7B57"
+  danger: "B42318"
+moods:
+  calm: "0E7490"
+  urgent: "B42318"
+  optimistic: "3F7D20"
+  analytical: "203C8C"
+  instructional: "6D28D9"
+  strategic: "E8A317"
