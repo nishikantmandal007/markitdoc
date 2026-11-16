@@ -174,7 +174,8 @@ def number_document(document, sheet=None, inject=True):
         blocks.append(replace(block, body=body))
         texts = (body, *block.slots.values(), *(part for item in block.items for part in item))
         state.wants_pages = state.wants_pages or any(found.group(3) for text in texts for found in REFERENCE_TEXT.finditer(text))
-    state.refs = load_refs(document.meta, options_in_use().style_folders)[0]
+    state.refs, _, refs_style, _ = load_refs(document.meta, options_in_use().style_folders)
+    state.style = citation_style(document.meta, refs_style)
     state.cited = cited_keys([text for block in blocks for text in (block.body, *block.slots.values(), *(part for item in block.items for part in item))], state)
     if inject:
         for key in state.cited:
@@ -242,12 +243,13 @@ def caption_of(target):
 def reference_findings(lines, end, meta, folders=()):
     state = new_numbering(None, meta)
     number_lines(lines[end:], state, first_line=end + 1, inject=False)
-    state.refs, problem = load_refs(meta, folders)
+    state.refs, problem, _, skipped = load_refs(meta, folders)
     refs_line = next((number for number, text in enumerate(lines[:end], 1) if text.lower().startswith("refs")), 1)
     found = [(line, "error", f"id '{ident}' is already used on line {state.targets[ident].line}", "give each target its own id")
              for ident, line in state.duplicates]
     if problem:
         found.append((refs_line, "error", f"the refs file is unusable: {problem}", "fix the file or remove refs:"))
+    found += [(refs_line, "warning", f"reference entry '{key}' is skipped: it must have author, title, year", "fix the entry") for key in skipped]
     found += [(refs_line, "error", f"id '{ident}' is both a target and a reference", "rename one of them") for ident in state.refs if ident in state.targets]
     text = "\n".join([""] * end + lines[end:])
     used = set()
@@ -259,7 +261,7 @@ def reference_findings(lines, end, meta, folders=()):
             used.add(ident)
             if ident not in state.targets and ident not in state.refs:
                 close = get_close_matches(ident, [*state.targets, *state.refs], n=1)
-                found.append((line, "error", f"unknown reference '{ident}'", f"did you mean '{close[0]}'?" if close else f"label the target with {{#{ident}}}"))
+                found.append((line, "error", f"unknown reference '{ident}'", f"did you mean '{close[0]}'?" if close else f"add '{ident}' to the refs file" if problem or skipped else f"label the target with {{#{ident}}}"))
         if match.group(3):
             found.append((line, "info", "a page reference shows the target's number in a PowerPoint deck", "use it for PDF and Word"))
     found += [(refs_line, "info", f"reference '{key}' is never cited", "cite it or remove it from the refs file") for key in state.refs if key not in used]

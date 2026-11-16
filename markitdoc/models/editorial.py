@@ -16,23 +16,25 @@ REFERENCES_TITLE = "References"
 UNNUMBERED_MARK = " {.unnumbered}"
 
 
-# the refs file entries as {key: entry} and the problem found, empty when none; the file is read from the first style folder
+# the refs file entries as {key: entry}, the problem found (empty when none), its style: value and the keys of the entries skipped as malformed; the file is read from the first style folder
 def load_refs(meta, folders):
     name = str(meta.get("refs") or "").strip()
     if not name:
-        return {}, ""
+        return {}, "", "", []
     try:
         data = yaml.safe_load((Path(folders[0]) if folders else Path()).joinpath(name).read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as error:
-        return {}, f"cannot read {name}: {str(error).splitlines()[0][:80]}"
-    if not isinstance(data, dict) or not all(isinstance(entry, dict) for entry in data.values()):
-        return {}, f"{name} must map each key to an entry with author, title, year"
-    return {str(key): entry for key, entry in data.items()}, ""
+        return {}, f"cannot read {name}: {str(error).splitlines()[0][:80]}", "", []
+    if not isinstance(data, dict):
+        return {}, f"{name} must map each key to an entry with author, title, year", "", []
+    style = str(data.pop("style", "")).strip()
+    entries = {str(key): entry for key, entry in data.items() if isinstance(entry, dict)}
+    return entries, "", style if style in CITATION_STYLES else "", [str(key) for key in data if str(key) not in entries]
 
 
-# the citation style a document asks for with style: numeric or author-year, numeric when it asks for none
-def citation_style(meta):
-    return meta["style"] if meta.get("style") in CITATION_STYLES else CITATION_STYLES[0]
+# the citation style a document asks for with style: numeric or author-year, else the refs file's style, else numeric
+def citation_style(meta, refs_style=""):
+    return meta["style"] if meta.get("style") in CITATION_STYLES else refs_style or CITATION_STYLES[0]
 
 
 # the authors of an entry as a list of names
