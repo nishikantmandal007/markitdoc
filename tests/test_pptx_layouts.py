@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pytest
 from helpers import generate_document
@@ -398,3 +399,12 @@ Q3 2026 – Q1 2027 — Cloud — Frankfurt.
     chart = next(shape.chart for slide in deck.slides for shape in slide.shapes if shape.has_chart)
     assert list(chart.plots[0].categories) == ["2025", "Customers", "Hosting", "2026"]
     assert "Residency" in all_text(deck) and "Full" not in all_text(deck)
+
+
+def test_should_render_investor_update_as_a_pptx(tmp_path, monkeypatch, caplog):
+    monkeypatch.delenv("GOTENBERG_ENDPOINT", raising=False)
+    monkeypatch.setattr(doc_generator_service, "find_images", lambda wanted, ratios: {})
+    markdown = (Path(__file__).parent / "fixtures" / "investor_update.md").read_text()
+    deck = Presentation(generate_document(markdown, "pptx", filename_stem="investor_update", output_dir=str(tmp_path)))
+    assert len(deck.slides) > 0
+    assert not any("failed to draw" in record.getMessage() for record in caplog.records)
