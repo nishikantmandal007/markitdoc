@@ -3,6 +3,7 @@ import math
 import re
 
 from markitdoc.markup.inline import plain_text
+from markitdoc.models.attributes import parse_attributes
 from markitdoc.visuals.charts import parse_chart_fence
 
 NUMERIC_CELL = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
@@ -84,9 +85,9 @@ def element_settings(tokens, position):
 
 # parses key-value settings and a class name from text
 def settings_from(text):
-    found = dict(re.findall(r"([a-z_]+)=([\w-]+)", text))
-    classes = re.findall(r"\.([\w-]+)", text)
-    return {**found, "class": classes[0]} if classes else found
+    attributes = parse_attributes(text)
+    found = {key: value for key, value in attributes.values.items() if value is not True}
+    return {**found, "class": attributes.classes[0]} if attributes.classes else found
 
 
 # finds the matching closing token for a nested token block

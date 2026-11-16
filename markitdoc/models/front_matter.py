@@ -57,3 +57,8 @@ def consume_directives(lines, start, meta):
         meta[key] = value
         start += 1
     return start
+
+
+# language version asked for by 'markitdoc: 2' in the front matter, 1 when absent or unknown
+def language_version(meta):
+    return 2 if str((meta or {}).get("markitdoc", "")).strip() == "2" else 1

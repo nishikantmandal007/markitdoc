@@ -95,3 +95,21 @@ def test_should_keep_the_case_of_free_text_settings_and_lowercase_choices():
 
     assert document.meta["palette"] == "forest"
     assert document.meta["header"] == "St. Jude Health System" and document.meta["footer"] == "Page {page} of {pages}"
+
+
+def test_should_nest_any_opener_inside_a_flow_container_and_close_the_innermost():
+    from markitdoc.models.document import split_blocks
+
+    body = "::: cover\ntitle: T\n:::\n::: columns {ratio=2:1}\nA\n\n::: {.aside title=\"M\"}\nB\n:::\nC\n:::\nafter"
+
+    chunks = split_blocks(body)
+    assert len(chunks) == 2 and chunks[1][1:] == [
+        ":::: columns {ratio=2:1}", "A", "", "::: {.aside title=\"M\"}", "B", ":::", "C", "::::", "after"]
+    deeper = split_blocks("::: box\n::: foo\n::: bar\nx\n:::\n:::\n:::\nz\n::: cover\n:::")
+    assert len(deeper) == 2 and deeper[0][1:6] == ["::::: box", ":::: foo", "::: bar", "x", ":::"] and deeper[0][-1] == "z"
+
+
+def test_should_still_start_a_designed_block_at_top_level():
+    from markitdoc.models.document import split_blocks
+
+    assert len(split_blocks("intro\n\n::: cover\ntitle: T\n:::\n")) == 2

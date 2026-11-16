@@ -1,9 +1,9 @@
 import logging
 from dataclasses import dataclass, field
 
+from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter
 from markitdoc.models.model_constants import (
-    ATTRIBUTE,
     BLOCK_START,
     BULLET_SEPARATORS,
     DIV_CLOSE,
@@ -48,31 +48,45 @@ def parse_document(markdown):
 
 # ::: {.layout key=value} opening line to 'layout: name' and slot lines
 def div_header(match):
-    attributes = {key: (quoted if quoted is not None and value.startswith('"') else value)
-                  for key, value, quoted in ATTRIBUTE.findall(match.group(2))}
+    attributes = {key: value for key, value in parse_attributes(match.group(2)).values.items() if value is not True}
     return [f"layout: {match.group(1).lower()}", *(f"{key}: {value}" for key, value in attributes.items())]
 
 
 # body lines into chunks: one per fenced designed block, free markdown between them as flow
 def split_blocks(body):
     chunks, current, loose, in_fence, in_div, nested = [], None, [], False, False, 0
+    fences = []
 
     def flush_loose():
         if "".join(loose).strip():
             chunks.append([f"layout: {FLOW_LAYOUT}", *loose])
         loose.clear()
 
+    # gives outer fences more colons than the ones nested in them, as the container parser needs
+    def lengthen_fences():
+        deepest = max(depth for _, _, depth in fences)
+        if deepest:
+            for target, position, depth in fences:
+                target[position] = ":" * (3 + deepest - depth) + target[position].strip().lstrip(":")
+        fences.clear()
+
     for line in body.splitlines():
         stripped = line.strip()
         if stripped.startswith(("```", "~~~")):
             in_fence = not in_fence
         container = DIV_OPEN.match(stripped) if not in_fence else None
-        if container and not DIV_CLOSE.match(stripped) and container.group(1).lower() in FLOW_CONTAINERS:
+        if container and not DIV_CLOSE.match(stripped) and (nested or container.group(1).lower() in FLOW_CONTAINERS):
+            target = current if current is not None else loose
+            target.append(line)
+            fences.append((target, len(target) - 1, nested))
             nested += 1
-            (current if current is not None else loose).append(line)
         elif nested and not in_fence and DIV_CLOSE.match(stripped):
             nested -= 1
-            (current if current is not None else loose).append(line)
+            target = current if current is not None else loose
+            target.append(line)
+            fences.append((target, len(target) - 1, nested))
+            if not nested:
+                lengthen_fences()
         elif not in_fence and (match := DIV_OPEN.match(stripped)) and not DIV_CLOSE.match(stripped):
             flush_loose()
             current, in_div = div_header(match), True

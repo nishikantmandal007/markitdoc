@@ -73,3 +73,35 @@ class TestFlowPdf:
         assert len(texts) >= 2
         assert "MEETING NOTES" not in texts[1]
         assert "Meeting notes" in texts[0]
+
+
+def test_should_set_inline_code_in_the_mono_font_at_nine_tenths_of_the_body_size(tmp_path):
+    path = render("# Title\n\nCall `render_all` now.\n\n| Name | Note |\n|---|---|\n| `table_cell` | plain |\n", tmp_path, "code")
+
+    with fitz.open(path) as pdf:
+        spans = [span for block in pdf[0].get_text("dict")["blocks"] for line in block.get("lines", []) for span in line["spans"]]
+    code = {span["text"].strip(): span for span in spans if "Mono" in span["font"]}
+    body = next(span for span in spans if "Call" in span["text"])
+    assert "render_all" in code and "table_cell" in code
+    assert round(code["render_all"]["size"], 1) == round(body["size"] * 0.9, 1)
+
+
+def test_should_show_inline_code_with_markdown_markers_literally_in_the_mono_font(tmp_path):
+    path = render("# Title\n\nUse `---`, `**x**` and `__y__` here.\n\n| Name | Note |\n|---|---|\n| `---` | `**x**` |\n", tmp_path, "markers")
+
+    with fitz.open(path) as pdf:
+        spans = [span for block in pdf[0].get_text("dict")["blocks"] for line in block.get("lines", []) for span in line["spans"]]
+    mono = [span["text"].replace("\u200b", "").strip() for span in spans if "Mono" in span["font"]]
+    assert {"---", "**x**", "__y__"} <= set(mono)
+    assert mono.count("---") == 2 and mono.count("**x**") == 2
+
+
+def test_should_render_nested_blocks_inside_columns_without_breaking_out(tmp_path):
+    from pathlib import Path
+
+    markdown = Path(__file__).parent.joinpath("fixtures", "language_preview.md").read_text(encoding="utf-8")
+    path = render(markdown, tmp_path, "preview")
+    with fitz.open(path) as pdf:
+        outline = [title for _, title, _ in pdf.get_toc()]
+
+    assert ":::" not in " ".join(page_texts(path)) and "Method" not in outline and "Method Gauge" not in " ".join(outline)

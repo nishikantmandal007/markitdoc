@@ -9,6 +9,7 @@ from markitdoc.markup.blocks import as_flow, balanced, prepared
 from markitdoc.markup.inline import ANCHOR, parser
 from markitdoc.models.catalogue import SECTIONED_LAYOUTS, TRAILING_HEADINGS
 from markitdoc.models.document import Document
+from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pdf.designed.openers import (
     draw_chapter,
     draw_closing,
@@ -31,8 +32,16 @@ from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import creation_date
 
 logger = logging.getLogger(__name__)
-for container_name in ("box", "sidebar", "columns"):
-    container_plugin(parser, container_name, validate=lambda params, *_, name=container_name: name in re.findall(r"[\w-]+", params)[:1])
+
+
+# whether a ::: line opens this container; any other name or bare attributes open a box
+def opens(name, params):
+    first = (re.findall(r"[\w-]+", params) or [""])[0]
+    return first == name or (name == "box" and params.strip() != "" and first not in FLOW_CONTAINERS)
+
+
+for container_name in FLOW_CONTAINERS:
+    container_plugin(parser, container_name, validate=lambda params, *_, name=container_name: opens(name, params))
 
 
 DRAWERS = {"cover": draw_cover, "summary": draw_summary, "divider": draw_divider, "chapter": draw_chapter,
