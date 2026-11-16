@@ -33,4 +33,4 @@ def test_should_pass_gotenberg_and_cache_options_to_render(tmp_path, monkeypatch
 
     assert main(["render", str(source), "-o", str(output), "--gotenberg", "http://renderer.test",
                  "--cache", str(tmp_path)]) == 0
-    assert captured["options"] == Options(gotenberg_url="http://renderer.test", cache_folder=tmp_path)
+    assert captured["options"] == Options(gotenberg_url="http://renderer.test", cache_folder=tmp_path, style_folders=(tmp_path,))

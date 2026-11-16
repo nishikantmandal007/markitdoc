@@ -1,0 +1,19 @@
+fonts:
+  display: PT Serif
+  sans: Inter
+  code: JetBrains Mono
+colors:
+  brand: "#0F766E"
+  warm: "#B45309"
+text: {font: sans, size: 10.5pt, color: ink}
+set:
+  h2: {font: display, color: brand, size: xl}
+  h3: {color: warm, weight: normal, italic: true}
+  list: {color: muted}
+  quote: {italic: true, color: brand}
+styles:
+  term: {kind: inline, caps: small, tracking: wide, color: warm}
+  tight: {kind: inline, tracking: tight}
+  shout: {kind: inline, caps: all, weight: bold}
+  pull: {kind: block, based-on: quote, size: l, align: center}
+  deep: {kind: block, based-on: pull, color: warm}
