@@ -1,7 +1,7 @@
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches
 
-from markitdoc.pdf.layouts import long_date
+from markitdoc.utils.helpers import long_date
 from markitdoc.pptx.deck import (body_sizes, draw_footer, key_sentences, literal, side_margin, slide_width, title_fit,
                                  write_text)
 

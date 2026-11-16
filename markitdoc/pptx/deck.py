@@ -15,7 +15,8 @@ from pptx.util import Inches, Pt
 
 import logging
 from markitdoc.markup.inline import inline_runs, parser
-from markitdoc.pdf.layouts import Box, PdfPages, fitted_image, lifted
+from markitdoc.pdf.layouts import Box, PdfPages, fitted_image
+from markitdoc.utils.helpers import lifted
 from markitdoc.themes.themes import Theme
 
 logger = logging.getLogger(__name__)

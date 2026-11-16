@@ -1,9 +1,7 @@
 import io
-import os
 import zlib
 import re
 from dataclasses import dataclass, replace
-from datetime import date, datetime, time, timezone
 from pathlib import Path
 
 from fpdf import FPDF, ViewerPreferences
@@ -18,6 +16,7 @@ from markitdoc.models.document import Block, Document
 from markitdoc.themes.theme_constants import TEXT_SIZES
 from markitdoc.themes.themes import Theme
 from markitdoc.markup.inline import anchor, inline_runs, parser, subscripts, superscripts
+from markitdoc.utils.helpers import creation_date, lifted, long_date
 
 logger = logging.getLogger(__name__)
 page_width, page_height, margin = 210, 297, 20
@@ -138,10 +137,6 @@ def inline_markup(token, targets=frozenset()) -> str:
 def rich_markup(text):
     tokens = parser.parseInline(text or "")
     return inline_markup(tokens[0]) if tokens else ""
-
-
-def lifted(rgb, amount=0.4):
-    return tuple(int(channel + (255 - channel) * amount) for channel in rgb)
 
 
 class PdfPages(FPDF):
@@ -310,14 +305,6 @@ def balanced(blocks, theme: Theme):
         previous_dark = is_dark(block, theme)
         result.append(block)
     return tuple(result)
-
-
-def long_date(text):
-    try:
-        moment = datetime.strptime(str(text).strip(), "%Y-%m-%d")
-    except ValueError:
-        return ""
-    return f"{moment.day} {moment:%B %Y}"
 
 
 def as_flow(block: Block) -> Block:
@@ -989,18 +976,6 @@ def draw_block(pdf, block, image, work_folder, credits):
     if block.layout == "closing":
         return draw_closing(pdf, block, image, work_folder, credits)
     return drawers[block.layout](pdf, block, image, work_folder)
-
-
-def creation_date(written):
-    try:
-        if written:
-            return datetime.combine(date.fromisoformat(str(written)), time.min, tzinfo=timezone.utc)
-    except ValueError:
-        pass
-    epoch = os.getenv("SOURCE_DATE_EPOCH")
-    if epoch and epoch.isdigit():
-        return datetime.fromtimestamp(int(epoch), tz=timezone.utc)
-    return datetime.combine(date.today(), time.min, tzinfo=timezone.utc)
 
 
 def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=()):
