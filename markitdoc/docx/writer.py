@@ -30,7 +30,7 @@ LIST_FORMATS = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "up
 
 class Writer:
     # sets up the rendering context and its document settings
-    def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict, title: str, styles=None):
+    def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict, title: str, styles=None, numbering=None):
         self.document = docx.Document()
         self.styles, self.context = styles, None
         self.theme, self.meta, self.work_folder, self.title = theme, meta, work_folder, title
@@ -39,13 +39,15 @@ class Writer:
         self.photos_by_block = {key: value for key, value in images.items() if not isinstance(key, tuple)}
         self.photos = str(meta.get("photos", "natural")).lower()
         self.table_style = str(meta.get("tables", "lined")).lower()
-        self.numbered = str(meta.get("numbering", "")).lower() == "decimal"
+        self.numbers = numbering.targets if numbering else {}
+        self.numbered = str(meta.get("numbering", "")).lower() == "decimal" or bool(numbering and numbering.section_numbers)
         self.headings = [0, 0, 0, 0]
         self.figure_count = self.table_count = 0
-        self.notes, self.targets, self.lists = [], set(), {}
+        self.notes, self.targets, self.lists = [], set(self.numbers), {}
         self.bookmark_id, self.master_name = 0, "default"
         self.titled = self.started = self.break_next = False
-        self.pending_caption = self.skip_title = ""
+        self.pending_caption = self.skip_title = self.pending_target = ""
+        self.restarts, self.section_no = [True], 0
         self.body, self.width = self.document, TEXT_WIDTH
         setup_page(self)
         setup_styles(self)
@@ -90,6 +92,9 @@ def write_runs(writer, paragraph, runs, size=None, role=None, bold=None, italic=
         if not piece.text:
             continue
         mine = writer.styles.span_look(piece.style, look) if look and piece.style else look
+        if piece.link.startswith("#page:"):
+            add_field(paragraph, f"PAGEREF {anchor_name(piece.link[6:])} \\h", piece.text, dirty=True)
+            continue
         if piece.link:
             add_link(writer, paragraph, piece, size, role, mine)
             continue
@@ -154,7 +159,7 @@ def align_paragraph(paragraph, look):
 def add_link(writer, paragraph, piece, size, role, look=None):
     link = OxmlElement("w:hyperlink")
     if piece.link.startswith("#"):
-        link.set(qn("w:anchor"), piece.link[1:])
+        link.set(qn("w:anchor"), anchor_name(piece.link[1:]))
     else:
         relation = paragraph.part.relate_to(piece.link, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
                                             is_external=True)
@@ -179,8 +184,14 @@ def plain(writer, paragraph, text, size=None, role=None, bold=False, italic=Fals
     return run
 
 
+# a Word bookmark name from an id: Word bookmark names cannot hold hyphens
+def anchor_name(name):
+    return name.replace("-", "_")
+
+
 # adds a named Word bookmark around a paragraph
 def bookmark(writer, paragraph, name):
+    name = anchor_name(name)
     writer.bookmark_id += 1
     start, end = OxmlElement("w:bookmarkStart"), OxmlElement("w:bookmarkEnd")
     start.set(qn("w:id"), str(writer.bookmark_id))
@@ -191,12 +202,14 @@ def bookmark(writer, paragraph, name):
 
 
 # adds a Word field with its result text
-def add_field(paragraph, instruction, shown=""):
+def add_field(paragraph, instruction, shown="", dirty=False):
     for kind, text in (("begin", None), (None, instruction), ("separate", None), ("text", shown), ("end", None)):
         run = paragraph.add_run()
         if kind in ("begin", "separate", "end"):
             character = OxmlElement("w:fldChar")
             character.set(qn("w:fldCharType"), kind)
+            if dirty and kind == "begin":
+                character.set(qn("w:dirty"), "true")
             run._r.append(character)
         elif kind == "text":
             run.text = text
@@ -235,10 +248,14 @@ def photo(writer, path, width_cm, height_cm, alt):
 
 
 # adds a numbered figure caption with its optional credit and source
-def caption(writer, text, credit="", source=""):
-    writer.figure_count += 1
+def caption(writer, text, credit="", source="", target=None, anchor=None):
     paragraph = writer.body.add_paragraph(style="Caption")
-    plain(writer, paragraph, f"Figure {writer.figure_count}. ", bold=True)
+    if target:
+        bookmark(writer, anchor if anchor is not None else paragraph, target.id)
+        plain(writer, paragraph, f"{target.mark}. ", bold=True)
+    else:
+        writer.figure_count += 1
+        plain(writer, paragraph, f"Figure {writer.figure_count}. ", bold=True)
     plain(writer, paragraph, text)
     if credit:
         plain(writer, paragraph, "  ·  ")
@@ -312,7 +329,9 @@ def setup_chrome(writer, cover):
 
 # fills page, title, date, and section placeholders in footer text
 def page_fields(writer, paragraph, template):
-    fields = {"{page}": ("PAGE", "1"), "{pages}": ("NUMPAGES", "1"), "{section}": ('STYLEREF "Heading 2"', "")}
+    here = writer.restarts[writer.section_no:writer.section_no + 2]
+    sections = bool(writer.styles and any(writer.restarts[1:]) and here and here[0] and (len(here) < 2 or here[1]))
+    fields = {"{page}": ("PAGE", "1"), "{pages}": ("SECTIONPAGES" if sections else "NUMPAGES", "1"), "{section}": ('STYLEREF "Heading 2"', "")}
     text = template.replace("{title}", writer.title).replace("{date}", long_date(writer.meta.get("date", "")))
     for piece in re.split(r"(\{page\}|\{pages\}|\{section\})", text):
         if piece in fields:
@@ -356,6 +375,7 @@ def apply_master(writer, section, master, restart=False):
 # starts a new Word section on a new page under the named page master
 def master_section(writer, name, restart):
     writer.master_name = name
+    writer.section_no += 1
     section = writer.document.add_section(WD_SECTION.NEW_PAGE)
     section.different_first_page_header_footer = False
     apply_master(writer, section, writer.styles.master(name), restart)

@@ -6,8 +6,10 @@ from fpdf.enums import XPos, YPos
 from PIL import Image
 
 from markitdoc.markup.elements import CHART_SIZES, chart_data, settings_from
+from markitdoc.models.attributes import parse_attributes
+from markitdoc.models.references import caption_of
 from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages
-from markitdoc.pdf.flow.text import add_heading, add_list_item
+from markitdoc.pdf.flow.text import add_caption, add_heading, add_list_item
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import CANVAS_WIDTH, ZOOM, diagram_as_text, diagram_title, render_diagram
@@ -28,17 +30,23 @@ def room_for(pdf: FlowPages, width, height, reserve):
 
 
 # places a centered picture on the PDF page with alternative text
-def add_picture(pdf: FlowPages, picture, width, height, description=""):
+def add_picture(pdf: FlowPages, picture, width, height, description="", ident=""):
+    target = pdf.numbers.get(ident)
     width, height = room_for(pdf, width, height, 6)
-    if pdf.will_page_break(height + 6):
+    if pdf.will_page_break(height + 6 + (8 if target else 0)):
         pdf.add_page()
+    pdf.mark_target(ident)
     pdf.image(picture, x=pdf.l_margin + (pdf.area - width) / 2, w=width, h=height, alt_text=description or None)
+    if target:
+        pdf.ln(1.5)
+        add_caption(pdf, caption_of(target))
     pdf.ln(4)
 
 
 # renders a code fence as text, chart, diagram, or code
 def add_fence(pdf: FlowPages, language: str, content: str):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
+    ident = parse_attributes(language[language.find("{"):]).id if "{" in language else ""
     language = language.split("{")[0].strip()
     width = (pdf.area) * CHART_SIZES.get(settings.get("size", "full"), 1.0)
     if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in BOX_DRAWING) >= 6:
@@ -57,7 +65,7 @@ def add_fence(pdf: FlowPages, language: str, content: str):
             add_infographic_as_list(pdf, syntax)
         return
     if language == "mermaid":
-        add_diagram(pdf, content)
+        add_diagram(pdf, content, ident)
         return
     if language == "chart":
         data = chart_data(content)
@@ -71,7 +79,7 @@ def add_fence(pdf: FlowPages, language: str, content: str):
             except Exception as error:
                 logger.warning("Chart skipped: %s", type(error).__name__)
                 return
-            add_picture(pdf, io.BytesIO(image), width, width * 0.5, f"Chart: {data.get('title') or data['type']}")
+            add_picture(pdf, io.BytesIO(image), width, width * 0.5, f"Chart: {data.get('title') or data['type']}", ident)
         return
     lines = content.rstrip().count("\n") + 1
     if lines <= SHORT_CODE_LINES and pdf.will_page_break(lines * 4.2 + 6):
@@ -103,7 +111,8 @@ def add_text_art(pdf: FlowPages, content: str):
 
 
 # renders a diagram or falls back to a readable list of steps
-def add_diagram(pdf: FlowPages, source: str):
+def add_diagram(pdf: FlowPages, source: str, ident=""):
+    target = pdf.numbers.get(ident)
     lines = source.strip().splitlines()
     titled = any(line.strip().startswith(("title ", "pie title ")) for line in lines)
     title = diagram_title(source)
@@ -130,9 +139,12 @@ def add_diagram(pdf: FlowPages, source: str):
     width, height = room_for(pdf, width, height, 12)
     if pdf.will_page_break(height + 12):
         pdf.add_page()
+    pdf.mark_target(ident)
     pdf.image(str(path), x=pdf.l_margin + (pdf.area - width) / 2, w=width, h=height, alt_text=f"Diagram: {title}")
     pdf.ln(1.5)
-    if titled:
+    if target:
+        add_caption(pdf, caption_of(target))
+    elif titled:
         pdf.figure_count += 1
         pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * 0.85)
         pdf.set_text_color(*pdf.theme.rgb("muted"))

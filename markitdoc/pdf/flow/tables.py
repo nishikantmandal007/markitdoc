@@ -78,6 +78,7 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
             pdf.add_page()
     if pdf.pending_caption:
         caption, pdf.pending_caption = pdf.pending_caption, ""
+        pdf.mark_target(pdf.pending_target)
         add_paragraph(pdf, caption, after=1.5)
     numeric = [all(NUMERIC_CELL.match(row[column].strip()) for row in rows[1:] if column < len(row) and row[column].strip())
                for column in range(len(rows[0]))]

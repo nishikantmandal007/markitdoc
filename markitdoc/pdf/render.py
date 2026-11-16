@@ -59,7 +59,8 @@ def draw_block(pdf, block, image, work_folder, credits):
 
 
 # renders a document as a PDF file
-def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=(), styles=None):
+def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=(), styles=None,
+               numbering=None, pages_out=None):
     from markitdoc.pdf.flow.pages import FlowPages
     from markitdoc.pdf.flow.render import fitted_spacing, queue_switch, render_flow, render_toc
     images = images or {}
@@ -76,8 +77,9 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     pdf.photos = str(document.meta.get("photos", "natural")).lower()
     pdf.work_folder = work_folder
     pdf.targets = frozenset(match.group(1) for block in blocks for line in block.body.splitlines()
-                            if line.lstrip().startswith("#") and (match := ANCHOR.search(line)))
-    pdf.numbering = str(document.meta.get("numbering", "")).lower() == "decimal"
+                            if line.lstrip().startswith("#") and (match := ANCHOR.search(line))) | frozenset(numbering.targets if numbering else ())
+    pdf.numbers = numbering.targets if numbering else {}
+    pdf.numbering = str(document.meta.get("numbering", "")).lower() == "decimal" or bool(numbering and numbering.section_numbers)
     pdf.header_text, pdf.footer_text, pdf.classification, pdf.watermark = (str(document.meta.get(key, "")).strip().strip("'\"")
                                                                             for key in ("header", "footer", "classification", "watermark"))
     pdf.meta_date = str(document.meta.get("date", ""))
@@ -146,6 +148,8 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
             pdf.set_xy(pdf.l_margin, 24)
             render_flow(pdf, as_flow(block).body)
     pdf.output(str(output_path))
+    if pages_out is not None:
+        pages_out.update(pdf.target_pages)
     logger.info("PDF rendered: %d blocks, %d pages, theme %s, contents %s, %d images",
                 len(blocks), pdf.pages_count, theme.name, "yes" if wants_toc else "no", len(images))
     return output_path

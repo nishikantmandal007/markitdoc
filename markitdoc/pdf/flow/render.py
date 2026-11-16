@@ -105,23 +105,28 @@ def render_tokens(pdf: FlowPages, tokens):
             attributes = parse_attributes(block_line.group(1) if block_line else "")
             look = pdf.look("list" if list_stack else "paragraph", attributes.classes, attributes.values)
             align = PARAGRAPH_ALIGNMENTS.get(style) or (look.align if look and look.align else "L")
+            labelled = parse_attributes(settings_line.group(1)).id if settings_line else ""
             if settings_line:
                 text = re.sub(r"\s*\{[^{}]*\}\s*$", "", text)
             if not text and picture is None:
-                for equation in equations:
-                    add_equation(pdf, equation)
+                for number, equation in enumerate(equations):
+                    add_equation(pdf, equation, labelled if number == 0 else "")
                 pending = style if not equations else pending
                 index += 3
                 continue
             if text.startswith("Table:") and not list_stack:
-                pdf.table_count += 1
-                caption = f"__Table {pdf.table_count}. {text[6:].strip()}__"
+                if target := pdf.numbers.get(labelled):
+                    caption = f"__{target.mark}. {text[6:].strip()}__"
+                else:
+                    pdf.table_count += 1
+                    caption = f"__Table {pdf.table_count}. {text[6:].strip()}__"
                 if index + 3 < len(tokens) and tokens[index + 3].type == "table_open":
-                    pdf.pending_caption = caption
+                    pdf.pending_caption, pdf.pending_target = caption, labelled
                     index += 3
                     continue
                 if pdf.will_page_break(8 * pdf.scale + opening_height(pdf, tokens, index + 3)):
                     pdf.add_page()
+                pdf.mark_target(labelled)
                 add_paragraph(pdf, caption, after=1.5)
                 index += 3
                 continue
@@ -159,8 +164,8 @@ def render_tokens(pdf: FlowPages, tokens):
                               following=opening_height(pdf, tokens, index + 3) if text.endswith(":") else 0, look=look)
             if framed and pdf.page_no() == frame_page:
                 draw_frame(pdf, pdf.l_margin, min(TEXT_WIDTH, pdf.area), frame_top - 1.5, pdf.get_y() - 1.5, replace(look, fill=None))
-            for equation in equations:
-                add_equation(pdf, equation)
+            for number, equation in enumerate(equations):
+                add_equation(pdf, equation, labelled if number == 0 else "")
             index += 3
             continue
         if token.type in ("bullet_list_open", "ordered_list_open"):

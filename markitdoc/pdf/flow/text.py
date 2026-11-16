@@ -33,12 +33,14 @@ CODE_SCALE = 0.9
 
 
 # draws an equation in the PDF or falls back to readable TeX text
-def add_equation(pdf: FlowPages, tex: str):
+def add_equation(pdf: FlowPages, tex: str, ident=""):
+    target = pdf.numbers.get(ident)
     tex = mathtext_ready(tex)
     try:
         svg = equation_drawing(tex, "#" + pdf.theme.colors["ink"].lstrip("#"))
     except ValueError as error:
         logger.warning("Equation shown as text (unsupported TeX): %s", str(error).splitlines()[0][:80])
+        pdf.mark_target(ident)
         add_paragraph(pdf, escaped(inline_maths(tex)).replace("\u0001", "**").replace("\u0002", "**"), "C")
         return
     width, height = svg_size(svg)
@@ -47,7 +49,15 @@ def add_equation(pdf: FlowPages, tex: str):
     if pdf.will_page_break(height + 6):
         pdf.add_page()
     pdf.ln(2)
+    pdf.mark_target(ident)
+    top = pdf.get_y()
     pdf.image(io.BytesIO(svg), x=pdf.l_margin + (min(TEXT_WIDTH, pdf.area) - width) / 2, w=width, h=height, alt_text=tex)
+    if target:
+        pdf.set_font("Brand", "", BODY_SIZE * pdf.scale)
+        pdf.set_text_color(*pdf.theme.rgb("body"))
+        pdf.set_xy(pdf.l_margin, top + height / 2 - BODY_SIZE * pdf.scale * 0.25)
+        pdf.cell(min(TEXT_WIDTH, pdf.area), BODY_SIZE * pdf.scale * 0.5, target.mark, align="R")
+        pdf.set_xy(pdf.l_margin, top + height)
     pdf.ln(3)
 
 
@@ -134,6 +144,13 @@ def add_figure(pdf: FlowPages, query: str):
     pdf.ln(3)
 
 
+# draws a centred figure caption under a chart or diagram
+def add_caption(pdf: FlowPages, text: str):
+    pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * 0.85)
+    pdf.set_text_color(*pdf.theme.rgb("muted"))
+    pdf.multi_cell(pdf.area, BODY_SIZE * pdf.scale * 0.45, escaped(text), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+
 # draws a section heading and tracks its outline level
 def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0, look=None):
     plain_text = text.replace("**", "").replace("__", "")
@@ -153,7 +170,7 @@ def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0,
     if level <= 3:
         pdf.start_section(plain_text, level=level - 1, strict=False)
     if target and target in pdf.targets:
-        pdf.set_link(name=target, page=pdf.page_no(), y=pdf.get_y())
+        pdf.mark_target(target)
     pdf.ln(HEADING_ABOVE - PARAGRAPH_AFTER)
     bold = look.bold is not False if look else True
     pdf.set_font(pdf.family_of(look, "Head" if level <= 3 else "Brand"), ("B" if bold else "") + ("I" if look and look.italic else ""), size)
