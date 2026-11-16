@@ -30,6 +30,9 @@ dependencies = [
 
 # tests and docs live only in a clone of the repository: `uv sync` there installs these groups; `pip install markitdoc`
 # installs the library and its dependencies alone.
+[project.scripts]
+markitdoc = "markitdoc.cli:main"
+
 [dependency-groups]
 dev = ["pytest==9.1.1"]
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.7.7"]
