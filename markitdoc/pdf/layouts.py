@@ -34,7 +34,8 @@ def draw_block(pdf, block, image, work_folder, credits):
 
 
 def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=()):
-    from markitdoc.pdf.flow import FlowPages, fitted_spacing, render_flow, render_toc
+    from markitdoc.pdf.flow import fitted_spacing, render_flow, render_toc
+    from markitdoc.pdf.flow_pages import FlowPages
     images = images or {}
     blocks = balanced([prepared(block) for block in document.blocks], theme)
     first = blocks[0]
