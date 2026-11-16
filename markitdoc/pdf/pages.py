@@ -1,3 +1,4 @@
+import re
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,16 +13,13 @@ from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import lifted
 
 WHITE, SOFT_WHITE, FAINT_WHITE = (255, 255, 255), (226, 230, 240), (190, 198, 216)
-FPDF_MARKERS = ("**", "__", "--", "~~")
 SHRINK_STEPS = (1, 0.95, 0.9, 0.85)
 HEADING_POINT = 12
 
 
 # protects PDF text markers from being interpreted as formatting
 def escaped(text):
-    for marker in FPDF_MARKERS:
-        text = text.replace(marker, f"{marker[0]}\u200b{marker[1]}")
-    return text
+    return re.sub(r"([*_~-])(?=\1)", "\\1\u200b", text)
 
 
 # joins adjacent text runs with matching styles

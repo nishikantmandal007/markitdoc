@@ -44,6 +44,7 @@ class Run:
     script: str = ""
     link: str = ""
     highlight: bool = False
+    code: bool = False
 
 
 SPAN_ROLES = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
@@ -59,12 +60,12 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
             runs.append(Run(text, bold=state["bold"] > 0 or extra.get("bold", False), italic=state["italic"] > 0,
                             strike=state["strike"] > 0, underline=any(span[0] for span in spans),
                             role=next((span[1] for span in reversed(spans) if span[1]), ""), script=extra.get("script", script),
-                            link=link, highlight=any(span[2] for span in spans)))
+                            link=link, highlight=any(span[2] for span in spans), code=extra.get("code", False)))
 
     for child in token.children or []:
         kind = child.type
         if kind in ("text", "code_inline"):
-            add(child.content)
+            add(child.content, code=kind == "code_inline")
         elif kind in ("strong_open", "em_open", "s_open"):
             state[{"strong_open": "bold", "em_open": "italic", "s_open": "strike"}[kind]] += 1
         elif kind in ("strong_close", "em_close", "s_close"):
