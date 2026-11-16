@@ -69,7 +69,7 @@ def render_tokens(pdf: FlowPages, tokens):
     while index < len(tokens):
         token = tokens[index]
         float_check(pdf, token)
-        if pdf.styles and token.type == "paragraph_open" and token.level == 0 and (switch := PAGE_SWITCH.match(tokens[index + 1].content.strip())):
+        if token.type == "paragraph_open" and token.level == 0 and (switch := PAGE_SWITCH.match(tokens[index + 1].content.strip())):
             queue_switch(pdf, switch.group(1))
             pdf.back_to_portrait = False
             pdf.add_page()
@@ -116,7 +116,7 @@ def render_tokens(pdf: FlowPages, tokens):
             lines = dropcap_lines(look)
             align = PARAGRAPH_ALIGNMENTS.get(style) or (look.align if look and look.align else "L")
             labelled = parse_attributes(settings_line.group(1)).id if settings_line else ""
-            if "\t" in inline.content and pdf.styles and not list_stack:
+            if "\t" in inline.content and not list_stack:
                 add_leader_row(pdf, inline_runs(inline, pdf.targets), index + 4 >= len(tokens) or "\t" not in tokens[index + 4].content, look)
                 index += 3
                 continue
@@ -144,7 +144,7 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_paragraph(pdf, caption, after=1.5)
                 index += 3
                 continue
-            written = written_image(inline.content) if picture is not None and pdf.styles else None
+            written = written_image(inline.content) if picture is not None else None
             framed = look is not None and picture is None and look.borders
             if labelled in pdf.numbers and pdf.numbers[labelled].kind == "reference":
                 pdf.mark_target(labelled)
@@ -267,7 +267,7 @@ def fitted_spacing(pdf: FlowPages, markdown: str):
 def add_container(pdf: FlowPages, kind: str, info: str, inner):
     attributes = parse_attributes(info)
     if kind == "columns":
-        weights, gap = pdf.styles.columns(attributes.values) if pdf.styles else ((1, 1), 8)
+        weights, gap = pdf.styles.columns(attributes.values)
         add_columns(pdf, inner, gap, weights)
         return
     title = (re.search(r'title="([^"]*)"', info) or re.search(r"title=(\S+)", info) or [None, ""])[1].rstrip("}")
@@ -351,10 +351,10 @@ def add_styled_box(pdf: FlowPages, look, title, inner):
 
 
 # divides container content into two groups using headings or top-level blocks
-def column_groups(inner, nested=False):
+def column_groups(inner):
     starts = [position for position, token in enumerate(inner) if token.type == "heading_open"]
     if len(starts) < 2:
-        top = min((token.level for token in inner), default=0) if nested else 0
+        top = min((token.level for token in inner), default=0)
         blocks = [position for position, token in enumerate(inner) if token.level == top and token.type.endswith("_open")]
         middle = blocks[len(blocks) // 2] if len(blocks) > 1 else len(inner)
         return [inner[:middle], inner[middle:]]
@@ -366,7 +366,7 @@ def column_groups(inner, nested=False):
 def add_columns(pdf: FlowPages, inner, gutter=8, weights=(1, 1)):
     margins, full = (pdf.l_margin, pdf.r_margin), pdf.area
     widths = [(full - gutter) * weight / sum(weights) for weight in weights]
-    groups = column_groups(inner, bool(pdf.styles))
+    groups = column_groups(inner)
 
     def draw(target, group, column, top):
         target.narrow = True

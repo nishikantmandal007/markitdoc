@@ -63,7 +63,7 @@ def add_equation(pdf: FlowPages, tex: str, ident=""):
     pdf.ln(3)
 
 
-# checks whether text runs need styled rendering, a look meaning the document uses language v2 styles
+# checks whether text runs need styled rendering, a look adding the styles a document asks for
 def needs_runs(runs, look=None):
     return any(run.role or run.highlight or run.script or run.code or (look is not None and (run.style or look.caps or look.tracking))
                for run in runs)
@@ -167,7 +167,7 @@ def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0,
         pdf.current_section = plain_text
     if pdf.will_page_break(max(KEEP_WITH_NEXT, size * 0.5 + 8 + following)):
         pdf.add_page()
-    if level == 2 and pdf.styles:
+    if level == 2:
         pdf.page_section.setdefault(pdf.page_no(), plain_text)
     if level <= 3:
         pdf.start_section(plain_text, level=level - 1, strict=False)

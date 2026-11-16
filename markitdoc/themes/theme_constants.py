@@ -43,7 +43,6 @@ TONES = {"formal": ("professional", "navy"), "warm": ("editorial", "terracotta")
          "technical": ("professional", "ocean"), "celebratory": ("editorial", "forest"), "neutral": ("professional", "graphite")}
 
 STYLE_FILE_SUFFIX = ".style.yml"
-PLANNED_SECTIONS = ()
 PAPER_MM = {"a3": (297, 420), "a4": (210, 297), "a5": (148, 210), "letter": (215.9, 279.4), "legal": (215.9, 355.6)}
 MARGIN_WORDS = {"narrow": 14, "normal": 20, "wide": 28}
 DEFAULT_MARGINS_MM = (20, 25, 22, 25)
@@ -95,7 +94,5 @@ ENGINE_DEFAULTS = {
 BUILTIN_CLASSES = ("unnumbered", "left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
                    "roman", "upper-roman", "legal", "underline", "highlight", "accent", "second", "muted", "danger", "success",
                    "callout", "aside")
-PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "hyphenate", "repeat", "caption",
-                            "indent", "orientation")
-STYLE_FILE_KEYS = ("markitdoc", "use", "page", "pages", "text", "set", "styles", "colors", "fonts", "fields", "allow", "refs")
+STYLE_FILE_KEYS = ("use", "page", "pages", "text", "set", "styles", "colors", "fonts", "fields", "allow", "refs")
 STYLE_SELECTORS = ("h1", "h2", "h3", "h4", "paragraph", "list", "table", "quote", "code", "figure", "caption", "footnote", "link", "box")

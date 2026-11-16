@@ -13,7 +13,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "editorial"
 WORDS = " ".join(f"word{number}" for number in range(1500))
 LONG_TEXT = ("Flood days fell sharply after the restoration finished and the river now carries its storm water through marsh "
              "again instead of towns, which is why the valley stays dry in spring.")
-HEAD = "---\nmarkitdoc: 2\nlang: en\nrefs: refs.yml\n{extra}---\n\n# Title\n\n## Section\n\n"
+HEAD = "---\nlang: en\nrefs: refs.yml\n{extra}---\n\n# Title\n\n## Section\n\n"
 CITING = HEAD.replace("{extra}", "") + "Seen in [@dewit2021] and [@brook2019], also [@brook2019; @dewit2021].\n"
 
 
@@ -197,10 +197,3 @@ def test_should_list_figures_in_word_with_a_dotted_tab_and_a_page_field(tmp_path
 
     assert "Figure 1. One" in " ".join(paragraph.text for paragraph in WordDocument(str(path)).paragraphs)
     assert 'w:leader="dot"' in xml and "PAGEREF one" in xml
-
-
-def test_should_keep_a_version_one_document_unchanged(tmp_path):
-    markdown = "# Title\n\nSee [@dewit2021] and \\textbf{x} and *a*{lang=de}.\n"
-    text = flat(pdf_pages(tmp_path, markdown)[0])
-
-    assert "[@dewit2021]" in text and "\\textbf{x}" in text

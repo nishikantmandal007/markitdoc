@@ -69,17 +69,17 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     title = first.slots.get("title") or next((line.lstrip("# ").strip() for line in first.body.splitlines()
                                              if line.startswith("# ")), "Document")
     pdf = FlowPages(theme, title, document.meta.get("style") == "plain", text_of(document, theme) + str(credits)
-                    + (str(styles.fields) + str([layer.data.get("pages") for layer in styles.layers]) if styles else ""))
+                    + str(styles.fields) + str([layer.data.get("pages") for layer in styles.layers]))
     pdf.use_styles(styles)
-    pdf.field_values = field_values(styles, document.meta) if styles else {}
+    pdf.field_values = field_values(styles, document.meta)
     pdf.table_style = str(document.meta.get("tables", "lined")).lower()
     pdf.flow_images = {key[1]: path for key, path in images.items() if isinstance(key, tuple)}
     pdf.photos = str(document.meta.get("photos", "natural")).lower()
     pdf.work_folder = work_folder
     pdf.targets = frozenset(match.group(1) for block in blocks for line in block.body.splitlines()
-                            if line.lstrip().startswith("#") and (match := ANCHOR.search(UNNUMBERED.sub("", line)))) | frozenset(numbering.targets if numbering else ())
-    pdf.numbers = numbering.targets if numbering else {}
-    pdf.numbering = str(document.meta.get("numbering", "")).lower() == "decimal" or bool(numbering and numbering.section_numbers)
+                            if line.lstrip().startswith("#") and (match := ANCHOR.search(UNNUMBERED.sub("", line)))) | frozenset(numbering.targets)
+    pdf.numbers = numbering.targets
+    pdf.numbering = str(document.meta.get("numbering", "")).lower() == "decimal" or bool(numbering.section_numbers)
     pdf.header_text, pdf.footer_text, pdf.classification, pdf.watermark = (str(document.meta.get(key, "")).strip().strip("'\"")
                                                                             for key in ("header", "footer", "classification", "watermark"))
     pdf.meta_date = str(document.meta.get("date", ""))
@@ -97,7 +97,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     for index, block in enumerate(blocks):
         fresh_page, text, switch = False, block.body, None
         first_line, _, rest = block.body.lstrip().partition("\n")
-        if pdf.styles and block.layout == "flow" and (found := PAGE_SWITCH.match(first_line.strip())):
+        if block.layout == "flow" and (found := PAGE_SWITCH.match(first_line.strip())):
             text, switch = rest, found.group(1)
         if wants_toc and index == toc_at:
             pdf.decorate = True

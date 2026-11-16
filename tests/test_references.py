@@ -7,11 +7,7 @@ from markitdoc.models.document import parse_document
 from markitdoc.models.references import number_document
 
 WORDS = " ".join(f"word{number}" for number in range(1500))
-SOURCE = f"""---
-markitdoc: 2
----
-
-# Report
+SOURCE = f"""# Report
 
 Read [@cha], [@costs], [@eq], [@later], and [@cha; @costs] or [@cha; @fig2].
 
@@ -116,14 +112,8 @@ def test_should_caption_a_chart_as_figure_one_and_an_equation_as_one_in_brackets
     assert "(1)" in text.split()
 
 
-def test_should_leave_a_literal_reference_in_a_version_one_document(tmp_path):
-    text = pdf_text(tmp_path, "# Title\n\nSee [@cha] here.\n")
-
-    assert "[@cha]" in text
-
-
 def test_should_count_pages_of_the_current_numbering_run_in_the_footer(tmp_path):
-    markdown = ("---\nmarkitdoc: 2\npages:\n  default:\n    footer: ' | {page} of {pages} | '\n---\n\n# T\n\nFirst.\n\n"
+    markdown = ("---\npages:\n  default:\n    footer: ' | {page} of {pages} | '\n---\n\n# T\n\nFirst.\n\n"
                 f"+++ {{numbers=restart}}\n\n{WORDS}\n\n{WORDS}\n")
     pages = list(pymupdf.open(render_to(tmp_path, markdown, "pdf")))
     footers = [next(line for line in page.get_text().splitlines() if " of " in line) for page in pages]
@@ -133,7 +123,7 @@ def test_should_count_pages_of_the_current_numbering_run_in_the_footer(tmp_path)
 
 
 def test_should_use_section_pages_in_word_when_a_run_is_one_section(tmp_path):
-    markdown = "---\nmarkitdoc: 2\npages:\n  default:\n    footer: ' | {page} of {pages} | '\n---\n\n# T\n\nFirst.\n\n+++ {numbers=restart}\n\nSecond.\n"
+    markdown = "---\npages:\n  default:\n    footer: ' | {page} of {pages} | '\n---\n\n# T\n\nFirst.\n\n+++ {numbers=restart}\n\nSecond.\n"
     document = WordDocument(str(render_to(tmp_path, markdown, "docx")))
     codes = [element.text for section in document.sections for element in section.footer._element.iter(
         "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}instrText")]

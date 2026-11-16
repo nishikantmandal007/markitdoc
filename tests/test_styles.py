@@ -86,7 +86,7 @@ def test_should_justify_a_paragraph_with_the_align_key_in_the_pdf(spans):
 
 
 def test_should_space_letters_for_tracking_in_the_pdf(tmp_path):
-    text = "---\nmarkitdoc: 2\n---\n\n# T\n\nA [abcdefghij]{tracking=wide} B [abcdefghij]{tracking=tight} C [abcdefghij]{tracking=normal} D.\n"
+    text = "# T\n\nA [abcdefghij]{tracking=wide} B [abcdefghij]{tracking=tight} C [abcdefghij]{tracking=normal} D.\n"
     output = render(text, "pdf", tmp_path / "t.pdf")
     words = [word for word in pymupdf.open(output)[0].get_text("words") if word[4].startswith("abcdefghij")]
     wide, tight, normal = (word[2] - word[0] for word in words)
@@ -96,18 +96,11 @@ def test_should_space_letters_for_tracking_in_the_pdf(tmp_path):
 
 def test_should_let_a_locked_brand_win_over_the_document(tmp_path):
     (tmp_path / "brand.style.yml").write_text('locked: true\ncolors: {brand: "#112233"}\nset: {h2: {color: brand}}\n')
-    text = ('---\nmarkitdoc: 2\nuse: [brand]\ncolors: {brand: "#EE4455"}\nset: {h2: {color: "#EE4455"}}\n---\n\n# T\n\n## Locked\n\n'
+    text = ('---\nuse: [brand]\ncolors: {brand: "#EE4455"}\nset: {h2: {color: "#EE4455"}}\n---\n\n# T\n\n## Locked\n\n'
             "[words]{color=brand}\n")
     found = pdf_spans(text, tmp_path, Options(style_folders=(tmp_path,)))
 
     assert span_with(found, "Locked")["color"] == 0x112233 and span_with(found, "words")["color"] == 0x112233
-
-
-def test_should_ignore_styles_in_a_version_one_document(tmp_path):
-    found = pdf_spans(REPORT.replace("markitdoc: 2\n", ""), tmp_path)
-
-    assert not any("PTSerif" in span["font"] for span in found)
-    assert span_with(found, "The ")["size"] == pytest.approx(10, abs=0.05)
 
 
 def test_should_apply_the_same_properties_in_word(word):
@@ -151,44 +144,43 @@ def test_should_resolve_the_cascade_with_the_source_of_each_property(tmp_path):
 
 
 def test_should_explain_where_each_property_on_a_line_came_from(capsys):
-    assert main(["explain", f"{FIXTURES / 'styled_report.md'}:21"]) == 0
+    assert main(["explain", f"{FIXTURES / 'styled_report.md'}:20"]) == 0
     printed = capsys.readouterr().out
 
-    assert "line 21: paragraph .deep" in printed
+    assert "line 20: paragraph .deep" in printed
     assert "house.style.yml:styles.deep" in printed and "house.style.yml:styles.pull" in printed and "house.style.yml:set.quote" in printed
-    assert main(["explain", f"{FIXTURES / 'styled_report.md'}:13"]) == 0
+    assert main(["explain", f"{FIXTURES / 'styled_report.md'}:12"]) == 0
     assert "span .term" in capsys.readouterr().out
 
 
 def test_should_warn_about_an_unknown_style_name():
-    findings = check_document("---\nmarkitdoc: 2\n---\n\nText [x]{.trem}\n\n{.pul}\n", (FIXTURES / "styles",))
+    findings = check_document("Text [x]{.trem}\n\n{.pul}\n", (FIXTURES / "styles",))
 
     assert [f.message for f in findings] == ["unknown style '.trem'", "unknown style '.pul'"]
 
 
 def test_should_warn_about_an_undeclared_font_and_a_missing_style_file():
-    findings = check_document("---\nmarkitdoc: 2\nuse: [nothing]\n---\n\nText [x]{font=display}\n")
+    findings = check_document("---\nuse: [nothing]\n---\n\nText [x]{font=display}\n")
 
-    assert [(f.line, f.message) for f in findings] == [(3, "style file 'nothing' not found"), (6, "font 'display' is not declared under fonts:")]
+    assert [(f.line, f.message) for f in findings] == [(2, "style file 'nothing' not found"), (5, "font 'display' is not declared under fonts:")]
 
 
 def test_should_ask_to_name_a_style_used_three_times():
-    text = "---\nmarkitdoc: 2\n---\n\n[a]{size=14pt color=ink}\n\n[b]{size=14pt color=ink}\n\n[c]{color=ink size=14pt}\n"
+    text = "[a]{size=14pt color=ink}\n\n[b]{size=14pt color=ink}\n\n[c]{color=ink size=14pt}\n"
     findings = check_document(text)
 
-    assert len(findings) == 1 and findings[0].line == 5 and "name this style" in findings[0].message
+    assert len(findings) == 1 and findings[0].line == 1 and "name this style" in findings[0].message
     assert check_document(text.rsplit("\n\n", 1)[0] + "\n") == []
 
 
 def test_should_warn_about_low_contrast_hex_colors():
-    findings = check_document("---\nmarkitdoc: 2\n---\n\n[a]{color=#BBBBBB} [b]{color=#222222}\n")
+    findings = check_document("[a]{color=#BBBBBB} [b]{color=#222222}\n")
 
-    assert [f.line for f in findings] == [5] and "contrast" in findings[0].message
+    assert [f.line for f in findings] == [1] and "contrast" in findings[0].message
 
 
-def test_should_name_the_style_keys_as_planned_only_for_version_one_documents():
-    assert "planned" in check_document("::: box color=red\n:::")[0].message
-    assert check_document("---\nmarkitdoc: 2\n---\n\n::: box color=ink\n:::\n") == []
+def test_should_accept_the_style_keys_on_a_box():
+    assert check_document("::: box color=ink\n:::\n") == []
 
 
 def test_should_drop_an_unavailable_font_so_the_next_layer_font_remains(tmp_path):
@@ -206,11 +198,11 @@ def test_should_drop_an_unavailable_font_so_the_next_layer_font_remains(tmp_path
 
 def test_should_render_an_unavailable_font_in_the_inherited_font_and_explain_it(tmp_path, capsys):
     (tmp_path / "x.style.yml").write_text('fonts: {display: "Playfair Display", serif: PT Serif}\ntext: {font: serif}\n')
-    text = "---\nmarkitdoc: 2\nuse: [x]\n---\n\n# T\n\nWords [here]{font=display} now.\n"
+    text = "---\nuse: [x]\n---\n\n# T\n\nWords [here]{font=display} now.\n"
     found = pdf_spans(text, tmp_path, Options(style_folders=(tmp_path,)))
     (tmp_path / "d.md").write_text(text)
 
     assert span_with(found, "Words")["font"] == "PTSerif"
     assert "not available; using the inherited font" in check_document(text, (tmp_path,))[0].message
-    assert main(["explain", f"{tmp_path / 'd.md'}:8"]) == 0
+    assert main(["explain", f"{tmp_path / 'd.md'}:7"]) == 0
     assert "'display' dropped" in capsys.readouterr().out

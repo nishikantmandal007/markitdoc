@@ -1,5 +1,4 @@
 ---
-markitdoc: 2
 use: [house]
 lang: en
 set:

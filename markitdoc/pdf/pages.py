@@ -135,18 +135,18 @@ class PdfPages(FPDF):
             self.add_family(family, self.family_files[family])
         self.set_fallback_fonts(chosen, exact_match=False)
 
-    # turns on the language v2 stylesheet and registers the fonts it declares in all four styles
+    # sets the stylesheet and registers the fonts it declares in all four styles
     def use_styles(self, styles):
         self.styles = styles
-        for name, face in (styles.faces if styles else {}).items():
+        for name, face in styles.faces.items():
             if face:
                 self.add_family(f"Face-{name}", face.files)
                 self.primaries.append(face.files[0])
         self.use_fallbacks()
 
-    # the look of an element under the stylesheet, None for version 1 documents
+    # the look of an element under the stylesheet
     def look(self, selector, classes=(), inline=None):
-        return self.styles.look(selector, classes, inline, context=self.context) if self.styles else None
+        return self.styles.look(selector, classes, inline, context=self.context)
 
     # the font family a look asks for, the default when it asks for none
     def family_of(self, look, default):

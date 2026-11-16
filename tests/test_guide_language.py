@@ -11,8 +11,7 @@ from markitdoc.guide.language import core_card
 from markitdoc.guide.support import SUPPORT, SUPPORT_FORMATS, support_table
 from markitdoc.themes.theme_constants import STYLE_FILE_KEYS
 
-V2 = "---\nmarkitdoc: 2\n---\n"
-BOX_DOCUMENT = V2 + "## A\n\n::: columns\nx\n\ny\n:::\n\n::: box {border=thin}\nin\n:::\n"
+BOX_DOCUMENT = "## A\n\n::: columns\nx\n\ny\n:::\n\n::: box {border=thin}\nin\n:::\n"
 
 
 def test_should_keep_the_core_card_short_and_name_every_top_level_key():
@@ -22,7 +21,7 @@ def test_should_keep_the_core_card_short_and_name_every_top_level_key():
 
 
 def test_should_put_the_core_card_before_the_catalogue_and_let_the_level_pick_it_alone():
-    assert markitdoc.guide("pptx").startswith("MARKITDOC LANGUAGE v2") and "SLIDE DESIGN GUIDE" in markitdoc.guide("pptx")
+    assert markitdoc.guide("pptx").startswith("MARKITDOC LANGUAGE") and "SLIDE DESIGN GUIDE" in markitdoc.guide("pptx")
     assert markitdoc.guide("pdf", level="core") == core_card("pdf") and "LAYOUTS" not in markitdoc.guide("pdf", level="core")
     with pytest.raises(markitdoc.UnsupportedFormatError):
         markitdoc.guide("pdf", level="tiny")
@@ -48,7 +47,7 @@ def test_should_note_each_approximate_or_ignored_feature_once_for_the_requested_
 
 
 def test_should_note_ignored_page_features_for_slides_only():
-    markdown = V2.replace("---\n", "---\npage: {paper: a4}\n", 1) + "## A\n\nText.\n"
+    markdown = "---\npage: {paper: a4}\n---\n## A\n\nText.\n"
 
     assert any("ignored in pptx" in finding.message for finding in check_document(markdown, output_format="pptx"))
     assert not any("ignored" in finding.message for finding in check_document(markdown, output_format="docx"))
@@ -74,7 +73,7 @@ def test_should_write_a_skill_with_its_reference_files(tmp_path, capsys):
 
 
 def references_document(extra=""):
-    return ("---\nmarkitdoc: 2\nnumbering: decimal\nrefs: refs.yml\nlists: [figures]\n---\n# Title\n\n## Methods\n\nSee [@dewit2021] and [@fig1].\n\n"
+    return ("---\nnumbering: decimal\nrefs: refs.yml\nlists: [figures]\n---\n# Title\n\n## Methods\n\nSee [@dewit2021] and [@fig1].\n\n"
             + extra + '```chart {#fig1 caption="Levels"}\n{"type": "bar", "labels": ["a", "b"], "datasets": [{"values": [1, 2]}]}\n```\n')
 
 

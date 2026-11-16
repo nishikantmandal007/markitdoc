@@ -64,11 +64,6 @@ def consume_directives(lines, start, meta):
     return start
 
 
-# language version asked for by 'markitdoc: 2' in the front matter, 1 when absent or unknown
-def language_version(meta):
-    return 2 if str((meta or {}).get("markitdoc", "")).strip() == "2" else 1
-
-
 # the front matter read as yaml so nested sections such as text, set and styles survive, None when it is not valid yaml
 def front_matter_yaml(markdown):
     lines = (markdown or "").lstrip("\n").split("\n")

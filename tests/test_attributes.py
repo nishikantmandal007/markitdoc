@@ -1,7 +1,6 @@
 from markitdoc import parse_attributes
 from markitdoc.markup.elements import settings_from
 from markitdoc.models.document import parse_document
-from markitdoc.models.front_matter import language_version
 
 
 def test_should_read_id_classes_quoted_values_and_flags():
@@ -36,8 +35,3 @@ def test_should_read_block_header_values_through_the_same_grammar():
     block = parse_document('::: cover title="Two words" variant=dark\n:::').blocks[0]
 
     assert block.layout == "cover" and block.slots["title"] == "Two words" and block.slots["variant"] == "dark"
-
-
-def test_should_default_the_language_version_to_one():
-    assert language_version({}) == 1 and language_version({"markitdoc": "2"}) == 2 and language_version({"markitdoc": "9"}) == 1
-    assert language_version(parse_document("---\nmarkitdoc: 2\n---\n# Title").meta) == 2
