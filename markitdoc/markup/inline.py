@@ -13,7 +13,7 @@ from mdit_py_plugins.tasklists import tasklists_plugin
 parser = (MarkdownIt("commonmark").enable(["table", "strikethrough"]).disable(["html_block", "html_inline"])
           .use(footnote_plugin).use(tasklists_plugin).use(deflist_plugin).use(attrs_plugin, spans=True)
           .use(sub_plugin).use(superscript_plugin).use(dollarmath_plugin, allow_space=False, allow_digits=False, double_inline=True))
-tex_symbols = {"alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "theta": "θ", "lambda": "λ", "mu": "μ",
+TEX_SYMBOLS = {"alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "theta": "θ", "lambda": "λ", "mu": "μ",
                "pi": "π", "rho": "ρ", "sigma": "σ", "tau": "τ", "phi": "φ", "omega": "ω", "Delta": "Δ", "Sigma": "Σ", "Omega": "Ω",
                "cdot": "·", "times": "×", "div": "÷", "pm": "±", "leq": "≤", "le": "≤", "geq": "≥", "ge": "≥", "neq": "≠",
                "approx": "≈", "infty": "∞", "sum": "Σ", "prod": "Π", "int": "∫", "rightarrow": "→", "to": "→", "leftarrow": "←",
@@ -23,14 +23,14 @@ tex_symbols = {"alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsil
                "oplus": "⊕", "odot": "⊙", "otimes": "⊗", "gg": "≫", "ll": "≪", "sim": "∼", "simeq": "≃", "equiv": "≡",
                "propto": "∝", "circ": "∘", "prime": "′", "degree": "°", "perp": "⊥", "parallel": "∥", "forall": "∀",
                "exists": "∃", "Rightarrow": "⇒", "Leftrightarrow": "⇔", "mapsto": "↦", "hbar": "ħ", "ell": "ℓ"}
-tex_text_commands = ("text", "mathrm", "textrm", "mathit", "textit", "operatorname", "mathsf", "mathcal", "boldsymbol",
+TEX_TEXT_COMMANDS = ("text", "mathrm", "textrm", "mathit", "textit", "operatorname", "mathsf", "mathcal", "boldsymbol",
                      "mathbf", "textbf")
-tex_accents = {"dot": "\u0307", "ddot": "\u0308", "hat": "\u0302", "bar": "\u0304", "overline": "\u0304"}
-bold_open, bold_close = "\u0001", "\u0002"
-subscripts = str.maketrans("0123456789+-=()aehijklmnoprstuvx", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ")
-superscripts = str.maketrans("0123456789+-=()abcdefghijklmnoprstuvwxyz", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ")
-anchor = re.compile(r"\s*\{#([\w-]+)\}\s*$")
-superscript_digits = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+TEX_ACCENTS = {"dot": "\u0307", "ddot": "\u0308", "hat": "\u0302", "bar": "\u0304", "overline": "\u0304"}
+BOLD_OPEN, BOLD_CLOSE = "\u0001", "\u0002"
+SUBSCRIPTS = str.maketrans("0123456789+-=()aehijklmnoprstuvx", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ")
+SUPERSCRIPTS = str.maketrans("0123456789+-=()abcdefghijklmnoprstuvwxyz", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ")
+ANCHOR = re.compile(r"\s*\{#([\w-]+)\}\s*$")
+SUPERSCRIPT_DIGITS = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
 
 
 @dataclass(frozen=True)
@@ -46,7 +46,7 @@ class Run:
     highlight: bool = False
 
 
-span_roles = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
+SPAN_ROLES = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
 
 
 # converts inline markdown tokens into styled text runs
@@ -84,15 +84,15 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
         elif kind == "link_close":
             link = ""
         elif kind in ("math_inline", "math_inline_double"):
-            for index, piece in enumerate(re.split(f"[{bold_open}{bold_close}]", inline_maths(child.content))):
+            for index, piece in enumerate(re.split(f"[{BOLD_OPEN}{BOLD_CLOSE}]", inline_maths(child.content))):
                 add(piece, bold=index % 2 == 1)
         elif kind == "footnote_ref":
-            add(str(child.meta["id"] + 1).translate(superscripts))
+            add(str(child.meta["id"] + 1).translate(SUPERSCRIPTS))
         elif kind == "html_inline" and "checkbox" in child.content:
             add("☑ " if "checked" in child.content else "☐ ")
         elif kind == "span_open":
             classes = str(child.attrs.get("class", "")).split()
-            spans.append(("underline" in classes, next((span_roles[name] for name in classes if name in span_roles), ""),
+            spans.append(("underline" in classes, next((SPAN_ROLES[name] for name in classes if name in SPAN_ROLES), ""),
                           "highlight" in classes))
         elif kind == "span_close" and spans:
             spans.pop()
@@ -103,17 +103,17 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
 def inline_maths(tex):
     text = re.sub(r"\\(left|right|big|Big|bigg|Bigg)\b", "", tex)
     text = re.sub(r"\\[,;:! ]|\\q?quad\b", " ", text)
-    text = re.sub(r"\\(" + "|".join(tex_text_commands) + r")\{([^{}]*)\}",
-                  lambda match: (bold_open + match.group(2) + bold_close) if match.group(1) in ("mathbf", "textbf", "boldsymbol")
+    text = re.sub(r"\\(" + "|".join(TEX_TEXT_COMMANDS) + r")\{([^{}]*)\}",
+                  lambda match: (BOLD_OPEN + match.group(2) + BOLD_CLOSE) if match.group(1) in ("mathbf", "textbf", "boldsymbol")
                   else match.group(2), text)
-    text = re.sub(r"\\vec\{([^{}]*)\}|\\vec\s*(\w)", lambda match: bold_open + (match.group(1) or match.group(2)) + bold_close, text)
-    text = re.sub(r"\\(" + "|".join(tex_accents) + r")\{(\w)\}|\\(" + "|".join(tex_accents) + r")\s*(\w)",
-                  lambda match: (match.group(2) or match.group(4)) + tex_accents[match.group(1) or match.group(3)], text)
+    text = re.sub(r"\\vec\{([^{}]*)\}|\\vec\s*(\w)", lambda match: BOLD_OPEN + (match.group(1) or match.group(2)) + BOLD_CLOSE, text)
+    text = re.sub(r"\\(" + "|".join(TEX_ACCENTS) + r")\{(\w)\}|\\(" + "|".join(TEX_ACCENTS) + r")\s*(\w)",
+                  lambda match: (match.group(2) or match.group(4)) + TEX_ACCENTS[match.group(1) or match.group(3)], text)
     text = re.sub(r"\\frac\{([^{}]*)\}\{([^{}]*)\}", r"(\1)/(\2)", text)
     text = re.sub(r"\\sqrt\{([^{}]*)\}", r"√(\1)", text)
-    text = re.sub(r"\\([A-Za-z]+)", lambda match: tex_symbols.get(match.group(1), match.group(1)), text)
-    text = re.sub(r"\^\{([^{}]*)\}|\^([^\s{}])", lambda match: (match.group(1) or match.group(2)).translate(superscripts), text)
-    text = re.sub(r"_\{([^{}]*)\}|_([^\s{}])", lambda match: (match.group(1) or match.group(2)).translate(subscripts), text)
+    text = re.sub(r"\\([A-Za-z]+)", lambda match: TEX_SYMBOLS.get(match.group(1), match.group(1)), text)
+    text = re.sub(r"\^\{([^{}]*)\}|\^([^\s{}])", lambda match: (match.group(1) or match.group(2)).translate(SUPERSCRIPTS), text)
+    text = re.sub(r"_\{([^{}]*)\}|_([^\s{}])", lambda match: (match.group(1) or match.group(2)).translate(SUBSCRIPTS), text)
     text = re.sub(r"√\((\w)\)", r"√\1", text.replace("{", "").replace("}", ""))
     text = re.sub(r"\(([^\s()+\-*/=]+)\)/", r"\1/", text)
     text = re.sub(r"/\(([^\s()+\-*/=]+)\)", r"/\1", text)

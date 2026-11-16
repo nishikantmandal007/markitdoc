@@ -4,26 +4,26 @@ from functools import lru_cache
 import pyphen
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
-from markitdoc.markup.inline import superscript_digits
+from markitdoc.markup.inline import SUPERSCRIPT_DIGITS
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.utils.helpers import lifted
 
-body_size, table_size = 11, 9
-margin = 25
-highlight_link = "§highlight"
-hyphenation_languages = {"en": "en_GB", "de": "de_DE", "fr": "fr", "es": "es"}
-long_word = re.compile(r"[^\W\d_]{7,}")
+BODY_SIZE, TABLE_SIZE = 11, 9
+MARGIN = 25
+HIGHLIGHT_LINK = "§highlight"
+HYPHENATION_LANGUAGES = {"en": "en_GB", "de": "de_DE", "fr": "fr", "es": "es"}
+LONG_WORD = re.compile(r"[^\W\d_]{7,}")
 
 
 # loads the hyphenation dictionary for a supported language
 @lru_cache(maxsize=8)
 def hyphenator(lang):
-    return pyphen.Pyphen(lang=hyphenation_languages.get(lang.split("-")[0].split("_")[0], "en_GB"))
+    return pyphen.Pyphen(lang=HYPHENATION_LANGUAGES.get(lang.split("-")[0].split("_")[0], "en_GB"))
 
 
 # checks whether a language has a hyphenation dictionary
 def can_hyphenate(lang):
-    return (lang or "en").split("-")[0].split("_")[0] in hyphenation_languages
+    return (lang or "en").split("-")[0].split("_")[0] in HYPHENATION_LANGUAGES
 
 
 # adds soft hyphens to long words outside markdown links
@@ -32,7 +32,7 @@ def hyphenated(text, lang):
         return text
     dictionary = hyphenator(lang or "en")
     pieces = re.split(r"(\]\([^)]*\))", text)
-    return "".join(piece if piece.startswith("](") else long_word.sub(lambda word: dictionary.inserted(word.group(0), hyphen="\u00ad"), piece)
+    return "".join(piece if piece.startswith("](") else LONG_WORD.sub(lambda word: dictionary.inserted(word.group(0), hyphen="\u00ad"), piece)
                    for piece in pieces)
 
 
@@ -54,11 +54,11 @@ class FlowPages(PdfPages):
         self.scale = 1.0
         self.flow_pages = set()
         self.set_auto_page_break(True, margin=22)
-        self.set_margins(margin, 20, margin)
+        self.set_margins(MARGIN, 20, MARGIN)
 
     # saves highlight link positions or adds an ordinary PDF link
     def link(self, x, y, w, h, link, *args, **kwargs):
-        if link == highlight_link:
+        if link == HIGHLIGHT_LINK:
             self.highlights.append((self.page, x, y, w, h))
             return None
         return super().link(x, y, w, h, link, *args, **kwargs)
@@ -95,18 +95,18 @@ class FlowPages(PdfPages):
             return
         self.set_font("Brand", "I" if self.theme.header_note else "B", 7.5)
         self.set_text_color(*self.theme.rgb("muted"))
-        self.set_xy(margin, 9)
+        self.set_xy(MARGIN, 9)
         self.cell(110, 5, self.fields(self.header_text) or self.theme.header_note or self.document_title.upper()[:80])
         if self.theme.logo:
-            self.image(str(self.theme.logo), self.w - margin - 45, 8, h=6)
+            self.image(str(self.theme.logo), self.w - MARGIN - 45, 8, h=6)
         if self.theme.brand:
             self.set_font("Brand", "B", 7.5)
             self.set_text_color(*self.theme.rgb("ink"))
-            self.set_xy(self.w - margin - 38, 9)
+            self.set_xy(self.w - MARGIN - 38, 9)
             self.cell(38, 5, self.theme.brand, align="R")
         self.set_draw_color(*self.theme.rgb("primary" if self.theme.header_note else "rule"))
         self.set_line_width(0.3 if self.theme.header_note else 0.2)
-        self.line(margin, 15, self.w - margin, 15)
+        self.line(MARGIN, 15, self.w - MARGIN, 15)
         self.set_xy(self.l_margin, self.t_margin)
 
     # draws the watermark and classification label on the page
@@ -132,13 +132,13 @@ class FlowPages(PdfPages):
         self.set_font("Brand", "", 7.5)
         self.set_text_color(*self.theme.rgb("muted"))
         if "{page}" not in self.footer_text:
-            self.set_xy(margin, -13)
-            self.cell(self.w - 2 * margin, 5, f"{self.page_no()} / {{nb}}", align="R")
+            self.set_xy(MARGIN, -13)
+            self.cell(self.w - 2 * MARGIN, 5, f"{self.page_no()} / {{nb}}", align="R")
         footer = self.fields(self.footer_text) or (self.theme.footer_text if not self.plain else "")
         if footer:
             self.set_font("Brand", "", 7.5)
-            self.set_xy(margin, -13)
-            self.cell(self.w - 2 * margin - 20, 5, footer)
+            self.set_xy(MARGIN, -13)
+            self.cell(self.w - 2 * MARGIN - 20, 5, footer)
 
 
 # places new footnotes at the bottom of the current PDF page
@@ -154,10 +154,10 @@ def place_notes(pdf, inline, note_texts, placed):
 
 # measures the height needed to draw one footnote
 def note_height(pdf, number, text):
-    pdf.set_font("Brand", "", body_size * pdf.scale * 0.8)
-    lines = pdf.multi_cell(pdf.w - 2 * margin, body_size * pdf.scale * 0.42, f"{number} {text}", markdown=True,
+    pdf.set_font("Brand", "", BODY_SIZE * pdf.scale * 0.8)
+    lines = pdf.multi_cell(pdf.w - 2 * MARGIN, BODY_SIZE * pdf.scale * 0.42, f"{number} {text}", markdown=True,
                            dry_run=True, output=MethodReturnValue.LINES)
-    return len(lines) * body_size * pdf.scale * 0.42 + 1
+    return len(lines) * BODY_SIZE * pdf.scale * 0.42 + 1
 
 
 # draws the footnotes assigned to the current PDF page
@@ -169,17 +169,17 @@ def draw_page_notes(pdf):
     top = pdf.h - 20 - height
     pdf.set_draw_color(*pdf.theme.rgb("rule"))
     pdf.set_line_width(0.2)
-    pdf.line(margin, top, margin + 40, top)
-    pdf.set_xy(margin, top + 2.5)
+    pdf.line(MARGIN, top, MARGIN + 40, top)
+    pdf.set_xy(MARGIN, top + 2.5)
     pdf.set_text_color(*pdf.theme.rgb("muted"))
     for number, text in notes:
-        hanging_note(pdf, number, text, pdf.w - 2 * margin, 0.8)
+        hanging_note(pdf, number, text, pdf.w - 2 * MARGIN, 0.8)
         pdf.ln(1)
 
 
 # draws a footnote with its number hanging beside the text
 def hanging_note(pdf, number, text, width, scale):
-    size = body_size * pdf.scale * scale
+    size = BODY_SIZE * pdf.scale * scale
     left = pdf.get_x()
     pdf.set_font("Brand", "", size)
     pdf.cell(4, size * 0.52, number)
@@ -190,7 +190,7 @@ def hanging_note(pdf, number, text, width, scale):
 # assigns unplaced footnotes referenced by a paragraph to its page
 def place_page_notes(pdf, inline, note_texts, placed):
     references = [child.meta["id"] for child in inline.children or [] if child.type == "footnote_ref"]
-    fresh = [(str(reference + 1).translate(superscript_digits), note_texts[reference]) for reference in references
+    fresh = [(str(reference + 1).translate(SUPERSCRIPT_DIGITS), note_texts[reference]) for reference in references
              if reference in note_texts and reference not in placed]
     if not fresh:
         return []

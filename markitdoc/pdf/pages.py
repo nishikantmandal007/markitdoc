@@ -6,20 +6,20 @@ from fpdf.enums import MethodReturnValue
 from PIL import Image
 
 from markitdoc.markup.blocks import slot_pieces
-from markitdoc.markup.inline import inline_runs, parser, subscripts, superscripts
-from markitdoc.models.catalogue import Box, layouts, margin, page_height, page_width
+from markitdoc.markup.inline import SUBSCRIPTS, SUPERSCRIPTS, inline_runs, parser
+from markitdoc.models.catalogue import LAYOUTS, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, Box
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import lifted
 
-white, soft_white, faint_white = (255, 255, 255), (226, 230, 240), (190, 198, 216)
-fpdf_markers = ("**", "__", "--", "~~")
-shrink_steps = (1, 0.95, 0.9, 0.85)
-heading_point = 12
+WHITE, SOFT_WHITE, FAINT_WHITE = (255, 255, 255), (226, 230, 240), (190, 198, 216)
+FPDF_MARKERS = ("**", "__", "--", "~~")
+SHRINK_STEPS = (1, 0.95, 0.9, 0.85)
+HEADING_POINT = 12
 
 
 # protects PDF text markers from being interpreted as formatting
 def escaped(text):
-    for marker in fpdf_markers:
+    for marker in FPDF_MARKERS:
         text = text.replace(marker, f"{marker[0]}\u200b{marker[1]}")
     return text
 
@@ -41,7 +41,7 @@ def runs_markup(runs) -> str:
     for run in merged(runs):
         text = escaped(run.text)
         if run.script:
-            text = text.translate(subscripts if run.script == "SUB" else superscripts)
+            text = text.translate(SUBSCRIPTS if run.script == "SUB" else SUPERSCRIPTS)
         markers = ("**" if run.bold else "") + ("__" if run.italic else "") + ("--" if run.underline else "") + ("~~" if run.strike else "")
         if markers and text.strip():
             core, lead, trail = text.strip(), text[:len(text) - len(text.lstrip())], text[len(text.rstrip()):]
@@ -97,26 +97,26 @@ class PdfPages(FPDF):
     # draws text at a fixed PDF position and returns its ending height
     def write_at(self, x, y, width, text, size, style="", role="ink", line_height=1.35, align="L", rgb=None, rich=False):
         self.set_xy(x, y)
-        self.set_font("Head" if style == "B" and size >= heading_point else "Brand", style, size)
+        self.set_font("Head" if style == "B" and size >= HEADING_POINT else "Brand", style, size)
         self.set_text_color(*(rgb or self.theme.rgb(role)))
         self.multi_cell(width, size * 0.3528 * line_height * self.tightness, rich_markup(text) if rich else escaped(text), align=align, markdown=True)
         return self.get_y()
 
     # measures how many lines a text box needs
     def line_count(self, text, box: Box):
-        self.set_font("Head" if box.style == "B" and box.size >= heading_point else "Brand", box.style, box.size)
+        self.set_font("Head" if box.style == "B" and box.size >= HEADING_POINT else "Brand", box.style, box.size)
         return len(self.multi_cell(box.width, box.size * 0.45, rich_markup(text), dry_run=True, output=MethodReturnValue.LINES,
                                    markdown=True))
 
     # chooses the largest slot text size that fits its line limit
     def slot_size(self, block, slot):
-        box = layouts[block.layout].boxes[slot]
+        box = LAYOUTS[block.layout].boxes[slot]
         pieces = slot_pieces(block, slot)
-        for scale in shrink_steps:
+        for scale in SHRINK_STEPS:
             size = round(box.size * scale, 1)
             if all(self.line_count(piece, replace(box, size=size)) <= box.lines for piece in pieces):
                 return size
-        return round(box.size * shrink_steps[-1], 1)
+        return round(box.size * SHRINK_STEPS[-1], 1)
 
     # measures the height needed for text in the PDF
     def text_height(self, text, width, size, line_height, style=""):
@@ -140,16 +140,16 @@ class PdfPages(FPDF):
         self.write_at(x, y, 150, text.upper(), 8.5, "B", rgb=lifted(self.theme.rgb("mood"), 0.55) if on_dark else self.theme.rgb("mood"))
 
     # draws the page footer rule, label, and page number
-    def folio(self, label, left=margin, right=page_width - margin, on_dark=False):
-        role_rgb = faint_white if on_dark else self.theme.rgb("muted")
+    def folio(self, label, left=MARGIN, right=PAGE_WIDTH - MARGIN, on_dark=False):
+        role_rgb = FAINT_WHITE if on_dark else self.theme.rgb("muted")
         self.set_draw_color(*((70, 82, 120) if on_dark else self.theme.rgb("rule")))
         self.set_line_width(0.2)
-        self.line(left, page_height - 14, right, page_height - 14)
-        self.write_at(left, page_height - 11.5, 100, label.upper(), 7.5, "B", rgb=role_rgb)
-        self.write_at(right - 30, page_height - 11.5, 30, f"{self.page_no()} / {{nb}}", 7.5, "B", rgb=role_rgb, align="R")
+        self.line(left, PAGE_HEIGHT - 14, right, PAGE_HEIGHT - 14)
+        self.write_at(left, PAGE_HEIGHT - 11.5, 100, label.upper(), 7.5, "B", rgb=role_rgb)
+        self.write_at(right - 30, PAGE_HEIGHT - 11.5, 30, f"{self.page_no()} / {{nb}}", 7.5, "B", rgb=role_rgb, align="R")
 
     # draws a soft circular glow within the requested page area
-    def glow(self, center_x, center_y, size, rings=60, clip=(0, 0, page_width, page_height)):
+    def glow(self, center_x, center_y, size, rings=60, clip=(0, 0, PAGE_WIDTH, PAGE_HEIGHT)):
         with self.rect_clip(*clip):
             for ring in range(rings):
                 with self.local_context(fill_opacity=0.03):
@@ -162,18 +162,18 @@ class PdfPages(FPDF):
         if not self.theme.logo:
             return
         self.image(str(self.theme.logo), x, y, h=10)
-        self.write_at(x + 13, y + 1.2, 120, self.theme.brand, 11, "B", rgb=white if on_dark else self.theme.rgb("ink"))
+        self.write_at(x + 13, y + 1.2, 120, self.theme.brand, 11, "B", rgb=WHITE if on_dark else self.theme.rgb("ink"))
         if self.theme.tagline:
             self.write_at(x + 13, y + 6.4, 120, self.theme.tagline, 7, "B",
                           rgb=lifted(self.theme.rgb("mood"), 0.55) if on_dark else self.theme.rgb("primary"))
 
     # places partner logos across the bottom of the page
     def partner_strip(self, y, gap=6):
-        x = margin
+        x = MARGIN
         for path, height in self.theme.partners:
             with Image.open(path) as picture:
                 width = height * picture.width / picture.height
-            if x + width > page_width - margin:
+            if x + width > PAGE_WIDTH - MARGIN:
                 break
             self.image(str(path), x, y + (12 - height) / 2, h=height)
             x += width + gap

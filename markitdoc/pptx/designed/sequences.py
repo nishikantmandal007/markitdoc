@@ -7,23 +7,23 @@ from pptx.util import Pt
 
 from markitdoc.markup.inline import plain_text
 from markitdoc.pptx.deck import (
+    BODY_HEIGHT,
+    BODY_TOP,
+    CONTENT_WIDTH,
+    SIDE_MARGIN,
+    WHITE,
     add_badge,
     add_rect,
-    body_height,
-    body_top,
-    content_width,
-    side_margin,
     split_to_fit,
     tint,
-    white,
     write_text,
 )
-from markitdoc.pptx.designed.titles import draw_lead, fit_text, lead_room, max_per_slide, slide_titles
+from markitdoc.pptx.designed.titles import MAX_PER_SLIDE, draw_lead, fit_text, lead_room, slide_titles
 from markitdoc.visuals.gantt import gantt_plan, unit_name
 
-row_presets = ((24, 20), (22, 18), (20, 16), (18, 15), (16, 14))
-column_presets = ((22, 18), (20, 16), (18, 16), (16, 14))
-comparison_presets = ((22, 0), (20, 0), (18, 0), (16, 0), (14, 0))
+ROW_PRESETS = ((24, 20), (22, 18), (20, 16), (18, 15), (16, 14))
+COLUMN_PRESETS = ((22, 18), (20, 16), (18, 16), (16, 14))
+COMPARISON_PRESETS = ((22, 0), (20, 0), (18, 0), (16, 0), (14, 0))
 
 
 # returns the first sizing preset that fits the available height
@@ -39,7 +39,7 @@ def split_rows(deck, items, cap, height_of, presets, available):
 # measures the height needed for a group of keypoints
 def keypoint_height(deck, group, preset):
     head, text = preset
-    width = content_width - 1.6
+    width = CONTENT_WIDTH - 1.6
     return len(group) * (max(max(0.9, deck.text_height(item[0], width, head, "B") + 0.06 + deck.text_height(item[1], width, text) + 0.36)
                              for item in group) + 0.2)
 
@@ -47,30 +47,30 @@ def keypoint_height(deck, group, preset):
 # splits and draws key findings across slides
 def draw_keypoints(deck, block, image):
     slots = block.slots
-    room = body_height - lead_room(deck, slots.get("lead", ""))
+    room = BODY_HEIGHT - lead_room(deck, slots.get("lead", ""))
     titles = slide_titles(slots["title"])
     start = 0
-    for number, group in enumerate(split_rows(deck, block.items, max_per_slide["keypoints"], lambda g, p: keypoint_height(deck, g, p),
-                                              row_presets, room)):
+    for number, group in enumerate(split_rows(deck, block.items, MAX_PER_SLIDE["keypoints"], lambda g, p: keypoint_height(deck, g, p),
+                                              ROW_PRESETS, room)):
         slide = deck.new_slide(next(titles))
-        top = draw_lead(deck, slide, slots.get("lead", "") if number == 0 else "", body_top)
-        preset = fitting_preset(row_presets, lambda g, p: keypoint_height(deck, g, p), group, room) or row_presets[-1]
+        top = draw_lead(deck, slide, slots.get("lead", "") if number == 0 else "", BODY_TOP)
+        preset = fitting_preset(ROW_PRESETS, lambda g, p: keypoint_height(deck, g, p), group, room) or ROW_PRESETS[-1]
         head, text = preset
         top += max(0.0, room - keypoint_height(deck, group, preset)) * 0.3
-        width = content_width - 1.6
+        width = CONTENT_WIDTH - 1.6
         used = max(max(0.9, deck.text_height(item[0], width, head, "B") + 0.06 + deck.text_height(item[1], width, text) + 0.36) for item in group)
         for index, item in enumerate(group, start + 1):
-            add_rect(deck, slide, side_margin, top, content_width, used, "surface", "Point card")
-            add_badge(deck, slide, side_margin + 0.3, top + (used - 0.6) / 2, 0.6, str(index))
-            after = write_text(deck, slide, item[0], side_margin + 1.2, top + 0.18, width, head, "ink", bold=True, name="Heading")
-            write_text(deck, slide, item[1], side_margin + 1.2, top + 0.24 + after, width, text, "body", name="Detail")
+            add_rect(deck, slide, SIDE_MARGIN, top, CONTENT_WIDTH, used, "surface", "Point card")
+            add_badge(deck, slide, SIDE_MARGIN + 0.3, top + (used - 0.6) / 2, 0.6, str(index))
+            after = write_text(deck, slide, item[0], SIDE_MARGIN + 1.2, top + 0.18, width, head, "ink", bold=True, name="Heading")
+            write_text(deck, slide, item[1], SIDE_MARGIN + 1.2, top + 0.24 + after, width, text, "body", name="Detail")
             top += used + 0.2
         start += len(group)
 
 
 # measures the height needed for a horizontal process row
 def horizontal_height(deck, group, preset):
-    width = (content_width - 0.3 * (len(group) - 1)) / len(group)
+    width = (CONTENT_WIDTH - 0.3 * (len(group) - 1)) / len(group)
     return (1.0 + max(deck.text_height(item[0], width, preset[0], "B") for item in group) + 0.08
             + max(deck.text_height(item[-1], width, preset[1]) if item[-1] else 0 for item in group))
 
@@ -79,24 +79,24 @@ def horizontal_height(deck, group, preset):
 def draw_process(deck, block, image):
     slots = block.slots
     items = [item for item in block.items if item and item[0]]
-    room = body_height - lead_room(deck, slots.get("lead", ""))
+    room = BODY_HEIGHT - lead_room(deck, slots.get("lead", ""))
     titles = slide_titles(slots["title"])
     start = 0
     short = all(len(plain_text(item[0]).split()) <= 3 and len(plain_text(item[-1]).split()) <= 6 for item in items)
-    for number, group in enumerate(split_rows(deck, items, 8 if short else max_per_slide["process"], lambda g, p: horizontal_height(deck, g, p),
-                                              column_presets, room)):
+    for number, group in enumerate(split_rows(deck, items, 8 if short else MAX_PER_SLIDE["process"], lambda g, p: horizontal_height(deck, g, p),
+                                              COLUMN_PRESETS, room)):
         slide = deck.new_slide(next(titles))
-        top = draw_lead(deck, slide, slots.get("lead", "") if number == 0 else "", body_top)
-        preset = fitting_preset(column_presets, lambda g, p: horizontal_height(deck, g, p), group, room) or column_presets[-1]
+        top = draw_lead(deck, slide, slots.get("lead", "") if number == 0 else "", BODY_TOP)
+        preset = fitting_preset(COLUMN_PRESETS, lambda g, p: horizontal_height(deck, g, p), group, room) or COLUMN_PRESETS[-1]
         top += max(0.0, room - horizontal_height(deck, group, preset)) * 0.35
-        width = (content_width - 0.3 * (len(group) - 1)) / len(group)
+        width = (CONTENT_WIDTH - 0.3 * (len(group) - 1)) / len(group)
         heading_size = preset[0]
         while heading_size > 14 and any(deck.lines(word, width, heading_size, "B") > 1 for item in group for word in plain_text(item[0]).split()):
             heading_size -= 1
         preset = (heading_size, min(preset[1], heading_size))
         heading_room = max(deck.text_height(item[0], width, preset[0], "B") for item in group)
         for index, item in enumerate(group):
-            left = side_margin + index * (width + 0.3)
+            left = SIDE_MARGIN + index * (width + 0.3)
             chevron = add_rect(deck, slide, left, top, width + 0.22, 0.7, tint(deck, "mood", 0.5 * index / max(1, len(group) - 1)), "Step",
                                MSO_SHAPE.PENTAGON if index == 0 else MSO_SHAPE.CHEVRON)
             frame = chevron.text_frame
@@ -107,7 +107,7 @@ def draw_process(deck, block, image):
             run = paragraph.add_run()
             run.text = f"{start + index + 1:02d}"
             run.font.size, run.font.bold, run.font.name = Pt(20), True, deck.heading_font
-            run.font.color.rgb = deck.color(white)
+            run.font.color.rgb = deck.color(WHITE)
             write_text(deck, slide, item[0], left, top + 0.95, width, preset[0], "ink", bold=True, name="Step heading")
             if item[-1]:
                 write_text(deck, slide, item[-1], left, top + 0.95 + heading_room + 0.08, width, preset[1], "body", name="Step text")
@@ -119,12 +119,12 @@ def draw_gantt(deck, block, plan):
     slots = block.slots
     unit, first, last, periods = plan
     slide = deck.new_slide(slots["title"])
-    top = draw_lead(deck, slide, slots.get("lead", ""), body_top)
+    top = draw_lead(deck, slide, slots.get("lead", ""), BODY_TOP)
     label_width, columns = 3.6, last - first + 1
-    grid_left = side_margin + label_width + 0.2
-    column = (content_width - label_width - 0.2) / columns
+    grid_left = SIDE_MARGIN + label_width + 0.2
+    column = (CONTENT_WIDTH - label_width - 0.2) / columns
     header = 0.45
-    row = min(0.85, (body_top + body_height - top - header) / len(periods))
+    row = min(0.85, (BODY_TOP + BODY_HEIGHT - top - header) / len(periods))
     every = max(1, math.ceil(columns / 12))
     for index in range(columns):
         if index % every == 0:
@@ -134,9 +134,9 @@ def draw_gantt(deck, block, plan):
     for position, (item, found) in enumerate(zip(block.items, periods)):
         y = top + header + position * row
         if position % 2 == 0:
-            add_rect(deck, slide, side_margin, y, content_width, row, "surface", "Gantt band")
+            add_rect(deck, slide, SIDE_MARGIN, y, CONTENT_WIDTH, row, "surface", "Gantt band")
         size = 16 if deck.lines(item[1], label_width - 0.2, 16, "B") <= 2 else 14
-        write_text(deck, slide, item[1], side_margin + 0.15, y + (row - deck.text_height(item[1], label_width - 0.2, size, "B")) / 2,
+        write_text(deck, slide, item[1], SIDE_MARGIN + 0.15, y + (row - deck.text_height(item[1], label_width - 0.2, size, "B")) / 2,
                    label_width - 0.2, size, "ink", bold=True, name="Gantt task")
         bar = add_rect(deck, slide, grid_left + (found[1] - first) * column + 0.04, y + row * 0.22, (found[2] - found[1] + 1) * column - 0.08,
                        row * 0.56, "mood", "Gantt bar", MSO_SHAPE.ROUNDED_RECTANGLE)
@@ -154,31 +154,31 @@ def draw_timeline(deck, block, image):
     if plan:
         draw_gantt(deck, replace(block, items=tuple(items)), plan)
         return
-    room = body_height - lead_room(deck, slots.get("lead", ""))
+    room = BODY_HEIGHT - lead_room(deck, slots.get("lead", ""))
     titles = slide_titles(slots["title"])
 
     def height_of(group, preset):
-        width = (content_width - 0.3 * (len(group) - 1)) / len(group)
+        width = (CONTENT_WIDTH - 0.3 * (len(group) - 1)) / len(group)
         return (0.95 + max(deck.text_height(item[1], width, preset[0], "B") for item in group) + 0.08
                 + max(deck.text_height(item[-1], width, preset[1]) if len(item) > 2 and item[-1] else 0 for item in group))
 
-    for number, group in enumerate(split_rows(deck, items, max_per_slide["timeline"], height_of, column_presets, room)):
+    for number, group in enumerate(split_rows(deck, items, MAX_PER_SLIDE["timeline"], height_of, COLUMN_PRESETS, room)):
         slide = deck.new_slide(next(titles))
-        top = draw_lead(deck, slide, slots.get("lead", "") if number == 0 else "", body_top)
-        preset = fitting_preset(column_presets, height_of, group, room) or column_presets[-1]
+        top = draw_lead(deck, slide, slots.get("lead", "") if number == 0 else "", BODY_TOP)
+        preset = fitting_preset(COLUMN_PRESETS, height_of, group, room) or COLUMN_PRESETS[-1]
         top += max(0.0, room - height_of(group, preset)) * 0.35
-        width = (content_width - 0.3 * (len(group) - 1)) / len(group)
+        width = (CONTENT_WIDTH - 0.3 * (len(group) - 1)) / len(group)
         heading_room = max(deck.text_height(item[1], width, preset[0], "B") for item in group)
-        add_rect(deck, slide, side_margin, top + 0.63, content_width, 0.04, tint(deck, "mood", 0.6), "Axis")
+        add_rect(deck, slide, SIDE_MARGIN, top + 0.63, CONTENT_WIDTH, 0.04, tint(deck, "mood", 0.6), "Axis")
         for index, item in enumerate(group):
-            left = side_margin + index * (width + 0.3)
+            left = SIDE_MARGIN + index * (width + 0.3)
             pill = add_rect(deck, slide, left, top, min(width, 0.4 + len(item[0]) * 0.12), 0.42, "mood", "When", MSO_SHAPE.ROUNDED_RECTANGLE)
             pill.text_frame.margin_top = pill.text_frame.margin_bottom = 0
             pill.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
             run = pill.text_frame.paragraphs[0].add_run()
             run.text = plain_text(item[0])
             run.font.size, run.font.bold, run.font.name = Pt(14), True, deck.body_font
-            run.font.color.rgb = deck.color(white)
+            run.font.color.rgb = deck.color(WHITE)
             add_rect(deck, slide, left + 0.12, top + 0.55, 0.2, 0.2, "mood", "Marker", MSO_SHAPE.OVAL)
             write_text(deck, slide, item[1], left, top + 0.95, width, preset[0], "ink", bold=True, name="Event")
             if len(item) > 2 and item[-1]:
@@ -188,17 +188,17 @@ def draw_timeline(deck, block, image):
 # draws two comparison columns across one or more slides
 def draw_comparison(deck, block, image):
     slots = block.slots
-    column = (content_width - 0.4) / 2
+    column = (CONTENT_WIDTH - 0.4) / 2
     takeaway = slots.get("takeaway", "")
-    band = deck.text_height(takeaway, content_width - 0.6, 18, "B") + 0.4 if takeaway else 0
+    band = deck.text_height(takeaway, CONTENT_WIDTH - 0.6, 18, "B") + 0.4 if takeaway else 0
     inner = column - 0.6
-    base = body_height - 1.1
+    base = BODY_HEIGHT - 1.1
 
     def height_of(group, preset):
         return sum(max(deck.text_height(item[0], inner, preset[0]), deck.text_height(item[1], inner, preset[0])) + 0.14 for item in group)
 
     def fits(group, room):
-        return len(group) <= max_per_slide["comparison"] and fitting_preset(comparison_presets, height_of, group, room) is not None
+        return len(group) <= MAX_PER_SLIDE["comparison"] and fitting_preset(COMPARISON_PRESETS, height_of, group, room) is not None
 
     def room_for(position, count, lead_space):
         return base - (lead_space if position == 0 else 0) - (band + 0.2 if band and position == count - 1 else 0)
@@ -222,25 +222,25 @@ def draw_comparison(deck, block, image):
     titles = slide_titles(slots["title"])
     for number, group in enumerate(groups):
         slide = deck.new_slide(next(titles))
-        top = draw_lead(deck, slide, lead if number == 0 else "", body_top)
-        size = (fitting_preset(comparison_presets, height_of, group, room_for(number, len(groups), lead_space)) or comparison_presets[-1])[0]
+        top = draw_lead(deck, slide, lead if number == 0 else "", BODY_TOP)
+        size = (fitting_preset(COMPARISON_PRESETS, height_of, group, room_for(number, len(groups), lead_space)) or COMPARISON_PRESETS[-1])[0]
         rows = height_of(group, (size,))
         for side, heading in enumerate((slots["left"], slots["right"])):
-            left = side_margin + side * (column + 0.4)
+            left = SIDE_MARGIN + side * (column + 0.4)
             add_rect(deck, slide, left, top, column, 0.95 + rows + 0.15, "surface", "Column card")
             add_rect(deck, slide, left, top, column, 0.7, "night" if side == 0 else "mood", "Column header")
             heading_size = 20 if deck.lines(heading, inner, 20, "B") == 1 else 16
-            write_text(deck, slide, heading, left + 0.3, top + 0.35 - heading_size * 0.6 / 72, inner, heading_size, white, heading=True,
+            write_text(deck, slide, heading, left + 0.3, top + 0.35 - heading_size * 0.6 / 72, inner, heading_size, WHITE, heading=True,
                        name="Column heading")
         top += 0.95
         for item in group:
             used = max(deck.text_height(item[0], inner, size), deck.text_height(item[1], inner, size))
             for side in (0, 1):
-                write_text(deck, slide, item[side], side_margin + side * (column + 0.4) + 0.3, top, inner, size, "body", name="Comparison text")
+                write_text(deck, slide, item[side], SIDE_MARGIN + side * (column + 0.4) + 0.3, top, inner, size, "body", name="Comparison text")
             top += used + 0.14
         if takeaway and number == len(groups) - 1:
-            add_rect(deck, slide, side_margin, body_top + body_height - band, content_width, band, "surface", "Takeaway band")
-            write_text(deck, slide, takeaway, side_margin + 0.3, body_top + body_height - band + 0.2, content_width - 0.6, 18, "ink", bold=True,
+            add_rect(deck, slide, SIDE_MARGIN, BODY_TOP + BODY_HEIGHT - band, CONTENT_WIDTH, band, "surface", "Takeaway band")
+            write_text(deck, slide, takeaway, SIDE_MARGIN + 0.3, BODY_TOP + BODY_HEIGHT - band + 0.2, CONTENT_WIDTH - 0.6, 18, "ink", bold=True,
                        name="Takeaway")
 
 
@@ -248,11 +248,11 @@ def draw_comparison(deck, block, image):
 def draw_matrix(deck, block, image):
     slots = block.slots
     slide = deck.new_slide(slots["title"])
-    top = draw_lead(deck, slide, slots.get("lead", ""), body_top)
+    top = draw_lead(deck, slide, slots.get("lead", ""), BODY_TOP)
     gap = 0.3
-    width, height = (content_width - gap) / 2, (body_top + body_height - top - gap) / 2
+    width, height = (CONTENT_WIDTH - gap) / 2, (BODY_TOP + BODY_HEIGHT - top - gap) / 2
     for index, item in enumerate(block.items[:4]):
-        left, cell_top = side_margin + (index % 2) * (width + gap), top + (index // 2) * (height + gap)
+        left, cell_top = SIDE_MARGIN + (index % 2) * (width + gap), top + (index // 2) * (height + gap)
         add_rect(deck, slide, left, cell_top, width, height, tint(deck, "mood", (0.86, 0.92, 0.92, 0.96)[index]), "Quadrant")
         add_rect(deck, slide, left, cell_top, 0.07, height, "mood", "Quadrant accent")
         inner = width - 0.6

@@ -3,8 +3,8 @@ import re
 
 from markitdoc.markup.inline import plain_text
 
-month_numbers = {name.lower(): number for number, name in enumerate(calendar.month_abbr) if name}
-range_split = re.compile(r"\s*(?:–|—|-|\bto\b)\s*")
+MONTH_NUMBERS = {name.lower(): number for number, name in enumerate(calendar.month_abbr) if name}
+RANGE_SPLIT = re.compile(r"\s*(?:–|—|-|\bto\b)\s*")
 
 
 # parses a quarter, month, or year and resolves its year
@@ -14,8 +14,8 @@ def moment(text, year):
     if found:
         return "quarter", int(found.group(1)) - 1, full_year(found.group(2), year)
     found = re.fullmatch(r"(?i)([a-z]{3})[a-z]*\.?\s*'?(\d{2}|\d{4})?", text)
-    if found and found.group(1).lower() in month_numbers:
-        return "month", month_numbers[found.group(1).lower()] - 1, full_year(found.group(2), year)
+    if found and found.group(1).lower() in MONTH_NUMBERS:
+        return "month", MONTH_NUMBERS[found.group(1).lower()] - 1, full_year(found.group(2), year)
     found = re.fullmatch(r"(\d{4})", text)
     return ("year", 0, int(found.group(1))) if found else None
 
@@ -29,7 +29,7 @@ def full_year(text, year):
 
 # parses a date range into comparable calendar periods
 def period(text):
-    parts = [part for part in range_split.split(plain_text(text).strip()) if part]
+    parts = [part for part in RANGE_SPLIT.split(plain_text(text).strip()) if part]
     if not 1 <= len(parts) <= 2:
         return None
     end = moment(parts[-1], None)

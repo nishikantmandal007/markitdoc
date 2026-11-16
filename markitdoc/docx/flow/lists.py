@@ -2,7 +2,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
-from markitdoc.docx.writer import bullet_marks, list_formats, write_runs
+from markitdoc.docx.writer import BULLET_MARKS, LIST_FORMATS, write_runs
 
 
 # creates or reuses the numbering definition for a list style
@@ -34,9 +34,9 @@ def list_level(writer, level, ordered, scheme):
     item = OxmlElement("w:lvl")
     item.set(qn("w:ilvl"), str(level))
     values = [("w:start", "1"),
-              ("w:numFmt", list_formats[scheme] if ordered else "bullet"),
+              ("w:numFmt", LIST_FORMATS[scheme] if ordered else "bullet"),
               ("w:lvlText", (".".join(f"%{depth + 1}" for depth in range(level + 1)) + "." if scheme == "legal" else f"%{level + 1}.")
-               if ordered else bullet_marks[level % 3]),
+               if ordered else BULLET_MARKS[level % 3]),
               ("w:lvlJc", "left")]
     for name, value in values:
         element = OxmlElement(name)

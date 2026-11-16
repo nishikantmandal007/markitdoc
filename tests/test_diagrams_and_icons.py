@@ -10,7 +10,7 @@ from PIL import Image
 from markitdoc.themes.themes import load_theme
 from markitdoc.visuals import diagrams as document_diagrams
 from markitdoc.visuals.diagrams import diagram_as_text, problems_in_diagram, render_diagram
-from markitdoc.visuals.icons import icon_names, icon_svg, strip_icon
+from markitdoc.visuals.icons import ICON_NAMES, icon_svg, strip_icon
 
 
 def text_of(path):
@@ -67,7 +67,7 @@ class TestDiagrams:
     def test_should_cache_a_rendered_diagram(self, monkeypatch, tmp_path):
         calls = []
         monkeypatch.setenv("GOTENBERG_ENDPOINT", "http://renderer.test")
-        monkeypatch.setattr(document_diagrams, "diagram_folder", tmp_path)
+        monkeypatch.setattr(document_diagrams, "DIAGRAM_FOLDER", tmp_path)
         monkeypatch.setattr(document_diagrams.requests, "post", lambda *args, **kwargs: calls.append(kwargs) or FakeResponse())
         theme = load_theme(None)
 
@@ -81,7 +81,7 @@ class TestDiagrams:
         blank = io.BytesIO()
         Image.new("RGB", (100, 100), (255, 255, 255)).save(blank, "PNG")
         monkeypatch.setenv("GOTENBERG_ENDPOINT", "http://renderer.test")
-        monkeypatch.setattr(document_diagrams, "diagram_folder", tmp_path)
+        monkeypatch.setattr(document_diagrams, "DIAGRAM_FOLDER", tmp_path)
         monkeypatch.setattr(document_diagrams.requests, "post",
                             lambda *args, **kwargs: type("Blank", (), {"status_code": 200, "content": blank.getvalue()})())
 
@@ -98,7 +98,7 @@ class TestDiagrams:
 
     def test_should_place_a_rendered_diagram_as_a_picture(self, monkeypatch, tmp_path):
         monkeypatch.setenv("GOTENBERG_ENDPOINT", "http://renderer.test")
-        monkeypatch.setattr(document_diagrams, "diagram_folder", tmp_path / "diagrams")
+        monkeypatch.setattr(document_diagrams, "DIAGRAM_FOLDER", tmp_path / "diagrams")
         monkeypatch.setattr(document_diagrams.requests, "post", lambda *args, **kwargs: FakeResponse())
         markdown = "# Sign in\n\n```mermaid\nflowchart LR\n  A[Login] --> B[Validate token]\n```\n"
 
@@ -112,7 +112,7 @@ class TestDiagrams:
         endpoint = os.getenv("GOTENBERG_ENDPOINT")
         if not endpoint or not reachable(endpoint):
             pytest.skip("Gotenberg is not running")
-        monkeypatch.setattr(document_diagrams, "diagram_folder", tmp_path)
+        monkeypatch.setattr(document_diagrams, "DIAGRAM_FOLDER", tmp_path)
 
         path = render_diagram("flowchart LR\n  A[Login] --> B{Token valid?}\n  B -->|Yes| C[Dashboard]", load_theme(None, "forest"))
 
@@ -126,7 +126,7 @@ class TestIcons:
     def test_should_colour_a_known_icon_and_refuse_unknown_names(self):
         svg = icon_svg("shield", (255, 0, 16))
 
-        assert len(icon_names) >= 100 and list(icon_names) == sorted(icon_names)
+        assert len(ICON_NAMES) >= 100 and list(ICON_NAMES) == sorted(ICON_NAMES)
         assert svg.startswith(b"<svg ") and b'stroke="#ff0010"' in svg and b"currentColor" not in svg and b"license" not in svg
         assert icon_svg("no-such-icon", (0, 0, 0)) is None
 
@@ -184,7 +184,7 @@ Partner — Share the work.
 
 class TestCompleteness:
     def test_should_ship_the_whole_icon_set_and_resolve_old_names(self):
-        assert len(icon_names) > 1500
+        assert len(ICON_NAMES) > 1500
         assert strip_icon(":alert-triangle: Risk") == ("triangle-alert", "Risk")
         assert strip_icon(":check-circle: Done")[0] == "circle-check-big"
         assert icon_svg("help-circle", (0, 0, 0)) is not None
@@ -192,7 +192,7 @@ class TestCompleteness:
     def test_should_caption_a_titled_diagram_without_sending_the_title_to_mermaid(self, monkeypatch, tmp_path):
         sent = []
         monkeypatch.setenv("GOTENBERG_ENDPOINT", "http://renderer.test")
-        monkeypatch.setattr(document_diagrams, "diagram_folder", tmp_path / "diagrams")
+        monkeypatch.setattr(document_diagrams, "DIAGRAM_FOLDER", tmp_path / "diagrams")
         monkeypatch.setattr(document_diagrams.requests, "post", lambda *args, **kwargs: sent.append(kwargs) or FakeResponse())
         markdown = "# Sign in\n\n```mermaid\nflowchart LR\n  title Sign-in path\n  A[Login] --> B[Validate token]\n```\n"
 

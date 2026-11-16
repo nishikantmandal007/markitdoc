@@ -5,14 +5,14 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
-from markitdoc.docx.render import document_photo_ratios, render_docx
+from markitdoc.docx.render import DOCUMENT_PHOTO_RATIOS, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
-from markitdoc.models.catalogue import layouts
+from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
 from markitdoc.pdf.checks import page_problems
 from markitdoc.pdf.render import render_pdf
-from markitdoc.pptx.render import render_pptx, slide_photo_ratios
+from markitdoc.pptx.render import SLIDE_PHOTO_RATIOS, render_pptx
 from markitdoc.themes.themes import theme_for
 from markitdoc.visuals.images import find_images
 
@@ -26,7 +26,7 @@ TRUE_WORDS = ("true", "yes", "on", True)
 def images_for(document, require_images, ratio_of=None):
     if not require_images:
         return {}, ()
-    ratio_of = ratio_of or {name: layout.image_ratio for name, layout in layouts.items()}
+    ratio_of = ratio_of or {name: layout.image_ratio for name, layout in LAYOUTS.items()}
     wanted = {index: block.slots["image"] for index, block in enumerate(document.blocks)
               if block.slots.get("image") and ratio_of.get(block.layout)}
     ratios = {index: ratio_of[document.blocks[index].layout] for index in wanted}
@@ -76,7 +76,7 @@ def render_laid_out_pdf(document, output_path, template):
 def render_laid_out_pptx(document, output_path, template, author):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
-    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, slide_photo_ratios)
+    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, SLIDE_PHOTO_RATIOS)
     render_pptx(document, theme, output_path, images, author)
     logger.info("Rendered PPTX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)
@@ -87,7 +87,7 @@ def render_laid_out_pptx(document, output_path, template, author):
 def render_laid_out_docx(document, output_path, template, author):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
-    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, document_photo_ratios)
+    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
     render_docx(document, theme, output_path, images, author)
     logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)

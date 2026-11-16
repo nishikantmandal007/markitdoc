@@ -1,12 +1,12 @@
-from markitdoc.pdf.pages import white
+from markitdoc.pdf.pages import WHITE
 from markitdoc.visuals.photo_fit import fitted_image
 
-measuring_photo = "measuring photo"
+MEASURING_PHOTO = "measuring photo"
 
 
 # places a cropped photo on the PDF page and adds its credit when available
 def placed(pdf, image, x, y, width, height, work_folder, fades=(), description="Photograph"):
-    if image == measuring_photo:
+    if image == MEASURING_PHOTO:
         return
     pdf.image(fitted_image(image, width, height, work_folder, fades, pdf.photos, pdf.theme), x, y, width, height,
               alt_text=description)
@@ -23,6 +23,6 @@ def credit_on_photo(pdf, x, y, width, height, credit, source):
     with pdf.local_context(fill_opacity=0.45):
         pdf.set_fill_color(0, 0, 0)
         pdf.rect(left, top, text_width, 4.2, "F")
-    pdf.set_text_color(*white)
+    pdf.set_text_color(*WHITE)
     pdf.set_xy(left + 1.5, top + 0.6)
     pdf.cell(text_width - 3, 3, text, link=source)

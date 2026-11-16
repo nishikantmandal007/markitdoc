@@ -5,18 +5,18 @@ import re
 from markitdoc.markup.inline import plain_text
 from markitdoc.visuals.charts import parse_chart_fence
 
-numeric_cell = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
-callout_kinds = ("Note", "Action", "Risk", "Key figure")
-table_styles = ("lined", "striped", "boxed")
-chart_sizes = {"full": 1.0, "wide": 1.0, "half": 0.75}
-totals_row = re.compile(r"^\W*(grand total|totals?|sum|gesamt|summe|insgesamt|total général)\b", re.I)
-paragraph_alignments = {"center": "C", "right": "R", "justify": "J"}
-span_colors = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
-bullet_markers = ("•", "–", "◦")
-signed_number = re.compile(r"^\s*([+\-−])\s?[$€£]?\d[\d.,]*\s?(%|pts?|bps|[kKmMbB])?\s*$")
-rating_words = {"none": 0, "low": 1, "minimal": 1, "medium": 2, "moderate": 2, "partial": 2, "high": 3, "strong": 3, "very high": 4,
+NUMERIC_CELL = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
+CALLOUT_KINDS = ("Note", "Action", "Risk", "Key figure")
+TABLE_STYLES = ("lined", "striped", "boxed")
+CHART_SIZES = {"full": 1.0, "wide": 1.0, "half": 0.75}
+TOTALS_ROW = re.compile(r"^\W*(grand total|totals?|sum|gesamt|summe|insgesamt|total général)\b", re.I)
+PARAGRAPH_ALIGNMENTS = {"center": "C", "right": "R", "justify": "J"}
+SPAN_COLORS = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
+BULLET_MARKERS = ("•", "–", "◦")
+SIGNED_NUMBER = re.compile(r"^\s*([+\-−])\s?[$€£]?\d[\d.,]*\s?(%|pts?|bps|[kKmMbB])?\s*$")
+RATING_WORDS = {"none": 0, "low": 1, "minimal": 1, "medium": 2, "moderate": 2, "partial": 2, "high": 3, "strong": 3, "very high": 4,
                 "full": 4, "complete": 4}
-table_marks = {**{word: ("✓", "success") for word in ("yes", "✓", "✔", "supported", "included", "true")},
+TABLE_MARKS = {**{word: ("✓", "success") for word in ("yes", "✓", "✔", "supported", "included", "true")},
                **{word: ("✕", "danger") for word in ("no", "✕", "✗", "x", "not supported", "none", "false", "not included")}}
 
 
@@ -30,8 +30,8 @@ def roman(number):
     return result
 
 
-numbering_schemes = (str, lambda number: chr(96 + (number - 1) % 26 + 1), roman)
-list_schemes = {"decimal": str, "alpha": numbering_schemes[1], "upper-alpha": lambda number: numbering_schemes[1](number).upper(),
+NUMBERING_SCHEMES = (str, lambda number: chr(96 + (number - 1) % 26 + 1), roman)
+LIST_SCHEMES = {"decimal": str, "alpha": NUMBERING_SCHEMES[1], "upper-alpha": lambda number: NUMBERING_SCHEMES[1](number).upper(),
                 "roman": roman, "upper-roman": lambda number: roman(number).upper(), "legal": str}
 
 
@@ -122,4 +122,4 @@ def chart_data(content):
 def rating_level(source):
     text = plain_text(source).strip().lower()
     found = re.fullmatch(r"([0-4])\s*/\s*4", text)
-    return int(found.group(1)) if found else rating_words.get(text)
+    return int(found.group(1)) if found else RATING_WORDS.get(text)

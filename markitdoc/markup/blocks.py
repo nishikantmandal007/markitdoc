@@ -2,31 +2,31 @@ import logging
 import re
 from dataclasses import replace
 
-from markitdoc.models.catalogue import icon_layouts, layouts
+from markitdoc.models.catalogue import ICON_LAYOUTS, LAYOUTS
 from markitdoc.models.document import Block
 from markitdoc.themes.themes import Theme
 from markitdoc.visuals.icons import strip_icon
 
 logger = logging.getLogger(__name__)
 
-paragraph_break = "||"
-leading_number = re.compile(r"^\s*(step\s+)?\d+\s*[.):-]\s*", re.IGNORECASE)
+PARAGRAPH_BREAK = "||"
+LEADING_NUMBER = re.compile(r"^\s*(step\s+)?\d+\s*[.):-]\s*", re.IGNORECASE)
 
 
 # splits a block slot into the text pieces used for fitting
 def slot_pieces(block, slot):
     text = block.slots.get(slot, "")
-    return paragraphs(text) if block.layout == "chapter" and slot == "body" else [text.replace(paragraph_break, "\n")]
+    return paragraphs(text) if block.layout == "chapter" and slot == "body" else [text.replace(PARAGRAPH_BREAK, "\n")]
 
 
 # splits text into non-empty paragraphs
 def paragraphs(text):
-    return [part.strip() for part in text.split(paragraph_break) if part.strip()]
+    return [part.strip() for part in text.split(PARAGRAPH_BREAK) if part.strip()]
 
 
 # fills layout aliases and defaults into a document block
 def prepared(block: Block) -> Block:
-    layout = layouts.get(block.layout)
+    layout = LAYOUTS.get(block.layout)
     if not layout:
         return block
     slots = dict(block.slots)
@@ -43,14 +43,14 @@ def prepared(block: Block) -> Block:
     if parts:
         items = tuple(item[:parts - 1] + (" — ".join(item[parts - 1:]),) if len(item) > parts else item + ("",) * (parts - len(item))
                       for item in items)
-    if block.layout not in icon_layouts:
+    if block.layout not in ICON_LAYOUTS:
         items = tuple((strip_icon(item[0])[1],) + item[1:] if item else item for item in items)
     if block.layout == "process":
-        items = tuple((icon_kept(item[0], lambda name: leading_number.sub("", name)),) + item[1:] for item in items)
+        items = tuple((icon_kept(item[0], lambda name: LEADING_NUMBER.sub("", name)),) + item[1:] for item in items)
     if block.layout == "chapter" and len(paragraphs(slots.get("body", ""))) > 2:
         parts = paragraphs(slots["body"])
         half = (len(parts) + 1) // 2
-        slots["body"] = "\n\n".join(parts[:half]) + f" {paragraph_break} " + "\n\n".join(parts[half:])
+        slots["body"] = "\n\n".join(parts[:half]) + f" {PARAGRAPH_BREAK} " + "\n\n".join(parts[half:])
     return replace(block, slots=slots, items=items)
 
 
@@ -67,7 +67,7 @@ def cell(text):
 
 # checks whether a block uses a dark layout variant
 def is_dark(block: Block, theme: Theme) -> bool:
-    layout = layouts.get(block.layout)
+    layout = LAYOUTS.get(block.layout)
     if not layout or not layout.dark_variants:
         return False
     variant = block.slots.get("variant") or (theme.cover if block.layout == "cover" else layout.variants[0])

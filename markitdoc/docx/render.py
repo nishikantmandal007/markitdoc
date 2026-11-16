@@ -12,6 +12,7 @@ from markitdoc.docx.flow.render import add_callout, add_notes, render_markdown
 from markitdoc.docx.flow.tables import step_table
 from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
 from markitdoc.docx.writer import (
+    WHITE,
     Writer,
     add_field,
     add_picture,
@@ -24,7 +25,6 @@ from markitdoc.docx.writer import (
     setup_chrome,
     stamp_properties,
     start_on_new_page,
-    white,
     write_runs,
 )
 from markitdoc.markup.blocks import paragraphs, prepared
@@ -36,8 +36,8 @@ from markitdoc.utils.helpers import creation_date, long_date
 from markitdoc.visuals.gantt import gantt_plan, unit_name
 
 logger = logging.getLogger(__name__)
-section_level = {"divider": 1, "chapter": 1, "summary": 1, "closing": 1}
-document_photo_ratios = {"cover": 16 / 9, "chapter": 16 / 9, "feature": 16 / 9}
+SECTION_LEVEL = {"divider": 1, "chapter": 1, "summary": 1, "closing": 1}
+DOCUMENT_PHOTO_RATIOS = {"cover": 16 / 9, "chapter": 16 / 9, "feature": 16 / 9}
 
 
 # converts inline source text into styled runs
@@ -60,7 +60,7 @@ def heading(writer, block, default="", kicker=""):
         return
     if kicker:
         text_paragraph(writer, kicker.upper(), "Kicker")
-    paragraph = writer.body.add_paragraph(style=f"Heading {section_level.get(block.layout, 2)}")
+    paragraph = writer.body.add_paragraph(style=f"Heading {SECTION_LEVEL.get(block.layout, 2)}")
     start_on_new_page(writer, paragraph)
     write_runs(writer, paragraph, runs_of(writer, title))
 
@@ -141,10 +141,10 @@ def figure_cells(writer, items, dark_first=True):
         cell_borders(cell, top=(writer.hex("mood"), 24))
         cell_margins(cell, 0.3, 0.3, 0.3)
         value = first_paragraph(cell)
-        plain(writer, value, item[0], 26 if len(item[0]) <= 8 else 20, white if dark else "mood", bold=True, font=writer.heading_font)
+        plain(writer, value, item[0], 26 if len(item[0]) <= 8 else 20, WHITE if dark else "mood", bold=True, font=writer.heading_font)
         label = cell.add_paragraph()
         label.paragraph_format.space_after = Pt(2)
-        write_runs(writer, label, runs_of(writer, item[1] if len(item) > 1 else ""), 10.5, white if dark else "ink", bold=True)
+        write_runs(writer, label, runs_of(writer, item[1] if len(item) > 1 else ""), 10.5, WHITE if dark else "ink", bold=True)
         if len(item) > 2 and item[2]:
             note = cell.add_paragraph()
             note.paragraph_format.space_after = Pt(0)
@@ -289,7 +289,7 @@ def draw_comparison(writer, block, image):
         cell = table.cell(0, column)
         cell_fill(cell, writer.hex(role))
         cell_margins(cell, 0.18, 0.25, 0.18)
-        write_runs(writer, first_paragraph(cell), runs_of(writer, title), 12, white, bold=True)
+        write_runs(writer, first_paragraph(cell), runs_of(writer, title), 12, WHITE, bold=True)
     for row, item in enumerate(block.items, 1):
         for column in range(2):
             cell = table.cell(row, column)
@@ -349,7 +349,7 @@ def draw_closing(writer, block, image):
     body(writer, block)
 
 
-drawers = {"cover": draw_cover, "summary": draw_summary, "figures": draw_figures, "divider": draw_divider, "chapter": draw_chapter,
+DRAWERS = {"cover": draw_cover, "summary": draw_summary, "figures": draw_figures, "divider": draw_divider, "chapter": draw_chapter,
            "keypoints": draw_keypoints, "process": draw_process, "timeline": draw_timeline, "comparison": draw_comparison,
            "matrix": draw_matrix, "quote": draw_quote, "feature": draw_feature, "closing": draw_closing}
 
@@ -407,8 +407,8 @@ def render_docx(document: Document, theme: Theme, output_path: Path, images=None
             try:
                 if block.layout == "flow":
                     render_markdown(writer, block.body)
-                elif block.layout in drawers:
-                    drawers[block.layout](writer, block, writer.photos_by_block.get(index))
+                elif block.layout in DRAWERS:
+                    DRAWERS[block.layout](writer, block, writer.photos_by_block.get(index))
                     if block.body.strip():
                         render_markdown(writer, block.body)
             except Exception:

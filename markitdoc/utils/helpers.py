@@ -2,8 +2,8 @@ import os
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
-fonts_by_file = {"PTSerif": "Georgia"}
-sans_font, mono_font = "Calibri", "Consolas"
+FONTS_BY_FILE = {"PTSerif": "Georgia"}
+SANS_FONT, MONO_FONT = "Calibri", "Consolas"
 
 
 # lightens a color toward white by the requested share
@@ -35,4 +35,4 @@ def creation_date(written):
 
 # maps a font file path to a font name supported by Office
 def office_font(path):
-    return next((font for stem, font in fonts_by_file.items() if stem in Path(path).name), sans_font)
+    return next((font for stem, font in FONTS_BY_FILE.items() if stem in Path(path).name), SANS_FONT)

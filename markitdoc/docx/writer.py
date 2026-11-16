@@ -11,7 +11,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-from markitdoc.docx.styles import border_bottom, page_height, page_width, setup_page, setup_styles, side_margin, text_width
+from markitdoc.docx.styles import PAGE_HEIGHT, PAGE_WIDTH, SIDE_MARGIN, TEXT_WIDTH, border_bottom, setup_page, setup_styles
 from markitdoc.markup.inline import Run
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
@@ -19,9 +19,9 @@ from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.utils.helpers import lifted, long_date, office_font
 from markitdoc.visuals.photo_fit import fitted_image
 
-white = (255, 255, 255)
-bullet_marks = ("•", "–", "◦")
-list_formats = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "upperLetter", "roman": "lowerRoman", "upper-roman": "upperRoman",
+WHITE = (255, 255, 255)
+BULLET_MARKS = ("•", "–", "◦")
+LIST_FORMATS = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "upperLetter", "roman": "lowerRoman", "upper-roman": "upperRoman",
                 "legal": "decimal"}
 
 
@@ -42,7 +42,7 @@ class Writer:
         self.bookmark_id = 0
         self.titled = self.started = self.break_next = False
         self.pending_caption = self.skip_title = ""
-        self.body, self.width = self.document, text_width
+        self.body, self.width = self.document, TEXT_WIDTH
         setup_page(self)
         setup_styles(self)
 
@@ -237,10 +237,10 @@ def page_break(writer):
 def landscape_section(writer, wide):
     section = writer.document.add_section(WD_SECTION.NEW_PAGE)
     section.orientation = WD_ORIENT.LANDSCAPE if wide else WD_ORIENT.PORTRAIT
-    width, height = (page_height, page_width) if wide else (page_width, page_height)
+    width, height = (PAGE_HEIGHT, PAGE_WIDTH) if wide else (PAGE_WIDTH, PAGE_HEIGHT)
     section.page_width, section.page_height = Cm(width), Cm(height)
-    section.left_margin = section.right_margin = Cm(side_margin)
-    return (width - 2 * side_margin) if wide else text_width
+    section.left_margin = section.right_margin = Cm(SIDE_MARGIN)
+    return (width - 2 * SIDE_MARGIN) if wide else TEXT_WIDTH
 
 
 # sets up the themed header and footer for Word pages

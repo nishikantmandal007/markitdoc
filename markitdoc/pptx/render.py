@@ -19,28 +19,28 @@ from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.utils.helpers import creation_date
 
 logger = logging.getLogger(__name__)
-required_slots = {"cover": "title", "summary": "title", "divider": "title", "chapter": "title", "figures": "title", "keypoints": "title",
+REQUIRED_SLOTS = {"cover": "title", "summary": "title", "divider": "title", "chapter": "title", "figures": "title", "keypoints": "title",
                   "matrix": "title", "quote": "quote", "comparison": "title", "process": "title", "timeline": "title", "feature": "title",
                   "closing": "title"}
-needs_items = {"figures": 1, "keypoints": 1, "matrix": 4, "comparison": 1, "process": 1, "timeline": 1}
-slide_photo_ratios = {"cover": 16 / 9, "divider": 16 / 9, "quote": 16 / 9, "closing": 16 / 9, "chapter": 8 / 9, "feature": 8 / 9}
+NEEDS_ITEMS = {"figures": 1, "keypoints": 1, "matrix": 4, "comparison": 1, "process": 1, "timeline": 1}
+SLIDE_PHOTO_RATIOS = {"cover": 16 / 9, "divider": 16 / 9, "quote": 16 / 9, "closing": 16 / 9, "chapter": 8 / 9, "feature": 8 / 9}
 
 
-drawers = {"cover": draw_cover, "divider": draw_divider, "quote": draw_quote, "closing": draw_closing, "summary": draw_summary,
+DRAWERS = {"cover": draw_cover, "divider": draw_divider, "quote": draw_quote, "closing": draw_closing, "summary": draw_summary,
            "figures": draw_figures, "keypoints": draw_keypoints, "process": draw_process, "timeline": draw_timeline,
            "comparison": draw_comparison, "matrix": draw_matrix, "chapter": draw_chapter, "feature": draw_feature}
 
 
 # checks whether a block has enough content to render
 def drawable(block):
-    slot = required_slots.get(block.layout)
-    return (slot is not None and bool(block.slots.get(slot)) and len([item for item in block.items if item and item[0]]) >= needs_items.get(block.layout, 0)
+    slot = REQUIRED_SLOTS.get(block.layout)
+    return (slot is not None and bool(block.slots.get(slot)) and len([item for item in block.items if item and item[0]]) >= NEEDS_ITEMS.get(block.layout, 0)
             and (block.layout != "comparison" or bool(block.slots.get("left") and block.slots.get("right"))))
 
 
 # dispatches designed blocks to their PowerPoint renderers
 def draw_designed(deck, block, image=None):
-    drawers[block.layout](deck, block, image)
+    DRAWERS[block.layout](deck, block, image)
 
 
 # dispatches a designed block to its PowerPoint slide renderer
@@ -50,7 +50,7 @@ def draw_block(deck, index, block):
         if block.layout == "flow":
             draw_flow(deck, block.body, draw_designed)
         elif drawable(block):
-            drawers[block.layout](deck, block, deck.photos_by_block.get(index))
+            DRAWERS[block.layout](deck, block, deck.photos_by_block.get(index))
         else:
             logger.warning("Slide block %d (%s) is incomplete, shown as plain slides", index + 1, block.layout)
             draw_flow(deck, as_flow(block).body, draw_designed)
