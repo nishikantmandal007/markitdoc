@@ -30,7 +30,9 @@ from markitdoc.docx.writer import (
 )
 from markitdoc.markup.blocks import paragraphs, prepared
 from markitdoc.markup.inline import inline_runs, parser, plain_text
+from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.document import Document
+from markitdoc.models.model_constants import PAGE_SWITCH
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import creation_date, long_date
@@ -387,7 +389,7 @@ def fill_contents(writer, title, marker):
 
 
 # renders a document as an editable Word file
-def render_docx(document: Document, theme: Theme, output_path: Path, images=None, user_email="", styles=None):
+def render_docx(document: Document, theme: Theme, output_path: Path, images=None, user_email="", styles=None, numbering=None):
     started = time.perf_counter()
     images = images or {}
     blocks = [prepared(block) for block in document.blocks]
@@ -395,7 +397,9 @@ def render_docx(document: Document, theme: Theme, output_path: Path, images=None
     title = (first.slots.get("title") if first is not None else "") or next(
         (line.lstrip("# ").strip() for block in blocks for line in block.body.splitlines() if line.startswith("# ")), "Document")
     with tempfile.TemporaryDirectory() as work_folder:
-        writer = Writer(theme, document.meta, Path(work_folder), images, title, styles)
+        writer = Writer(theme, document.meta, Path(work_folder), images, title, styles, numbering)
+        writer.restarts = [True] + [parse_attributes(found.group(1)).values.get("numbers") == "restart"
+                                    for block in blocks for line in block.body.splitlines() if (found := PAGE_SWITCH.match(line.strip()))]
         cover = first is not None and first.layout == "cover"
         setup_chrome(writer, cover)
         if styles and styles.pages_defined:

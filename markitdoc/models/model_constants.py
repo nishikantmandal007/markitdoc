@@ -22,3 +22,15 @@ DIV_OPEN = re.compile(r"^:::+\s*\{?\s*\.?([a-z][\w-]*)(.*?)\}?\s*$", re.IGNORECA
 PAGE_SWITCH = re.compile(r"^\+\+\+\s*\{([^{}]*)\}$")
 DIV_CLOSE = re.compile(r"^:::+\s*$")
 BARE_DIRECTIVE = re.compile(r"^([A-Za-z]+)\s*:\s*(\S.*?)\s*$")
+
+REFERENCE_LABELS = {"figure": "Figure {n}", "table": "Table {n}", "equation": "Equation {n}", "section": "Section {n}"}
+CAPTION_LABELS = {"figure": "Figure {n}", "table": "Table {n}", "equation": "({n})"}
+NUMBERING_OFF = ("", "none", "false", "off", "no")
+SKIPPED_TEXT = r"```.*?```|~~~.*?~~~|`[^`\n]*`|\$\$.*?\$\$|\$[^\s$][^$\n]*\$"
+REFERENCE_TEXT = re.compile(rf"({SKIPPED_TEXT})|\[@([\w-]+(?:\s*;\s*@[\w-]+)*)(\s+page)?\](?!\()", re.S)
+FENCE_OPEN = re.compile(r"^(`{3,}|~{3,})(.*)$")
+HEADING_LINE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+TABLE_CAPTION = re.compile(r"^Table:\s*(.*)$")
+TRAILING_BRACES = re.compile(r"\s*\{([^{}]*)\}\s*$")
+EQUATION_ID = re.compile(r"\$\$\s*\{([^{}]*)\}\s*$")
+MERMAID_TITLE = re.compile(r"^\s*(?:pie\s+)?title\s+(.+)$", re.M)

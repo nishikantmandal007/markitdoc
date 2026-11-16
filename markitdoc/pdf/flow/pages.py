@@ -83,6 +83,8 @@ class FlowPages(PdfPages):
         self.edge, self.page_edges, self.page_masters, self.page_labels, self.page_section = (MARGIN, 20, MARGIN, 22), {}, {}, {}, {}
         self.masters, self.master_name, self.next_master, self.restart = {}, None, None, False
         self.counter, self.number_style, self.master_landscape, self.field_values = 0, None, False, {}
+        self.numbers, self.target_pages, self.pending_target = {}, {}, ""
+        self.run, self.page_runs, self.page_numbers = 0, {}, {}
         self.set_auto_page_break(True, margin=22)
         self.set_margins(MARGIN, 20, MARGIN)
 
@@ -115,6 +117,21 @@ class FlowPages(PdfPages):
     def shown_page(self, page=None):
         return self.page_labels.get(page or self.page_no(), str(page or self.page_no()))
 
+    # records where a labelled target sits, so references can link to it and name its page
+    def mark_target(self, ident):
+        if ident:
+            self.set_link(name=ident, page=self.page_no(), y=self.get_y())
+            self.target_pages[ident] = self.shown_page()
+
+    # the pages of the numbering run each footer's {pages} stands for, patched in once the run is complete
+    def _render_footer(self):
+        super()._render_footer()
+        if self.styles and self.page in self.pages:
+            page = self.pages[self.page]
+            for fragment in page.get_text_substitutions():
+                fragment.render_text_substitution = lambda _, original=fragment.render_text_substitution, run=self.page_runs[id(page)]: original(
+                    str(sum(1 for item in self.pages.values() if self.page_runs.get(id(item)) == run)))
+
     # the bottom margin in mm of the current page
     @property
     def bottom(self):
@@ -132,9 +149,12 @@ class FlowPages(PdfPages):
             self.set_margins(left, top, right)
         if self.auto_page_break:
             self.set_auto_page_break(True, margin=bottom)
-        number = 1 if self.restart else self.counter + 1
-        labelled = {"label_style": LABEL_STYLES[master.numbers], "label_start": number} if master.numbers in LABEL_STYLES and (
-            self.restart or master.numbers != self.number_style) else {}
+        if page not in self.page_numbers:
+            number = 1 if self.restart else self.counter + 1
+            self.run += 1 if self.restart or not self.run else 0
+            self.page_numbers[page] = (number, self.run, {"label_style": LABEL_STYLES[master.numbers], "label_start": number}
+                                       if master.numbers in LABEL_STYLES and (self.restart or master.numbers != self.number_style) else {})
+        number, self.run, labelled = self.page_numbers[page]
         self.edge, self.page_edges[page], self.page_masters[page] = edge, edge, master
         self.page_labels[page] = number_label(number, master.numbers)
         self.counter, self.restart, self.number_style = number, False, master.numbers
@@ -167,6 +187,8 @@ class FlowPages(PdfPages):
         if self.styles:
             kwargs = self.enter_master(kwargs)
         super().add_page(*args, **kwargs)
+        if self.styles:
+            self.page_runs[id(self.pages[self.page])] = self.run
         if self.auto_page_break and self.decorate:
             self.set_auto_page_break(True, margin=self.bottom)
         if self.w < self.h:
@@ -338,7 +360,7 @@ def probe_of(pdf: FlowPages, y=None):
         donor.use_styles(pdf.styles)
     probe = FlowPages(pdf.theme, pdf.document_title, pdf.plain, pdf.document_text, donor)
     for name in ("scale", "table_style", "lang", "targets", "flow_images", "numbering", "notes_at_page_bottom", "header_text",
-                 "footer_text", "meta_date", "spacing", "field_values"):
+                 "footer_text", "meta_date", "spacing", "field_values", "numbers"):
         setattr(probe, name, getattr(pdf, name))
     probe.headings, probe.measuring = list(pdf.headings), True
     probe.use_styles(pdf.styles)

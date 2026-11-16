@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw
 
 from markitdoc.markup.elements import image_size
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.models.references import caption_of
 from markitdoc.options import options_in_use
 from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages, measured
 from markitdoc.pdf.pages import escaped
@@ -109,12 +110,15 @@ def add_picture(pdf: FlowPages, found):
     width = min(asked or (natural[0] if natural else pdf.area * PLACEHOLDER_WIDTH), pdf.area)
     height = width * natural[1] / natural[0] if natural else width * PLACEHOLDER_SHARE
     caption = str(attributes.values.get("caption", ""))
+    if target := pdf.numbers.get(attributes.id):
+        caption = caption_of(replace(target, text=caption))
     side = str(attributes.values.get("side", "")).lower()
     pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * CAPTION_SCALE)
     caption_height = len(pdf.multi_cell(width, BODY_SIZE * pdf.scale * 0.45, escaped(caption), markdown=True, dry_run=True,
                                         output=MethodReturnValue.LINES)) * BODY_SIZE * pdf.scale * 0.45 + 1.5 if caption else 0
     if pdf.will_page_break(height + caption_height + 2):
         pdf.add_page()
+    pdf.mark_target(attributes.id)
     left = pdf.l_margin + (pdf.area - width if side == "right" else 0 if side == "left" else (pdf.area - width) / 2)
     top = pdf.get_y()
     if natural:

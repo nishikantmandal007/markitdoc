@@ -83,7 +83,7 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
             add("\n")
         elif kind == "link_open":
             target = str(child.attrs.get("href") or "")
-            link = target if target.startswith(("http://", "https://", "mailto:")) or target[1:] in targets else ""
+            link = target if target.startswith(("http://", "https://", "mailto:")) or target[1:].removeprefix("page:") in targets else ""
         elif kind == "link_close":
             link = ""
         elif kind in ("math_inline", "math_inline_double"):

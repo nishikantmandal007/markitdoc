@@ -7,7 +7,7 @@ from docx.shared import Cm, Pt
 from PIL import Image, ImageDraw
 
 from markitdoc.docx.styles import cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
-from markitdoc.docx.writer import WHITE, first_paragraph, landscape_section, plain, write_runs
+from markitdoc.docx.writer import WHITE, bookmark, first_paragraph, landscape_section, plain, write_runs
 from markitdoc.markup.elements import SIGNED_NUMBER, TABLE_MARKS, TOTALS_ROW, column_alignments, rating_level, settings_from
 from markitdoc.markup.inline import inline_runs, parser
 
@@ -43,10 +43,14 @@ def add_table(writer, tokens, style):
     wide = columns > 8 and writer.body is writer.document
     width = landscape_section(writer, True) if wide else writer.width
     if writer.pending_caption:
-        writer.table_count += 1
         paragraph = writer.body.add_paragraph(style="Caption")
         paragraph.paragraph_format.keep_with_next = True
-        plain(writer, paragraph, f"Table {writer.table_count}. ", bold=True)
+        if target := writer.numbers.get(writer.pending_target):
+            bookmark(writer, paragraph, target.id)
+            plain(writer, paragraph, f"{target.mark}. ", bold=True)
+        else:
+            writer.table_count += 1
+            plain(writer, paragraph, f"Table {writer.table_count}. ", bold=True)
         plain(writer, paragraph, writer.pending_caption)
         writer.pending_caption = ""
     body_rows = [[cell.content for cell in row] for row in rows[1:]]

@@ -5,6 +5,7 @@ from difflib import get_close_matches
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, language_version
 from markitdoc.models.model_constants import DIV_CLOSE, DIV_OPEN, KNOWN_KEYS, PAGE_SWITCH, PLANNED_KEYS
+from markitdoc.models.references import reference_findings
 from markitdoc.models.style_checks import SPAN_ATTRIBUTES, style_findings
 from markitdoc.themes.theme_constants import BOX_PROPERTIES, LAYOUT_ATTRIBUTES, STYLE_PROPERTIES
 
@@ -69,4 +70,6 @@ def check_document(markdown, folders=()) -> list[Finding]:
     findings += [Finding(number, "error", "::: block is never closed", "add a closing ::: line") for number in open_blocks]
     if v2:
         findings += [Finding(*item) for item in style_findings(markdown, folders)]
+        end = next((number for number, text in enumerate(lines[1:], 2) if text.strip() == "---"), 0) if lines[:1] == ["---"] else 0
+        findings += [Finding(*item) for item in reference_findings(lines, end, meta)]
     return sorted(findings, key=lambda finding: finding.line)

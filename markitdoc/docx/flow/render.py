@@ -3,7 +3,7 @@ import logging
 import re
 from pathlib import Path
 
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 from PIL import Image
@@ -164,9 +164,10 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
         return ""
     settings = re.search(r"\n?\{([^{}]*)\}\s*$", content)
     style = settings_from(settings.group(1)).get("class", "") if settings else ""
+    labelled = parse_attributes(settings.group(1)).id if settings else ""
     if settings and not content[:settings.start()].strip():
-        for equation in equations:
-            add_equation(writer, equation)
+        for number, equation in enumerate(equations):
+            add_equation(writer, equation, labelled if number == 0 else "")
         return style
     picture = next((child for child in inline.children or [] if child.type == "image"), None)
     written = written_image(content) if picture is not None and writer.styles else None
@@ -184,7 +185,7 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
         writer.break_next = True
         return ""
     if text.startswith("Table:") and not stack:
-        writer.pending_caption = text[6:].strip()
+        writer.pending_caption, writer.pending_target = text[6:].strip(), labelled
         return ""
     block_line = re.search(r"(?<![\]*_`])\{([^{}]*)\}\s*$", content)
     attributes = parse_attributes(block_line.group(1) if block_line else "")
@@ -197,8 +198,8 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
         if style in ALIGNMENTS:
             paragraph.alignment = ALIGNMENTS[style]
         write_runs(writer, paragraph, runs, look=look)
-    for equation in equations:
-        add_equation(writer, equation)
+    for number, equation in enumerate(equations):
+        add_equation(writer, equation, labelled if number == 0 else "")
     return ""
 
 
@@ -301,13 +302,16 @@ def add_file_picture(writer, found):
     natural = image_size(path)
     if natural:
         asked = writer.styles.length(look.width, writer.width * 10) / 10 if look.width else None
-        add_picture(writer, str(path), min(asked or natural[0] / 10, writer.width), alt)
+        picture = add_picture(writer, str(path), min(asked or natural[0] / 10, writer.width), alt)
     else:
         logger.warning("Image file not found, its alt text is shown instead: %s", source)
         paragraph = writer.body.add_paragraph()
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         plain(writer, paragraph, f"[{alt or source}]", italic=True, role="muted")
-    if attributes.values.get("caption"):
+        picture = paragraph
+    if target := writer.numbers.get(attributes.id):
+        caption(writer, str(attributes.values.get("caption", "")), target=target, anchor=picture)
+    elif attributes.values.get("caption"):
         plain(writer, writer.body.add_paragraph(style="Caption"), str(attributes.values["caption"]))
 
 
@@ -333,14 +337,15 @@ def top_level_blocks(tokens, nested=False):
 # renders a code fence as text, chart, diagram, or code
 def add_fence(writer, language, content):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
+    ident = parse_attributes(language[language.find("{"):]).id if "{" in language else ""
     language = language.split("{")[0].strip()
     if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in BOX_DRAWING) >= 6:
         add_code(writer, content, 8.5)
         return
     if language == "chart":
-        add_chart(writer, content, settings)
+        add_chart(writer, content, settings, ident)
     elif language == "mermaid":
-        add_diagram(writer, content)
+        add_diagram(writer, content, ident)
     elif language.split()[:1] == ["infographic"]:
         syntax = f"{language}\n{content}" if " " in language else content
         path = render_infographic(syntax, writer.theme)
@@ -356,7 +361,7 @@ def add_fence(writer, language, content):
 
 
 # renders chart data as an image in the Word document
-def add_chart(writer, content, settings):
+def add_chart(writer, content, settings, ident=""):
     data = chart_data(content)
     if not data:
         logger.warning("Chart skipped: invalid JSON, unknown type, no values, or a value count that differs from the labels")
@@ -372,13 +377,16 @@ def add_chart(writer, content, settings):
     except Exception as error:
         logger.warning("Chart skipped: %s", type(error).__name__)
         return
-    add_picture(writer, io.BytesIO(image), width, f"Chart: {title or data['type']}")
-    if title:
+    picture = add_picture(writer, io.BytesIO(image), width, f"Chart: {title or data['type']}")
+    if target := writer.numbers.get(ident):
+        caption(writer, target.text, target=target, anchor=picture)
+    elif title and not writer.styles:
         caption(writer, title)
 
 
 # renders a diagram or falls back to a Word step table
-def add_diagram(writer, content):
+def add_diagram(writer, content, ident=""):
+    target = writer.numbers.get(ident)
     lines = content.strip().splitlines()
     titled = any(line.strip().startswith(("title ", "pie title ")) for line in lines)
     title = diagram_title(content) if titled else ""
@@ -386,7 +394,9 @@ def add_diagram(writer, content):
     steps = chain_steps(source)
     if len(steps) >= 3:
         step_table(writer, [(name, note) for name, note in steps])
-        if title:
+        if target:
+            caption(writer, target.text, target=target)
+        elif title:
             caption(writer, title)
         return
     path = render_diagram(source, writer.theme)
@@ -397,8 +407,10 @@ def add_diagram(writer, content):
         return
     with Image.open(path) as picture:
         natural = picture.width / ZOOM / 96 * 2.54
-    add_picture(writer, str(path), min(writer.width, max(natural, writer.width * 0.55)), f"Diagram: {title or 'diagram'}")
-    if title:
+    picture = add_picture(writer, str(path), min(writer.width, max(natural, writer.width * 0.55)), f"Diagram: {title or 'diagram'}")
+    if target:
+        caption(writer, target.text, target=target, anchor=picture)
+    elif title:
         caption(writer, title)
 
 
@@ -411,7 +423,8 @@ def add_code(writer, content, size=9.5):
 
 
 # adds a rendered equation or readable TeX fallback to Word
-def add_equation(writer, tex):
+def add_equation(writer, tex, ident=""):
+    target = writer.numbers.get(ident)
     try:
         image, (width_mm, _) = equation_png_bytes(mathtext_ready(tex), "#" + writer.theme.colors["ink"].lstrip("#"))
     except Exception as error:
@@ -419,6 +432,17 @@ def add_equation(writer, tex):
         paragraph = writer.body.add_paragraph()
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         plain(writer, paragraph, tex, italic=True)
+        if target:
+            bookmark(writer, paragraph, target.id)
+            plain(writer, paragraph, f"    {target.mark}")
+        return
+    if target:
+        paragraph = writer.body.add_paragraph()
+        paragraph.paragraph_format.tab_stops.add_tab_stop(Cm(writer.width / 2), WD_TAB_ALIGNMENT.CENTER)
+        paragraph.paragraph_format.tab_stops.add_tab_stop(Cm(writer.width), WD_TAB_ALIGNMENT.RIGHT)
+        paragraph.add_run("\t").add_picture(image, width=Cm(min(writer.width * 0.8, width_mm / 10)))
+        paragraph.add_run("\t" + target.mark)
+        bookmark(writer, paragraph, target.id)
         return
     add_picture(writer, image, min(writer.width * 0.8, width_mm / 10), "Equation")
 

@@ -12,6 +12,7 @@ from markitdoc.markup.fields import field_values, with_fields
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
 from markitdoc.models.front_matter import front_matter_yaml, language_version
+from markitdoc.models.references import number_document, resolve_document
 from markitdoc.options import Options, options_in_use, using_options
 from markitdoc.pdf.checks import page_problems
 from markitdoc.pdf.render import render_pdf
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 FORMATS = ("pdf", "pptx", "docx")
 TRUE_WORDS = ("true", "yes", "on", True)
+PAGE_REFERENCE_PASSES = 2
 
 
 # the stylesheet of a language v2 document, None for version 1 documents which keep today's rendering
@@ -55,13 +57,28 @@ def written_in_devanagari(document):
     return bool(letters) and sum("ऀ" <= character <= "ॿ" for character in letters) / len(letters) > 0.5
 
 
-# a parsed document to a PDF, falling back to plain text for pages that do not fit their design
+# a parsed document to a PDF, drawn again once when page references need the pages recorded by the first drawing
 def render_laid_out_pdf(document, output_path, template, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
     styles = stylesheet_for(document, markdown, theme)
+    numbering = None
     if styles:
-        document = with_fields(document, field_values(styles, document.meta))
+        document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
+    pages = {}
+    for _ in range(PAGE_REFERENCE_PASSES if numbering and numbering.wants_pages else 1):
+        found = {}
+        draw_pdf(resolve_document(document, numbering, "pdf", pages) if numbering else document, output_path, theme, styles, numbering, found)
+        if found == pages:
+            break
+        pages = found
+    logger.info("Rendered PDF: %d blocks, %.1f s", len(document.blocks), time.perf_counter() - started)
+    return output_path
+
+
+# one drawing of a parsed document to a PDF, falling back to plain text for pages that do not fit their design; recorded pages go to found
+def draw_pdf(document, output_path, theme, styles, numbering, found):
+    started = time.perf_counter()
     wants_images = document.meta.get("images") in TRUE_WORDS
     if not document.meta.get("lang") and written_in_devanagari(document):
         document = Document({**document.meta, "lang": "hi"}, document.blocks)
@@ -80,16 +97,18 @@ def render_laid_out_pdf(document, output_path, template, markdown=""):
     if tightened:
         logger.info("Tightened line spacing on %d pages to fit: %s", len(tightened), tightened)
     with tempfile.TemporaryDirectory() as work_folder:
-        render_pdf(document, theme, output_path, Path(work_folder), images, credits, styles)
-    logger.info("Rendered PDF: %d blocks, theme %s, %d images, %d bytes, %.1f s, %d pages shown as text",
+        render_pdf(document, theme, output_path, Path(work_folder), images, credits, styles, numbering, found)
+    logger.info("Drew PDF: %d blocks, theme %s, %d images, %d bytes, %.1f s, %d pages shown as text",
                 len(document.blocks), theme.name, len(images), output_path.stat().st_size, time.perf_counter() - started, len(broken))
-    return output_path
 
 
 # a parsed document to a PowerPoint deck
-def render_laid_out_pptx(document, output_path, template, author):
+def render_laid_out_pptx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
+    if stylesheet_for(document, markdown, theme):
+        document, numbering = number_document(document, None, inject=False)
+        document = resolve_document(document, numbering, "pptx")
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, SLIDE_PHOTO_RATIOS)
     render_pptx(document, theme, output_path, images, author)
     logger.info("Rendered PPTX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
@@ -102,10 +121,12 @@ def render_laid_out_docx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
     styles = stylesheet_for(document, markdown, theme)
+    numbering = None
     if styles:
-        document = with_fields(document, field_values(styles, document.meta))
+        document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
+        document = resolve_document(document, numbering, "docx")
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
-    render_docx(document, theme, output_path, images, author, styles)
+    render_docx(document, theme, output_path, images, author, styles, numbering)
     logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)
     return output_path
@@ -124,5 +145,5 @@ def render(markdown, output_format, output, template="default", author="", optio
         if output_format == "docx":
             return render_laid_out_docx(parse_document(markdown), output_path, template, author, markdown)
         if output_format == "pptx":
-            return render_laid_out_pptx(parse_document(markdown), output_path, template, author)
+            return render_laid_out_pptx(parse_document(markdown), output_path, template, author, markdown)
         return render_laid_out_pdf(parse_document(markdown), output_path, template, markdown)
