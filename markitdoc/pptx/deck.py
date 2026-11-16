@@ -14,7 +14,8 @@ from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
 import logging
-from markitdoc.pdf.layouts import Box, PdfPages, fitted_image, inline_runs, lifted, parser
+from markitdoc.markup.inline import inline_runs, parser
+from markitdoc.pdf.layouts import Box, PdfPages, fitted_image, lifted
 from markitdoc.themes.themes import Theme
 
 logger = logging.getLogger(__name__)

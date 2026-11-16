@@ -19,8 +19,9 @@ from markitdoc.visuals.charts import parse_chart_fence, render_chart
 from markitdoc.visuals.diagrams import canvas_width, diagram_as_text, diagram_title, render_diagram, zoom
 from markitdoc.visuals.icons import strip_icon
 from markitdoc.visuals.infographics import render_infographic
-from markitdoc.pdf.layouts import (PdfPages, anchor, escaped, fitted_image, inline_maths, inline_markup, inline_runs,
-                                   lifted, page_height, page_width, parser, runs_markup, superscript_digits)
+from markitdoc.markup.inline import anchor, inline_maths, inline_runs, parser, superscript_digits
+from markitdoc.pdf.layouts import (PdfPages, escaped, fitted_image, inline_markup, lifted, page_height, page_width,
+                                   runs_markup)
 
 logger = logging.getLogger(__name__)
 page_break_marker = "+++"

@@ -22,7 +22,7 @@ from markitdoc.models.document import Block
 from markitdoc.pdf.flow import (chart_data, closing_index, column_alignments, column_widths, element_settings,
                                 equation_drawing, mathtext_ready, numeric_cell, only_display_maths, svg_size,
                                 table_styles, without_display_maths)
-from markitdoc.pdf.layouts import anchor, inline_maths, parser
+from markitdoc.markup.inline import anchor, inline_maths, parser
 from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram, flow_graph
 from markitdoc.pptx.deck import (Item, add_image, add_rect, add_runs, add_textbox, body_height, body_top, card_pairs,
                                  card_preset, draw_panel, panel_fits, comfortable_size, contained, content_width,
