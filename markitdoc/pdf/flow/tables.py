@@ -12,6 +12,8 @@ from markitdoc.utils.helpers import lifted
 
 logger = logging.getLogger(__name__)
 
+TABLE_LINE = 0.3528 * 1.2
+HEAVY_RULE, LIGHT_RULE = 0.282, 0.141
 MINIMUM_COLUMN, READABLE_COLUMN, COLUMN_PADDING = 16, 26, 7
 
 
@@ -69,7 +71,7 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
         width, size = pdf.area, TABLE_SIZE * pdf.scale
         widths, needed = column_widths(pdf, rows, width, size)
     caption_room = 8 * pdf.scale if pdf.pending_caption else 0
-    if pdf.will_page_break(size * 0.55 * 1.6 * min(len(rows), 3) + 6 + caption_room):
+    if pdf.will_page_break(size * TABLE_LINE * 1.6 * min(len(rows), 3) + 6 + caption_room):
         pdf.add_page()
     elif not pdf.measuring and pdf.w < pdf.h and len(rows) > 1:
         if pdf.will_page_break(top_height(pdf, lambda probe: add_table(probe, rows[:3], style, alignments, roles, monos)) + caption_room):
@@ -91,14 +93,15 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
     pdf.set_font("Brand", "", size)
     pdf.set_text_color(*pdf.theme.rgb("body"))
     pdf.set_draw_color(*pdf.theme.rgb("rule" if boxed else "ink"))
-    pdf.set_fill_color(*lifted(pdf.theme.rgb("surface"), 0.35))
+    pdf.set_fill_color(*pdf.theme.rgb("paper"))
     pdf.ln(1)
     try:
         top, start_page = pdf.get_y(), pdf.page_no()
-        pdf.set_line_width(0.2 if boxed else 0.25)
+        pdf.set_line_width(0.2 if boxed else LIGHT_RULE)
         with pdf.table(col_widths=[w / width for w in widths], width=width, text_align=align, headings_style=heading_style,
                        cell_fill_mode=TableCellFillMode.EVEN_ROWS if style == "striped" else TableCellFillMode.NONE,
-                       line_height=size * 0.55, padding=(2.2, 2.4), markdown=True, repeat_headings=1,
+                       cell_fill_color=lifted(pdf.theme.rgb("surface"), 0.35),
+                       line_height=size * TABLE_LINE, padding=(1, 2.5), markdown=True, repeat_headings=1,
                        borders_layout="ALL" if boxed else "SINGLE_TOP_LINE") as table:
             for row_index, row in enumerate(rows):
                 cells = table.row()
@@ -111,7 +114,7 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
                             if role or total or mono else None)
                     cells.cell(row[column] if column < len(row) else "", style=face if row_index else None)
         if not boxed:
-            pdf.set_line_width(0.6)
+            pdf.set_line_width(HEAVY_RULE)
             pdf.set_draw_color(*pdf.theme.rgb("ink"))
             if pdf.page_no() == start_page:
                 pdf.line(pdf.l_margin, top, pdf.l_margin + width, top)

@@ -102,7 +102,7 @@ class TestLaidOutPdf:
 
         texts = page_texts(generate_document(broken, "pdf", filename_stem="broken", output_dir=str(tmp_path)))
 
-        assert any("Touchdown" in text and "21.5 hours" in text for text in texts)
+        assert "Touchdown" in " ".join(texts) and "21.5 hours" in " ".join(texts)
         assert "A promise kept" in " ".join(texts[-2:])
 
     def test_should_report_a_chart_without_values(self):

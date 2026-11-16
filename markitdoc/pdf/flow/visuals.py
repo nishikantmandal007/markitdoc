@@ -15,6 +15,7 @@ from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)
 
+SHORT_CODE_LINES = 12
 BOX_DRAWING = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
 
@@ -72,6 +73,9 @@ def add_fence(pdf: FlowPages, language: str, content: str):
                 return
             add_picture(pdf, io.BytesIO(image), width, width * 0.5, f"Chart: {data.get('title') or data['type']}")
         return
+    lines = content.rstrip().count("\n") + 1
+    if lines <= SHORT_CODE_LINES and pdf.will_page_break(lines * 4.2 + 6):
+        pdf.add_page()
     pdf.set_font("Mono", "", 8)
     pdf.set_fill_color(*pdf.theme.rgb("surface"))
     pdf.set_text_color(*pdf.theme.rgb("ink"))

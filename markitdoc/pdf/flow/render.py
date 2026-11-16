@@ -28,7 +28,7 @@ from markitdoc.pdf.flow.text import (
     draw_runs,
     needs_runs,
 )
-from markitdoc.pdf.flow.visuals import add_fence
+from markitdoc.pdf.flow.visuals import SHORT_CODE_LINES, add_fence
 from markitdoc.pdf.pages import escaped, inline_markup
 from markitdoc.utils.helpers import lifted
 
@@ -128,7 +128,7 @@ def render_tokens(pdf: FlowPages, tokens):
             else:
                 place_notes(pdf, inline, note_texts, placed)
                 add_paragraph(pdf, text, PARAGRAPH_ALIGNMENTS.get(style, "L"), indent + (INDENT_STEP if "indent" in style else 0),
-                              lead="lead" in style)
+                              lead="lead" in style, following=opening_height(pdf, tokens, index + 3) if text.endswith(":") else 0)
             for equation in equations:
                 add_equation(pdf, equation)
             index += 3
@@ -294,6 +294,13 @@ def opening_height(pdf: FlowPages, tokens, position):
         return 8 * pdf.scale + opening_height(pdf, tokens, position + 3)
     if token.type == "fence" and token.info.strip() in ("mermaid", "chart", "infographic"):
         return pdf.eph * 0.25
+    if token.type == "fence":
+        lines = token.content.rstrip().count("\n") + 1
+        return (lines if lines <= SHORT_CODE_LINES else 3) * 4.2 + 6
+    if token.type in ("bullet_list_open", "ordered_list_open"):
+        return 12
+    if token.type == "paragraph_open" and any(child.type == "image" for child in tokens[position + 1].children or []):
+        return pdf.eph * 0.25
     if token.type == "table_open":
         rows = table_rows(tokens[position:closing_index(tokens, position, "table_open", "table_close")], pdf.targets, [])
         return top_height(pdf, lambda probe: add_table(probe, rows[:4]))
@@ -310,8 +317,9 @@ def render_toc(pdf: FlowPages, outline):
     pdf.set_text_color(*pdf.theme.rgb("ink"))
     pdf.cell(0, 12, "Contents", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(3)
+    title = outline[0] if outline and outline[0].level == 0 and sum(item.level == 0 for item in outline) == 1 else None
     for section in outline:
-        if section.level > 1:
+        if section.level > 1 or section is title:
             continue
         pdf.set_font("Brand", "B" if section.level == 0 else "", 10 if section.level == 0 else 9.5)
         pdf.set_text_color(*pdf.theme.rgb("ink" if section.level == 0 else "body"))

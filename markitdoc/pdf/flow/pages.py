@@ -8,7 +8,9 @@ from markitdoc.markup.inline import SUPERSCRIPT_DIGITS
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.utils.helpers import lifted
 
-BODY_SIZE, TABLE_SIZE = 11, 9
+BODY_SIZE, TABLE_SIZE = 10, 9
+LINE_RATIO = 1.4
+LINE_MM = LINE_RATIO * 0.3528
 MARGIN = 25
 HIGHLIGHT_LINK = "§highlight"
 HYPHENATION_LANGUAGES = {"en": "en_GB", "de": "de_DE", "fr": "fr", "es": "es"}

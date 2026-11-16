@@ -11,6 +11,7 @@ from markitdoc.docx.writer import WHITE, first_paragraph, landscape_section, pla
 from markitdoc.markup.elements import SIGNED_NUMBER, TABLE_MARKS, TOTALS_ROW, column_alignments, rating_level, settings_from
 from markitdoc.markup.inline import inline_runs, parser
 
+HEAVY_RULE, LIGHT_RULE = 6, 3
 NUMERIC_CELL = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")
 
 
@@ -62,20 +63,23 @@ def add_table(writer, tokens, style):
     table = new_table(writer, len(rows), columns, widths)
     repeat_header(table.rows[0])
     hairline = writer.hex(writer.tint("mood", 0.75))
+    ruled = style in ("striped", "boxed")
     for row_index, row in enumerate(rows):
         header = row_index == 0
         last = row_index == len(rows) - 1
         total = last and row_index > 1 and TOTALS_ROW.match(row[0].content if row else "")
         for column in range(columns):
             cell = table.cell(row_index, column)
-            cell_margins(cell, 0.09, 0.18, 0.09)
+            cell_margins(cell, 0.1, 0.25, 0.1)
             source = row[column] if column < len(row) else None
-            fill = writer.hex("night") if header else writer.hex(writer.tint("mood", 0.9)) if column in highlighted else (
+            fill = writer.hex("night") if header and ruled else writer.hex(writer.tint("mood", 0.9)) if column in highlighted else (
                 writer.hex("surface") if style == "striped" and row_index % 2 == 0 else None)
             if fill:
                 cell_fill(cell, fill)
-            edge = (writer.hex("mood"), 10) if last or total else (hairline, 4)
-            cell_borders(cell, top=(writer.hex("ink"), 8) if total else None, bottom=None if header else edge,
+            edge = (writer.hex("ink"), HEAVY_RULE) if last and not ruled else (writer.hex("mood"), 10) if last or total else (hairline, 4)
+            top = (writer.hex("ink"), HEAVY_RULE) if header and not ruled else (writer.hex("ink"), 8) if total else None
+            bottom = (writer.hex("ink"), LIGHT_RULE) if header and not ruled else None if header or (not ruled and not last) else edge
+            cell_borders(cell, top=top, bottom=bottom,
                          left=(hairline, 4) if style == "boxed" else None, right=(hairline, 4) if style == "boxed" else None)
             paragraph = first_paragraph(cell)
             align = alignment[column] if column < len(alignment) and alignment[column] else ("right" if numeric[column] and not header else "")
@@ -93,9 +97,9 @@ def add_table(writer, tokens, style):
                 plain(writer, paragraph, mark[0], 11, mark[1], bold=True)
                 continue
             signed = SIGNED_NUMBER.match(text) if not header else None
-            role = WHITE if header else "mood" if column in highlighted else (
+            role = (WHITE if ruled else "ink") if header else "mood" if column in highlighted else (
                 "success" if signed.group(1) == "+" else "danger") if signed else "ink" if column == 0 and columns > 2 else None
-            write_runs(writer, paragraph, runs, size=8.5 if columns > 6 else 9.5 if columns > 4 else 10, role=role,
+            write_runs(writer, paragraph, runs, size=8.5 if columns > 6 else 9, role=role,
                        bold=header or total or column in highlighted or (column == 0 and columns > 2))
     if len(rows) <= 7:
         keep_together(table)
