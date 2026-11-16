@@ -3,14 +3,15 @@ import logging
 import re
 from pathlib import Path
 
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING, WD_TAB_ALIGNMENT, WD_TAB_LEADER
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 from PIL import Image
 
 from markitdoc.docx.flow.lists import add_list_item, new_list
 from markitdoc.docx.flow.tables import add_table, step_table
-from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, new_table
+from markitdoc.docx.styles import BODY_SIZE, border_bottom, cell_borders, cell_fill, cell_margins, new_table
 from markitdoc.docx.writer import (
     LIST_FORMATS,
     add_picture,
@@ -24,6 +25,7 @@ from markitdoc.docx.writer import (
     start_on_new_page,
     write_runs,
 )
+from markitdoc.markup.editorial import dropcap_lines, interrupts_opening, trimmed_runs
 from markitdoc.markup.elements import (
     CALLOUT_KINDS,
     TABLE_STYLES,
@@ -46,6 +48,7 @@ from markitdoc.visuals.equations import equation_png_bytes, mathtext_ready
 from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)
+DROPCAP_LINE, DROPCAP_CAP_HEIGHT = 1.18 * 1.2, 0.7
 ALIGNMENTS = {"center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}
 BOX_DRAWING = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
@@ -67,6 +70,8 @@ def render_tokens(writer, tokens):
     while index < len(tokens):
         token = tokens[index]
         kind = token.type
+        if interrupts_opening(token):
+            writer.section_start = False
         if kind == "footnote_block_open":
             end = closing_index(tokens, index, "footnote_block_open", "footnote_block_close")
             writer.notes += [inline_runs(item, writer.targets) for item in tokens[index:end] if item.type == "inline"]
@@ -145,6 +150,7 @@ def add_heading(writer, level, inline):
         writer.headings[level - 1] += 1
         writer.headings[level:] = [0] * (4 - level)
         runs = [Run(".".join(str(number) for number in writer.headings[1:level]) + "   ")] + runs
+    writer.section_start = level <= 2
     paragraph = writer.body.add_paragraph(style=f"Heading {min(level, 4)}")
     start_on_new_page(writer, paragraph)
     align_paragraph(paragraph, look)
@@ -152,6 +158,24 @@ def add_heading(writer, level, inline):
     if found:
         bookmark(writer, paragraph, found.group(1))
     return paragraph
+
+
+# writes the first letter of a paragraph as a Word drop cap frame spanning the given lines and returns the runs left for the paragraph
+def add_dropcap(writer, runs, lines, look):
+    pitch = BODY_SIZE * DROPCAP_LINE
+    size = ((lines - 1) * pitch + BODY_SIZE * DROPCAP_CAP_HEIGHT) / DROPCAP_CAP_HEIGHT
+    paragraph = writer.body.add_paragraph()
+    properties = paragraph._p.get_or_add_pPr()
+    frame = OxmlElement("w:framePr")
+    for key, value in (("dropCap", "drop"), ("lines", str(lines)), ("wrap", "around"), ("vAnchor", "text"), ("hAnchor", "text")):
+        frame.set(qn(f"w:{key}"), value)
+    properties.insert_element_before(frame, "w:widowControl", "w:numPr", "w:pBdr", "w:shd", "w:tabs", "w:spacing", "w:ind", "w:jc", "w:rPr")
+    paragraph.paragraph_format.line_spacing_rule, paragraph.paragraph_format.line_spacing = WD_LINE_SPACING.EXACTLY, Pt(pitch * lines)
+    paragraph.paragraph_format.space_after = Pt(0)
+    letter = paragraph.add_run(runs[0].text[0])
+    letter.font.size, letter.font.name, letter.font.bold = Pt(size), writer.heading_font, True
+    letter.font.color.rgb = writer.rgb("mood")
+    return [Run(runs[0].text[1:], runs[0].bold, runs[0].italic, style=runs[0].style), *runs[1:]]
 
 
 # renders a paragraph token with its settings and inline content
@@ -189,14 +213,21 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
         return ""
     block_line = re.search(r"(?<![\]*_`])\{([^{}]*)\}\s*$", content)
     attributes = parse_attributes(block_line.group(1) if block_line else "")
-    look = writer.look("list" if stack else "paragraph", attributes.classes, attributes.values)
+    look = writer.look("list" if stack else "paragraph.first" if writer.section_start else "paragraph", attributes.classes, attributes.values)
+    writer.section_start = False
     if stack:
         add_list_item(writer, stack, runs, look)
     elif text:
+        lines = dropcap_lines(look)
+        if lines and style != "lead" and (cut := trimmed_runs(inline, writer.targets, block_line)) and cut[0].text[:1].isalpha() and not cut[0].link:
+            runs = add_dropcap(writer, cut, lines, look)
         paragraph = writer.body.add_paragraph(style="Lead" if style == "lead" else None)
         align_paragraph(paragraph, look)
         if style in ALIGNMENTS:
             paragraph.alignment = ALIGNMENTS[style]
+        if "\t" in text:
+            paragraph.paragraph_format.tab_stops.add_tab_stop(Cm(writer.width), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+            paragraph.paragraph_format.space_after = Pt(3)
         write_runs(writer, paragraph, runs, look=look)
     for number, equation in enumerate(equations):
         add_equation(writer, equation, labelled if number == 0 else "")

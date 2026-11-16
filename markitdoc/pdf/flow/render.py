@@ -4,6 +4,7 @@ from dataclasses import replace
 
 from fpdf.enums import XPos, YPos
 
+from markitdoc.markup.editorial import dropcap_lines, interrupts_opening, trimmed_runs
 from markitdoc.markup.elements import (
     LIST_SCHEMES,
     PARAGRAPH_ALIGNMENTS,
@@ -25,13 +26,16 @@ from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
     TEXT_WIDTH,
     add_callout,
+    add_dropcap,
     add_equation,
     add_figure,
     add_heading,
+    add_leader_row,
     add_list_item,
     add_notes,
     add_paragraph,
     draw_runs,
+    dropcap_plan,
     needs_runs,
 )
 from markitdoc.pdf.flow.visuals import SHORT_CODE_LINES, add_fence
@@ -56,7 +60,7 @@ def render_flow(pdf: FlowPages, markdown: str):
 # renders markdown tokens into the current output format
 def render_tokens(pdf: FlowPages, tokens):
     index, list_stack, notes, indent, pending = 0, [], [], 0, ""
-    note_texts, placed = {}, set()
+    note_texts, placed, section_start = {}, set(), False
     if pdf.notes_at_page_bottom:
         for position, token in enumerate(tokens):
             if token.type == "footnote_open":
@@ -74,6 +78,8 @@ def render_tokens(pdf: FlowPages, tokens):
         if pdf.back_to_portrait and token.level == 0 and token.type.endswith("_open"):
             pdf.back_to_portrait = False
             pdf.add_page(orientation="P")
+        if interrupts_opening(token):
+            section_start = False
         if token.type == "list_item_open":
             list_stack[-1]["fresh"] = True
         if token.type == "footnote_block_open":
@@ -93,6 +99,7 @@ def render_tokens(pdf: FlowPages, tokens):
             text = ANCHOR.sub("", inline_markup(tokens[index + 1], pdf.targets))
             add_heading(pdf, text, level, target.group(1) if target else None, opening_height(pdf, tokens, index + 3),
                         pdf.look(f"h{min(level, 4)}"))
+            section_start = level <= 2
             index += 3
             continue
         if token.type == "paragraph_open":
@@ -103,9 +110,15 @@ def render_tokens(pdf: FlowPages, tokens):
             style = settings_from(settings_line.group(1)).get("class", "") if settings_line else ""
             block_line = re.search(r"(?<![\]*_`])\{([^{}]*)\}\s*$", inline.content)
             attributes = parse_attributes(block_line.group(1) if block_line else "")
-            look = pdf.look("list" if list_stack else "paragraph", attributes.classes, attributes.values)
+            look = pdf.look("list" if list_stack else "paragraph.first" if section_start else "paragraph", attributes.classes, attributes.values)
+            section_start = False
+            lines = dropcap_lines(look)
             align = PARAGRAPH_ALIGNMENTS.get(style) or (look.align if look and look.align else "L")
             labelled = parse_attributes(settings_line.group(1)).id if settings_line else ""
+            if "\t" in inline.content and pdf.styles and not list_stack:
+                add_leader_row(pdf, inline_runs(inline, pdf.targets), index + 4 >= len(tokens) or "\t" not in tokens[index + 4].content)
+                index += 3
+                continue
             if settings_line:
                 text = re.sub(r"\s*\{[^{}]*\}\s*$", "", text)
             if not text and picture is None:
@@ -141,6 +154,9 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_figure(pdf, picture.content or str(picture.attrs.get("alt", "")))
             elif only_display_maths(inline):
                 add_equation(pdf, next(child.content for child in inline.children if child.type == "math_inline_double"))
+            elif lines and not list_stack and (plan := dropcap_plan(pdf, trimmed_runs(inline, pdf.targets, block_line), lines, look, indent)):
+                place_notes(pdf, inline, note_texts, placed)
+                add_dropcap(pdf, plan, align, indent, look)
             elif needs_runs(inline_runs(inline, pdf.targets), look) and not list_stack:
                 place_notes(pdf, inline, note_texts, placed)
                 runs = inline_runs(inline, pdf.targets)
