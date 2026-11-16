@@ -3,8 +3,6 @@ import math
 import re
 from dataclasses import dataclass, replace
 
-import fitz
-from fpdf import FPDF
 from lxml import etree
 from PIL import Image
 from pptx.chart.data import CategoryChartData
@@ -20,18 +18,20 @@ from markitdoc.visuals.diagrams import chain_steps, diagram_as_text, diagram_tit
 from markitdoc.visuals.infographics import render_infographic
 from markitdoc.models.document import Block
 from markitdoc.markup.elements import (chart_data, closing_index, column_alignments, element_settings, numeric_cell,
-                                       only_display_maths, table_styles, without_display_maths)
+                                       only_display_maths, table_styles, without_display_maths, rating_level,
+                                       signed_number, table_marks)
 from markitdoc.pdf.flow_tables import column_widths
-from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
-from markitdoc.markup.inline import anchor, inline_maths, parser
+from markitdoc.visuals.equations import mathtext_ready, equation_png
+from markitdoc.markup.inline import anchor, inline_maths, parser, literal, plain_text
 from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram, flow_graph
 from markitdoc.pptx.deck import (Item, add_image, add_rect, add_runs, add_textbox, body_height, body_top, card_pairs,
                                  card_preset, draw_panel, panel_fits, comfortable_size, contained, content_width,
                                  draw_cards, draw_takeaway, figure_cards, fitted_items, full_bleed, half_bleed,
-                                 image_ratio, key_sentences, literal, mono_font, no_grid_table_style, overlay,
-                                 photo_for, place_title, plain_text, set_spacing, side_margin, side_text_width,
-                                 side_title, slide_width, soft_white, split_to_fit, stack_height, text_width, tint,
-                                 visual_left, visual_width, white, write_column, write_items, write_text)
+                                 image_ratio, key_sentences, no_grid_table_style, overlay, photo_for, place_title,
+                                 set_spacing, side_margin, side_text_width, side_title, slide_width, soft_white,
+                                 split_to_fit, stack_height, text_width, tint, visual_left, visual_width, white,
+                                 write_column, write_items, write_text)
+from markitdoc.utils.helpers import mono_font
 
 logger = logging.getLogger(__name__)
 chart_scale, chart_dpi = 1.6, 200
@@ -46,11 +46,6 @@ footnote_mark = re.compile(r"\[\^([^\]]+)\]")
 checkbox = re.compile(r"^\[( |x|X)\]\s+")
 settings_tail = re.compile(r"\s*\{[^{}]*\}\s*$")
 page_break_marker = "+++"
-signed_number = re.compile(r"^\s*([+\-−])\s?[$€£]?\d[\d.,]*\s?(%|pts?|bps|[kKmMbB])?\s*$")
-rating_words = {"none": 0, "low": 1, "minimal": 1, "medium": 2, "moderate": 2, "partial": 2, "high": 3, "strong": 3, "very high": 4,
-                "full": 4, "complete": 4}
-table_marks = {**{word: ("✓", "success") for word in ("yes", "✓", "✔", "supported", "included", "true")},
-               **{word: ("✕", "danger") for word in ("no", "✕", "✗", "x", "not supported", "none", "false", "not included")}}
 chart_roles = ("mood", "second", "muted", "night", "success", "danger")
 native_charts = {"bar": XL_CHART_TYPE.COLUMN_CLUSTERED, "horizontal_bar": XL_CHART_TYPE.BAR_CLUSTERED, "stacked_bar": XL_CHART_TYPE.COLUMN_STACKED,
                  "line": XL_CHART_TYPE.LINE_MARKERS, "pie": XL_CHART_TYPE.PIE, "donut": XL_CHART_TYPE.DOUGHNUT}
@@ -477,12 +472,6 @@ def add_border(deck, cell, side, role, points):
     etree.SubElement(line, qn("a:prstDash"), val="solid")
 
 
-def rating_level(source):
-    text = plain_text(source).strip().lower()
-    found = re.fullmatch(r"([0-4])\s*/\s*4", text)
-    return int(found.group(1)) if found else rating_words.get(text)
-
-
 def rating_ball(source):
     return rating_level(source) is not None
 
@@ -657,21 +646,6 @@ def landscape_diagram(deck, source):
 def diagram_scale(path):
     with Image.open(path) as picture:
         return min(content_width / picture.width, (body_height - 0.4) / picture.height)
-
-
-def equation_png(deck, tex):
-    return equation_png_bytes(mathtext_ready(tex), "#" + deck.theme.colors["ink"].lstrip("#"))
-
-
-def equation_png_bytes(tex, color):
-    svg = equation_drawing(tex, color)
-    width, height = svg_size(svg)
-    sheet = FPDF(unit="mm", format=(width, height))
-    sheet.set_margins(0, 0, 0)
-    sheet.add_page()
-    sheet.image(io.BytesIO(svg), x=0, y=0, w=width, h=height)
-    with fitz.open(stream=bytes(sheet.output()), filetype="pdf") as drawing:
-        return io.BytesIO(drawing[0].get_pixmap(dpi=400, alpha=True).tobytes("png")), (width, height)
 
 
 def infographic_items(syntax):

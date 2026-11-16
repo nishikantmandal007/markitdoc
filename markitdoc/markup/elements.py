@@ -3,6 +3,7 @@ import math
 import re
 
 from markitdoc.visuals.charts import parse_chart_fence
+from markitdoc.markup.inline import plain_text
 
 numeric_cell = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
 callout_kinds = ("Note", "Action", "Risk", "Key figure")
@@ -12,6 +13,11 @@ totals_row = re.compile(r"^\W*(grand total|totals?|sum|gesamt|summe|insgesamt|to
 paragraph_alignments = {"center": "C", "right": "R", "justify": "J"}
 span_colors = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
 bullet_markers = ("•", "–", "◦")
+signed_number = re.compile(r"^\s*([+\-−])\s?[$€£]?\d[\d.,]*\s?(%|pts?|bps|[kKmMbB])?\s*$")
+rating_words = {"none": 0, "low": 1, "minimal": 1, "medium": 2, "moderate": 2, "partial": 2, "high": 3, "strong": 3, "very high": 4,
+                "full": 4, "complete": 4}
+table_marks = {**{word: ("✓", "success") for word in ("yes", "✓", "✔", "supported", "included", "true")},
+               **{word: ("✕", "danger") for word in ("no", "✕", "✗", "x", "not supported", "none", "false", "not included")}}
 
 
 def roman(number):
@@ -101,3 +107,9 @@ def chart_data(content):
     if labels and any(len(dataset.get("values") or []) != len(labels) for dataset in data["datasets"]):
         return None
     return data
+
+
+def rating_level(source):
+    text = plain_text(source).strip().lower()
+    found = re.fullmatch(r"([0-4])\s*/\s*4", text)
+    return int(found.group(1)) if found else rating_words.get(text)

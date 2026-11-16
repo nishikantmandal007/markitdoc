@@ -1,5 +1,8 @@
+from pathlib import Path
 import os
 from datetime import date, datetime, time, timezone
+fonts_by_file = {"PTSerif": "Georgia"}
+sans_font, mono_font = "Calibri", "Consolas"
 
 
 def lifted(rgb, amount=0.4):
@@ -24,3 +27,7 @@ def creation_date(written):
     if epoch and epoch.isdigit():
         return datetime.fromtimestamp(int(epoch), tz=timezone.utc)
     return datetime.combine(date.today(), time.min, tzinfo=timezone.utc)
+
+
+def office_font(path):
+    return next((font for stem, font in fonts_by_file.items() if stem in Path(path).name), sans_font)

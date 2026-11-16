@@ -116,3 +116,16 @@ def inline_maths(tex):
     text = re.sub(r"\(([^\s()+\-*/=]+)\)/", r"\1/", text)
     text = re.sub(r"/\(([^\s()+\-*/=]+)\)", r"/\1", text)
     return re.sub(r" {2,}", " ", text).strip()
+
+
+def literal(text):
+    return re.sub(r"([\\`*_{}\[\]<>#~^$|])", r"\\\1", text)
+
+
+def runs_of(source):
+    tokens = parser.parseInline(source or "")
+    return inline_runs(tokens[0]) if tokens else []
+
+
+def plain_text(source):
+    return "".join(run.text for run in runs_of(source)).strip()

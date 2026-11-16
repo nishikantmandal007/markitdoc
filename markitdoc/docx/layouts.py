@@ -14,10 +14,9 @@ from markitdoc.docx.document import (Writer, add_field, add_picture, border_bott
                                      repeat_header, save_document, setup_chrome, stamp_properties, start_on_new_page,
                                      white, write_runs)
 from markitdoc.docx.flow import add_callout, add_notes, render_markdown, step_table
-from markitdoc.markup.inline import inline_runs, parser
+from markitdoc.markup.inline import inline_runs, parser, plain_text
 from markitdoc.markup.blocks import paragraphs, prepared
 from markitdoc.utils.helpers import creation_date, long_date
-from markitdoc.pptx.deck import plain_text
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.pptx.layouts import gantt_plan, unit_name
 from markitdoc.themes.themes import Theme

@@ -16,12 +16,13 @@ from markitdoc.models.document import Block, Document
 from markitdoc.markup.blocks import as_flow, balanced, paragraphs, prepared
 from markitdoc.utils.helpers import creation_date, lifted, long_date
 from markitdoc.pptx.brand_cover import draw_brand_cover
+from markitdoc.markup.inline import literal, plain_text
 from markitdoc.pptx.deck import (Deck, Item, add_badge, add_fade, full_bleed, half_bleed, overlay, side_title,
                                  write_column, add_image, add_rect, body_height, body_sizes, body_top, comfortable_size,
-                                 content_width, fitted_items, key_sentences, literal, photo_for, place_title,
-                                 plain_text, save_presentation, send_to_back, side_margin, slide_height, slide_width,
-                                 soft_white, split_to_fit, stack_height, standard_size, text_width, tint, title_fit,
-                                 white, write_items, write_text)
+                                 content_width, fitted_items, key_sentences, photo_for, place_title, save_presentation,
+                                 send_to_back, side_margin, slide_height, slide_width, soft_white, split_to_fit,
+                                 stack_height, standard_size, text_width, tint, title_fit, white, write_items,
+                                 write_text)
 from markitdoc.pptx.flow import draw_flow, draw_text_slides, title_stream
 from markitdoc.themes.themes import Theme
 

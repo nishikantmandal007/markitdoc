@@ -1,3 +1,5 @@
+import fitz
+from fpdf import FPDF
 import logging
 import io
 import re
@@ -53,3 +55,18 @@ def svg_size(svg):
     height = re.search(rb'height="([\d.]+)(pt|px)?"', svg)
     unit = 0.3528 if width and width.group(2) == b"pt" else 0.2646
     return (float(width.group(1)) * unit, float(height.group(1)) * unit) if width and height else (60.0, 12.0)
+
+
+def equation_png(deck, tex):
+    return equation_png_bytes(mathtext_ready(tex), "#" + deck.theme.colors["ink"].lstrip("#"))
+
+
+def equation_png_bytes(tex, color):
+    svg = equation_drawing(tex, color)
+    width, height = svg_size(svg)
+    sheet = FPDF(unit="mm", format=(width, height))
+    sheet.set_margins(0, 0, 0)
+    sheet.add_page()
+    sheet.image(io.BytesIO(svg), x=0, y=0, w=width, h=height)
+    with fitz.open(stream=bytes(sheet.output()), filetype="pdf") as drawing:
+        return io.BytesIO(drawing[0].get_pixmap(dpi=400, alpha=True).tobytes("png")), (width, height)

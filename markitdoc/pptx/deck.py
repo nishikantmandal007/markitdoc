@@ -13,15 +13,13 @@ from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-import logging
-from markitdoc.markup.inline import inline_runs, parser
 from markitdoc.models.catalogue import Box
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.visuals.photos import fitted_image
-from markitdoc.utils.helpers import lifted
+from markitdoc.utils.helpers import lifted, office_font
 from markitdoc.themes.themes import Theme
+from markitdoc.markup.inline import literal, plain_text, runs_of
 
-logger = logging.getLogger(__name__)
 slide_width, slide_height = 13.333, 7.5
 side_margin = 0.6
 content_width = round(slide_width - 2 * side_margin, 3)
@@ -45,8 +43,6 @@ soft_white = (226, 230, 240)
 photo_width_limit = 2400
 layout_title_only = 5
 no_grid_table_style = "{2D5ABB26-0587-4C30-8999-92F81FD0307C}"
-fonts_by_file = {"PTSerif": "Georgia"}
-sans_font, mono_font = "Calibri", "Consolas"
 steady_dates = re.compile(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:(?:created|modified)>)")
 card_gap, card_presets, panel_width = 0.3, ((22, 18), (20, 16), (18, 15), (16, 14)), 4.3
 brand_title_width = 11.5
@@ -64,23 +60,6 @@ class Item:
     @property
     def listed(self):
         return self.kind in ("bullet", "number")
-
-
-def office_font(path):
-    return next((font for stem, font in fonts_by_file.items() if stem in Path(path).name), sans_font)
-
-
-def literal(text):
-    return re.sub(r"([\\`*_{}\[\]<>#~^$|])", r"\\\1", text)
-
-
-def runs_of(source):
-    tokens = parser.parseInline(source or "")
-    return inline_runs(tokens[0]) if tokens else []
-
-
-def plain_text(source):
-    return "".join(run.text for run in runs_of(source)).strip()
 
 
 def item_indent(item):
