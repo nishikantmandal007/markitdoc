@@ -1,0 +1,116 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Wetland at dawn.jpg",
+    "index": 1,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   },
+   "1": {
+    "title": "File:Wetland birds.jpg",
+    "index": 2,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/2.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/2.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet2",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   },
+   "2": {
+    "title": "File:Wetland marsh.jpg",
+    "index": 3,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/3.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/3.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet3",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "Public domain"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   },
+   "3": {
+    "title": "File:Wetland fence.jpg",
+    "index": 4,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/4.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/4.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet4",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "All rights reserved"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   },
+   "4": {
+    "title": "File:Wetland small.jpg",
+    "index": 5,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/5.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/5.jpg",
+      "width": 900,
+      "height": 600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet5",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}

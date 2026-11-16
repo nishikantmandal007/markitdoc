@@ -19,13 +19,19 @@ logger = logging.getLogger(__name__)
 
 Image.MAX_IMAGE_PIXELS = 40_000_000
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+WIKIDATA_API = "https://www.wikidata.org/w/api.php"
+API_HOSTS = {"commons.wikimedia.org", "www.wikidata.org"}
 ALLOWED_HOSTS = {"upload.wikimedia.org", "thumb.wikimedia.org"}
 ALLOWED_LICENCES = ("public domain", "pd", "cc0", "cc by", "cc-by")
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 MAX_QUERY_LENGTH = 60
 LONGEST_WAIT_SECONDS = 10
-FEATURED_FILTER = ' incategory:"Featured_pictures_on_Wikimedia_Commons"'
-QUALITY_FILTER = ' incategory:"Quality_images"'
+STARRED_FILTER = ' incategory:"Quality_images|Featured_pictures_on_Wikimedia_Commons"'
+MIN_WIDTH = 1600
+FULL_BLEED_KILOPIXELS = 2000
+SEARCH_RESULTS = 30
+ENOUGH_CANDIDATES = 3
+REMEMBERED_CHOICES = 8
 IMAGE_FOLDER = CACHE_FOLDER / "images"
 CLIENT_HEADERS = {"User-Agent": "MarkitDoc/0.1 (https://pypi.org/project/markitdoc/) python-requests"}
 
@@ -79,81 +85,116 @@ def client_headers():
 
 # finds distinct images for the requested document sections
 def find_images(wanted: dict, ratios: dict) -> dict:
-    found, used = {}, set()
+    found, used, owner = {}, set(), {}
     for key, query in wanted.items():
         image = find_image(query, ratios[key], used)
         if image:
+            if image.title in owner:
+                logger.warning("Photo reused on blocks %s and %s: %s; use a more specific image query", owner[image.title], key, image.title)
             found[key] = image
             used.add(image.title)
+            owner.setdefault(image.title, key)
     logger.info("Document images: %d of %d found", len(found), len(wanted))
     return found
 
 
-# reuses a remembered image or searches for a suitable match
+# picks an unused photo from the remembered or searched pool, reusing the best one only when every photo is used
 def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | None:
     words = re.sub(r"[^\w\s,.-]", " ", query)[:MAX_QUERY_LENGTH].split()
     if not words:
         return None
-    remembered = remembered_choices().get(" ".join(words).lower())
+    key = " ".join(words).lower()
+    pool = remembered_choices().get(key)
+    pool = [one for one in [pool] if isinstance(pool, dict)] or pool or []
+    pool = [one for one in pool if permitted(one["licence"])]
+    if not pool:
+        pool = search_pool(words, ratio)
+        if pool:
+            remember_choice(key, pool)
     folder = image_folder()
-    if remembered and (folder / f"{remembered['sha1']}.jpg").exists() and remembered["title"] not in used:
-        return DocumentImage(folder / f"{remembered['sha1']}.jpg", remembered["title"], remembered["artist"], remembered["licence"])
-    image = search_image(words, ratio, used)
-    if image:
-        remember_choice(" ".join(words).lower(), image)
-    return image
+    for pick in [one for one in pool if one["title"] not in used] + [one for one in pool if one["title"] in used]:
+        path = folder / f"{pick['sha1']}.jpg"
+        if path.exists() or (pick.get("url") and save_safe_copy(pick["url"], path)):
+            return DocumentImage(path, pick["title"], pick["artist"], pick["licence"])
+    return None
 
 
-# loads saved image choices, returning an empty mapping if unavailable
-def remembered_choices():
+# loads a saved json mapping from the image cache, returning an empty mapping if unavailable
+def cached_mapping(name):
     try:
-        choices_file = image_folder() / "choices.json"
-        return json.loads(choices_file.read_text())
+        return json.loads((image_folder() / name).read_text())
     except (OSError, ValueError):
         return {}
 
 
-# saves the selected image for reuse with the same search
-def remember_choice(query, image):
-    choices = remembered_choices()
-    choices[query] = {"sha1": image.path.stem, "title": image.title, "artist": image.artist, "licence": image.licence}
+# saves one entry in a json mapping in the image cache
+def cache_entry(name, key, value):
+    mapping = cached_mapping(name)
+    mapping[key] = value
     try:
-        choices_file = image_folder() / "choices.json"
-        choices_file.parent.mkdir(parents=True, exist_ok=True)
-        choices_file.write_text(json.dumps(choices, sort_keys=True, indent=1))
+        file = image_folder() / name
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(json.dumps(mapping, sort_keys=True, indent=1))
     except OSError as error:
-        logger.warning("Could not remember image choice: %s", type(error).__name__)
+        logger.warning("Could not save image cache: %s", type(error).__name__)
 
 
-# searches Wikimedia for a permitted image matching the query
-def search_image(words, ratio, used):
-    folder = image_folder()
-    full, shorter = " ".join(words), " ".join(words[-3:])
-    name = next((plain(word) for word in words if len(word) > 3), "")
-    for text, filter_text, needs_title_match, anchor in ((full, FEATURED_FILTER, None, ""), (full, "", False, ""),
-                                                         (full, QUALITY_FILTER, False, ""), (shorter, FEATURED_FILTER, False, name),
-                                                         (shorter, QUALITY_FILTER, False, name), (shorter, "", True, name),
-                                                         (" ".join(words[-2:]), "", True, name), (full, "", None, name)):
-        pages = search(f"{text} filetype:bitmap{filter_text}")
-        title_words = [plain(word) for word in re.findall(r"\w+", text) if len(word) > 3 or word.isdigit() or word.isupper()]
-        for _, url, title, artist, licence, sha1 in sorted(candidates(pages, ratio, used, title_words, needs_title_match, anchor))[:4]:
-            path = folder / f"{sha1}.jpg"
-            if path.exists() or save_safe_copy(url, path):
-                logger.info("Document image chosen from %s search", filter_text.split(":")[-1] or "plain")
-                return DocumentImage(path, title, artist, licence)
-    return None
+# loads saved image choices, returning an empty mapping if unavailable
+def remembered_choices():
+    return cached_mapping("choices.json")
+
+
+# saves the best candidates for reuse with the same search
+def remember_choice(query, pool):
+    cache_entry("choices.json", query, pool[:REMEMBERED_CHOICES])
+
+
+# resolves a query to a Wikidata item id once, remembering misses too
+def depicted_item(text):
+    known = cached_mapping("depicts.json")
+    if text not in known:
+        found = api_get(WIKIDATA_API, {"action": "wbsearchentities", "format": "json", "language": "en", "limit": 1, "search": text}).get("search")
+        if found is None:
+            return ""
+        cache_entry("depicts.json", text, found[0]["id"] if found else "")
+        known = cached_mapping("depicts.json")
+    return known.get(text, "")
+
+
+# searches Wikimedia for permitted images, stopping at the first ladder step that gives enough candidates
+def search_pool(words, ratio):
+    full, shorter = " ".join(words), " ".join(words[-min(2, max(1, len(words) - 1)):])
+    item = depicted_item(full.lower())
+    filters = f" filetype:bitmap filew:>{MIN_WIDTH}" + (f" fileres:>{FULL_BLEED_KILOPIXELS}" if ratio < 1 else "")
+    steps = [(f"haswbstatement:P180={item}{STARRED_FILTER}", True, False), (f"haswbstatement:P180={item}", False, False)] if item else []
+    steps += [(full + STARRED_FILTER, True, False), (full, False, False)] + ([(shorter, False, True)] if shorter != full else [])
+    pool = []
+    for text, starred, strict in steps:
+        title_words = [plain(word) for word in re.findall(r"\w+", text.split(" incategory")[0]) if len(word) > 3 or word.isdigit() or word.isupper()]
+        found = candidates(search(text + filters), ratio, title_words, starred, strict)
+        pool += [one for one in found if one["title"] not in {have["title"] for have in pool}]
+        if len(pool) >= ENOUGH_CANDIDATES:
+            break
+    return pool[:REMEMBERED_CHOICES]
 
 
 # queries Wikimedia Commons for matching image files
 def search(text):
+    pages = api_get(COMMONS_API, {
+        "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrlimit": SEARCH_RESULTS,
+        "gsrsearch": text, "prop": "imageinfo", "iiprop": "url|size|mime|sha1|extmetadata", "iiurlwidth": 1600})
+    return list((pages.get("query") or {}).get("pages", {}).values())
+
+
+# gets json from an allowed Wikimedia API host, returning an empty mapping on failure
+def api_get(url, params):
+    if urlparse(url).hostname not in API_HOSTS:
+        return {}
     try:
-        response = requests.get(COMMONS_API, headers=client_headers(), timeout=15, params={
-            "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrlimit": 12,
-            "gsrsearch": text, "prop": "imageinfo", "iiprop": "url|size|mime|sha1|extmetadata", "iiurlwidth": 1600})
-        return list((response.json().get("query") or {}).get("pages", {}).values())
+        return requests.get(url, headers=client_headers(), timeout=15, params=params).json()
     except (requests.RequestException, ValueError) as error:
         logger.warning("Image search failed: %s", type(error).__name__)
-        return []
+        return {}
 
 
 # removes accents and lowercases text for image-title matching
@@ -161,8 +202,15 @@ def plain(text):
     return "".join(letter for letter in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(letter))
 
 
-# filters and ranks image search results by license, content, and shape
-def candidates(pages, ratio, used, words, needs_every_word, anchor=""):
+# accepts public domain, CC0, CC BY and CC BY-SA, rejecting non-commercial and no-derivatives licences
+def permitted(licence):
+    lowered = licence.lower()
+    return lowered.startswith(ALLOWED_LICENCES) and not re.search(r"\b(?:nc|nd)\b", lowered)
+
+
+# filters and ranks image search results by licence, content, shape and resolution, best first
+def candidates(pages, ratio, words, starred=False, strict=False):
+    found = []
     for page in pages:
         info = page["imageinfo"][0]
         meta = info.get("extmetadata", {})
@@ -170,17 +218,17 @@ def candidates(pages, ratio, used, words, needs_every_word, anchor=""):
         artist = html.unescape(re.sub("<[^>]+>", "", meta.get("Artist", {}).get("value", ""))).strip() or "Unknown"
         title = page["title"].removeprefix("File:")
         url = info.get("thumburl") or info["url"]
-        if (title in used or info.get("mime") not in ("image/jpeg", "image/png") or info["width"] < 1200
-                or not licence.lower().startswith(ALLOWED_LICENCES) or urlparse(url).hostname not in ALLOWED_HOSTS):
-            continue
-        if anchor and anchor not in plain(title):
+        if (info.get("mime") not in ("image/jpeg", "image/png") or info["width"] < 1200
+                or not permitted(licence) or urlparse(url).hostname not in ALLOWED_HOSTS):
             continue
         title_words = re.findall(r"\w+", plain(title))
         matches = sum(any(word == part or (len(word) > 3 and part.startswith(word)) for part in title_words) for word in words)
-        needed = 1 if needs_every_word is None else len(words) if needs_every_word else max(1, len(words) - 1)
-        if words and matches >= needed:
-            fit = abs(info["width"] / info["height"] - ratio)
-            yield (-matches, page.get("index", 99) + (1 if needs_every_word is None else 4) * fit), url, title, artist[:60], licence, info["sha1"]
+        if strict and words and not matches:
+            continue
+        fit = abs(info["width"] / info["height"] - ratio)
+        score = 2 * starred + 2 * matches / max(len(words), 1) - min(fit, 2) + min(info["width"] * info["height"] / 4e6, 1)
+        found.append((score, {"title": title, "url": url, "artist": artist[:60], "licence": licence, "sha1": info["sha1"]}))
+    return [one for _, one in sorted(found, key=lambda pair: -pair[0])]
 
 
 # validates a downloaded image and saves a JPEG copy
