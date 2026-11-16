@@ -1,8 +1,10 @@
 import io
 import logging
 import re
+from pathlib import Path
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 from PIL import Image
 
@@ -27,11 +29,15 @@ from markitdoc.markup.elements import (
     chart_data,
     closing_index,
     element_settings,
+    image_size,
     settings_from,
     without_display_maths,
+    written_image,
 )
 from markitdoc.markup.inline import ANCHOR, Run, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.options import options_in_use
+from markitdoc.themes.theme_constants import POINT_MM, STYLE_PROPERTIES
 from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import ZOOM, chain_steps, diagram_as_text, diagram_title, render_diagram
 from markitdoc.visuals.equations import equation_png_bytes, mathtext_ready
@@ -67,7 +73,7 @@ def render_tokens(writer, tokens):
         if kind.startswith("container_") and kind.endswith("_open"):
             name = kind[len("container_"):-len("_open")]
             end = closing_index(tokens, index, kind, f"container_{name}_close")
-            add_container(writer, name, tokens[index + 1:end])
+            add_container(writer, name, token.info, tokens[index + 1:end])
             index = end + 1
             continue
         if kind == "heading_open":
@@ -157,6 +163,10 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
             add_equation(writer, equation)
         return style
     picture = next((child for child in inline.children or [] if child.type == "image"), None)
+    written = written_image(content) if picture is not None and writer.styles else None
+    if written:
+        add_file_picture(writer, written)
+        return ""
     if picture is not None:
         add_figure(writer, picture.content or str(picture.attrs.get("alt", "")))
         return ""
@@ -226,17 +236,25 @@ def callout_table(writer, fill, accent):
 
 
 # renders a columns or box container in the Word document
-def add_container(writer, name, tokens):
+def add_container(writer, name, info, tokens):
+    attributes = parse_attributes(info)
     if name == "columns":
-        children = top_level_blocks(tokens)
+        children = top_level_blocks(tokens, bool(writer.styles))
         half = (len(children) + 1) // 2
-        table = new_table(writer, 1, 2, [writer.width / 2 - 0.2, writer.width / 2 + 0.2])
+        weights = writer.styles.columns(attributes.values)[0] if writer.styles else (1, 1)
+        widths = [writer.width / 2 - 0.2, writer.width / 2 + 0.2] if weights == (1, 1) else [writer.width * weight / sum(weights) for weight in weights]
+        inner = [writer.width / 2 - 0.4] * 2 if weights == (1, 1) else [width - 0.4 for width in widths]
+        table = new_table(writer, 1, 2, widths)
         for column, part in enumerate((children[:half], children[half:])):
             cell = table.cell(0, column)
             cell_margins(cell, 0, 0.1 if column else 0, 0)
-            with writer.inside(cell, writer.width / 2 - 0.4):
+            with writer.inside(cell, inner[column]):
                 render_tokens(writer, [token for block in part for token in block])
             drop_empty_first(cell)
+        return
+    look = writer.look("box", attributes.classes, attributes.values) if name == "box" else None
+    if look and look.boxed():
+        add_styled_box(writer, look, tokens)
         return
     table = callout_table(writer, writer.hex("surface"), writer.hex("mood"))
     cell = table.cell(0, 0)
@@ -244,6 +262,47 @@ def add_container(writer, name, tokens):
         render_tokens(writer, tokens)
     drop_empty_first(cell)
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
+
+
+# renders a box as a one-cell table with the look's borders, fill and padding, its text properties passing down to the content
+def add_styled_box(writer, look, tokens):
+    width = min(writer.width, writer.styles.length(look.width, writer.width * 10) / 10) if look.width else writer.width
+    pad = (look.padding or 0) / 10
+    table = new_table(writer, 1, 1, [width])
+    cell = table.cell(0, 0)
+    if look.fill:
+        cell_fill(cell, writer.hex(look.fill))
+    for old in cell._tc.tcPr.findall(qn("w:tcBorders")):
+        cell._tc.tcPr.remove(old)
+    cell_borders(cell, **{side: (writer.hex(rgb), max(2, round(line / POINT_MM * 8))) for side, (line, rgb) in look.borders.items()})
+    cell_margins(cell, pad, pad, pad)
+    before = writer.context
+    writer.context = {key: found for key, found in look.props.items() if key in STYLE_PROPERTIES}
+    with writer.inside(cell, width - 2 * pad - 0.2):
+        render_tokens(writer, tokens)
+    writer.context = before
+    drop_empty_first(cell)
+    writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
+
+
+# adds an image written with a file path at its width, with its caption; a missing file leaves its alt text in brackets
+def add_file_picture(writer, found):
+    alt, source, written = found.group(1), found.group(2), found.group(3) or ""
+    attributes = parse_attributes(written)
+    look = writer.look("figure", attributes.classes, attributes.values)
+    folders = options_in_use().style_folders
+    path = (Path(folders[0]) if folders else Path()) / source
+    natural = image_size(path)
+    if natural:
+        asked = writer.styles.length(look.width, writer.width * 10) / 10 if look.width else None
+        add_picture(writer, str(path), min(asked or natural[0] / 10, writer.width), alt)
+    else:
+        logger.warning("Image file not found, its alt text is shown instead: %s", source)
+        paragraph = writer.body.add_paragraph()
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        plain(writer, paragraph, f"[{alt or source}]", italic=True, role="muted")
+    if attributes.values.get("caption"):
+        plain(writer, writer.body.add_paragraph(style="Caption"), str(attributes.values["caption"]))
 
 
 # removes an unused leading paragraph from a table cell
@@ -254,11 +313,12 @@ def drop_empty_first(cell):
 
 
 # groups tokens into top-level markdown blocks
-def top_level_blocks(tokens):
+def top_level_blocks(tokens, nested=False):
     blocks, current = [], []
+    top = min((token.level for token in tokens), default=0) if nested else 0
     for token in tokens:
         current.append(token)
-        if token.level == 0 and (token.type.endswith("_close") or token.type in ("fence", "math_block", "hr", "code_block")):
+        if token.level == top and (token.type.endswith("_close") or token.type in ("fence", "math_block", "hr", "code_block")):
             blocks.append(current)
             current = []
     return blocks + ([current] if current else [])

@@ -106,7 +106,7 @@ class PdfPages(FPDF):
         self.use_fallbacks()
         self.photos, self.work_folder, self.photo_credit = "natural", None, None
         self.tightness = 1.0
-        self.styles = None
+        self.styles, self.context = None, None
         self.set_text_shaping(True)
         self.set_auto_page_break(False)
         self.set_margins(0, 0, 0)
@@ -146,7 +146,7 @@ class PdfPages(FPDF):
 
     # the look of an element under the stylesheet, None for version 1 documents
     def look(self, selector, classes=(), inline=None):
-        return self.styles.look(selector, classes, inline) if self.styles else None
+        return self.styles.look(selector, classes, inline, context=self.context) if self.styles else None
 
     # the font family a look asks for, the default when it asks for none
     def family_of(self, look, default):

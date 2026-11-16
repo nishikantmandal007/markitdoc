@@ -30,7 +30,7 @@ class Writer:
     # sets up the rendering context and its document settings
     def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict, title: str, styles=None):
         self.document = docx.Document()
-        self.styles = styles
+        self.styles, self.context = styles, None
         self.theme, self.meta, self.work_folder, self.title = theme, meta, work_folder, title
         self.heading_font, self.body_font = office_font(theme.fonts["heading"]), office_font(theme.fonts["body"])
         self.figures = {key[1]: value for key, value in images.items() if isinstance(key, tuple)}
@@ -60,7 +60,7 @@ class Writer:
 
     # the look of an element under the stylesheet, None for version 1 documents
     def look(self, selector, classes=(), inline=None):
-        return self.styles.look(selector, classes, inline) if self.styles else None
+        return self.styles.look(selector, classes, inline, context=self.context) if self.styles else None
 
     # the Word font name for a look's font: a theme role or a declared font
     def font_named(self, name):
