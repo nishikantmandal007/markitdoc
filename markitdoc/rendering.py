@@ -10,10 +10,12 @@ from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
-from markitdoc.options import Options, using_options
+from markitdoc.models.front_matter import front_matter_yaml, language_version
+from markitdoc.options import Options, options_in_use, using_options
 from markitdoc.pdf.checks import page_problems
 from markitdoc.pdf.render import render_pdf
 from markitdoc.pptx.render import SLIDE_PHOTO_RATIOS, render_pptx
+from markitdoc.themes.stylesheet import load_stylesheet
 from markitdoc.themes.themes import theme_for
 from markitdoc.visuals.images import find_images
 
@@ -21,6 +23,13 @@ logger = logging.getLogger(__name__)
 
 FORMATS = ("pdf", "pptx", "docx")
 TRUE_WORDS = ("true", "yes", "on", True)
+
+
+# the stylesheet of a language v2 document, None for version 1 documents which keep today's rendering
+def stylesheet_for(document, markdown, theme):
+    if language_version(document.meta) != 2:
+        return None
+    return load_stylesheet(front_matter_yaml(markdown) or {}, theme, options_in_use().style_folders)
 
 
 # photos for designed blocks and markdown figures, when the document asks for them
@@ -46,7 +55,7 @@ def written_in_devanagari(document):
 
 
 # a parsed document to a PDF, falling back to plain text for pages that do not fit their design
-def render_laid_out_pdf(document, output_path, template):
+def render_laid_out_pdf(document, output_path, template, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
     wants_images = document.meta.get("images") in TRUE_WORDS
@@ -67,7 +76,7 @@ def render_laid_out_pdf(document, output_path, template):
     if tightened:
         logger.info("Tightened line spacing on %d pages to fit: %s", len(tightened), tightened)
     with tempfile.TemporaryDirectory() as work_folder:
-        render_pdf(document, theme, output_path, Path(work_folder), images, credits)
+        render_pdf(document, theme, output_path, Path(work_folder), images, credits, stylesheet_for(document, markdown, theme))
     logger.info("Rendered PDF: %d blocks, theme %s, %d images, %d bytes, %.1f s, %d pages shown as text",
                 len(document.blocks), theme.name, len(images), output_path.stat().st_size, time.perf_counter() - started, len(broken))
     return output_path
@@ -85,11 +94,11 @@ def render_laid_out_pptx(document, output_path, template, author):
 
 
 # a parsed document to a Word file
-def render_laid_out_docx(document, output_path, template, author):
+def render_laid_out_docx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
-    render_docx(document, theme, output_path, images, author)
+    render_docx(document, theme, output_path, images, author, stylesheet_for(document, markdown, theme))
     logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)
     return output_path
@@ -106,7 +115,7 @@ def render(markdown, output_format, output, template="default", author="", optio
     logger.info("Rendering %s: %d characters, template %s, to %s", output_format, len(markdown), template, output_path)
     with using_options(options or Options()):
         if output_format == "docx":
-            return render_laid_out_docx(parse_document(markdown), output_path, template, author)
+            return render_laid_out_docx(parse_document(markdown), output_path, template, author, markdown)
         if output_format == "pptx":
             return render_laid_out_pptx(parse_document(markdown), output_path, template, author)
-        return render_laid_out_pdf(parse_document(markdown), output_path, template)
+        return render_laid_out_pdf(parse_document(markdown), output_path, template, markdown)

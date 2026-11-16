@@ -9,6 +9,7 @@ from PIL import Image
 from markitdoc.markup.blocks import slot_pieces
 from markitdoc.markup.inline import SUBSCRIPTS, SUPERSCRIPTS, inline_runs, parser
 from markitdoc.models.catalogue import LAYOUTS, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, Box
+from markitdoc.themes.theme_constants import FONT_WORDS
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import lifted
 
@@ -87,9 +88,28 @@ class PdfPages(FPDF):
         self.set_fallback_fonts(["Devanagari", "Symbols", "Latin", "Noto"], exact_match=False)
         self.photos, self.work_folder, self.photo_credit = "natural", None, None
         self.tightness = 1.0
+        self.styles = None
         self.set_text_shaping(True)
         self.set_auto_page_break(False)
         self.set_margins(0, 0, 0)
+
+    # turns on the language v2 stylesheet and registers the fonts it declares in all four styles
+    def use_styles(self, styles):
+        self.styles = styles
+        for name, face in (styles.faces if styles else {}).items():
+            if face:
+                for style, path in zip(("", "B", "I", "BI"), face.files):
+                    self.add_font(f"Face-{name}", style, str(path))
+
+    # the look of an element under the stylesheet, None for version 1 documents
+    def look(self, selector, classes=(), inline=None):
+        return self.styles.look(selector, classes, inline) if self.styles else None
+
+    # the font family a look asks for, the default when it asks for none
+    def family_of(self, look, default):
+        if look is None or not look.font:
+            return default
+        return FONT_WORDS.get(look.font) or f"Face-{look.font}"
 
     # fills the PDF page with a theme color
     def fill_page(self, role):

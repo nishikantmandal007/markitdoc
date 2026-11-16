@@ -1,5 +1,7 @@
 import re
 
+import yaml
+
 from markitdoc.models.model_constants import BARE_DIRECTIVE, BARE_DIRECTIVES, FREE_TEXT_SETTINGS
 
 
@@ -10,7 +12,10 @@ def front_matter(markdown):
         return bare_directives(markdown or "")
     end = [line.strip() for line in lines].index("---", 1)
     meta = {}
+    nested = any(re.match(r"^markitdoc\s*:\s*2\s*$", line.strip(), re.IGNORECASE) for line in lines[1:end])
     for line in lines[1:end]:
+        if nested and line[:1] in (" ", "\t", "-", "#"):
+            continue
         if ":" in line:
             key, value = line.split(":", 1)
             key, value = key.strip().lower(), value.strip().strip("'\"").strip()
@@ -62,3 +67,15 @@ def consume_directives(lines, start, meta):
 # language version asked for by 'markitdoc: 2' in the front matter, 1 when absent or unknown
 def language_version(meta):
     return 2 if str((meta or {}).get("markitdoc", "")).strip() == "2" else 1
+
+
+# the front matter read as yaml so nested sections such as text, set and styles survive, None when it is not valid yaml
+def front_matter_yaml(markdown):
+    lines = (markdown or "").lstrip("\n").split("\n")
+    if not lines or lines[0].strip() != "---" or "---" not in [line.strip() for line in lines[1:]]:
+        return {}
+    try:
+        found = yaml.safe_load("\n".join(lines[1:[line.strip() for line in lines].index("---", 1)]))
+    except yaml.YAMLError:
+        return None
+    return found if isinstance(found, dict) else {}

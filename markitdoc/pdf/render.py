@@ -57,7 +57,7 @@ def draw_block(pdf, block, image, work_folder, credits):
 
 
 # renders a document as a PDF file
-def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=()):
+def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=(), styles=None):
     from markitdoc.pdf.flow.pages import FlowPages
     from markitdoc.pdf.flow.render import fitted_spacing, render_flow, render_toc
     images = images or {}
@@ -66,6 +66,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     title = first.slots.get("title") or next((line.lstrip("# ").strip() for line in first.body.splitlines()
                                              if line.startswith("# ")), "Document")
     pdf = FlowPages(theme, title, document.meta.get("style") == "plain")
+    pdf.use_styles(styles)
     pdf.table_style = str(document.meta.get("tables", "lined")).lower()
     pdf.flow_images = {key[1]: path for key, path in images.items() if isinstance(key, tuple)}
     pdf.photos = str(document.meta.get("photos", "natural")).lower()

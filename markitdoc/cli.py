@@ -9,6 +9,7 @@ from markitdoc.guide.contract import guide
 from markitdoc.models.checks import check_document
 from markitdoc.options import Options
 from markitdoc.rendering import FORMATS, render
+from markitdoc.themes.explain import explain_line
 
 
 # command line: markitdoc render in.md -o out.pdf, markitdoc guide pptx, or markitdoc check in.md
@@ -27,13 +28,21 @@ def main(arguments=None):
     check_command = commands.add_parser("check", help="report problems in a markdown file without rendering it")
     check_command.add_argument("source", type=Path, help="markdown file")
     check_command.add_argument("--json", action="store_true", help="print the findings as JSON")
+    explain_command = commands.add_parser("explain", help="show where each style property on a line came from")
+    explain_command.add_argument("target", help="markdown file and line, such as report.md:41")
     options = parser.parse_args(arguments)
     try:
         if options.command == "guide":
             print(guide(options.format))
             return 0
+        if options.command == "explain":
+            path, _, line = options.target.rpartition(":")
+            if not line.isdigit():
+                raise MarkitDocError("give a file and a line number, such as report.md:41")
+            print("\n".join(explain_line(Path(path).read_text(encoding="utf-8"), int(line), (Path(path).parent,))))
+            return 0
         if options.command == "check":
-            findings = check_document(options.source.read_text(encoding="utf-8"))
+            findings = check_document(options.source.read_text(encoding="utf-8"), (options.source.parent,))
             lines = [f"line {finding.line}: {finding.severity}: {finding.message}" + (f" ({finding.fix})" if finding.fix else "")
                      for finding in findings]
             if options.json:
@@ -43,7 +52,8 @@ def main(arguments=None):
             return int(any(finding.severity == "error" for finding in findings))
         path = render(options.source.read_text(encoding="utf-8"), options.output.suffix.lstrip(".").lower(), options.output,
                       template=options.template, author=options.author,
-                      options=Options(gotenberg_url=options.gotenberg, cache_folder=options.cache))
+                      options=Options(gotenberg_url=options.gotenberg, cache_folder=options.cache,
+                                      style_folders=(options.source.parent,)))
         print(path)
         return 0
     except (MarkitDocError, OSError) as error:
