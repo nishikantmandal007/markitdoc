@@ -60,11 +60,11 @@ def test_should_teach_every_diagram_type_and_no_icons():
 
 def test_should_give_slides_their_own_guide_with_every_slide_type():
     from markitdoc.guide.contract import slides_contract
-    from markitdoc.pptx.render import drawers
+    from markitdoc.pptx.render import DRAWERS
 
     guide = slides_contract()
 
-    assert guide.startswith("SLIDE DESIGN GUIDE") and "action title" in guide and all(f"- {name}:" in guide for name in drawers)
+    assert guide.startswith("SLIDE DESIGN GUIDE") and "action title" in guide and all(f"- {name}:" in guide for name in DRAWERS)
 
 
 def test_should_serve_each_format_its_own_guide_from_the_package():

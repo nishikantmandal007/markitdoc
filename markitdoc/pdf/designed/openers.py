@@ -1,9 +1,9 @@
 from dataclasses import replace
 
 from markitdoc.markup.blocks import paragraphs
-from markitdoc.models.catalogue import Box, CONTENT_LIMIT, CONTENT_WIDTH, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, TEXT_WIDTH
+from markitdoc.models.catalogue import CONTENT_LIMIT, CONTENT_WIDTH, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, TEXT_WIDTH, Box
 from markitdoc.models.document import Block
-from markitdoc.pdf.pages import PdfPages, SOFT_WHITE, WHITE
+from markitdoc.pdf.pages import SOFT_WHITE, WHITE, PdfPages
 from markitdoc.pdf.photos import placed
 from markitdoc.utils.helpers import lifted, long_date
 

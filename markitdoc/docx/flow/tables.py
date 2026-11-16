@@ -7,11 +7,11 @@ from docx.shared import Cm, Pt
 from PIL import Image, ImageDraw
 
 from markitdoc.docx.styles import cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
-from markitdoc.docx.writer import first_paragraph, landscape_section, plain, white, write_runs
-from markitdoc.markup.elements import column_alignments, rating_level, settings_from, SIGNED_NUMBER, TABLE_MARKS, TOTALS_ROW
+from markitdoc.docx.writer import WHITE, first_paragraph, landscape_section, plain, write_runs
+from markitdoc.markup.elements import SIGNED_NUMBER, TABLE_MARKS, TOTALS_ROW, column_alignments, rating_level, settings_from
 from markitdoc.markup.inline import inline_runs, parser
 
-numeric_cell = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")
+NUMERIC_CELL = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")
 
 
 # removes inline emphasis markers from table cell text
@@ -49,7 +49,7 @@ def add_table(writer, tokens, style):
         plain(writer, paragraph, writer.pending_caption)
         writer.pending_caption = ""
     body_rows = [[cell.content for cell in row] for row in rows[1:]]
-    numeric = [all(numeric_cell.match(row[column]) for row in body_rows if column < len(row) and row[column].strip()) and any(
+    numeric = [all(NUMERIC_CELL.match(row[column]) for row in body_rows if column < len(row) and row[column].strip()) and any(
         column < len(row) and row[column].strip() for row in body_rows) for column in range(columns)]
     rated = {column for column in range(1, columns) if body_rows and all(rating_level(row[column] if column < len(row) else "") is not None
                                                                           for row in body_rows)}
@@ -93,7 +93,7 @@ def add_table(writer, tokens, style):
                 plain(writer, paragraph, mark[0], 11, mark[1], bold=True)
                 continue
             signed = SIGNED_NUMBER.match(text) if not header else None
-            role = white if header else "mood" if column in highlighted else (
+            role = WHITE if header else "mood" if column in highlighted else (
                 "success" if signed.group(1) == "+" else "danger") if signed else "ink" if column == 0 and columns > 2 else None
             write_runs(writer, paragraph, runs, size=8.5 if columns > 6 else 9.5 if columns > 4 else 10, role=role,
                        bold=header or total or column in highlighted or (column == 0 and columns > 2))
@@ -137,7 +137,7 @@ def step_table(writer, steps):
             cell_margins(cell, 0.18, 0.25, 0.18)
         marker = first_paragraph(number)
         marker.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        plain(writer, marker, f"{row + 1:02d}", 13, white, bold=True)
+        plain(writer, marker, f"{row + 1:02d}", 13, WHITE, bold=True)
         heading = first_paragraph(text)
         write_runs(writer, heading, inline_runs(parser.parseInline(title)[0], writer.targets), 11.5, "ink", bold=True)
         if detail:

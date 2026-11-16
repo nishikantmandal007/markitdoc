@@ -6,7 +6,7 @@ from PIL import Image
 from pptx.enum.text import PP_ALIGN
 
 from markitdoc.markup.inline import inline_maths, literal
-from markitdoc.pptx.deck import Item, body_height, body_top, content_width, slide_width, visual_left, visual_width, write_text
+from markitdoc.pptx.deck import BODY_HEIGHT, BODY_TOP, CONTENT_WIDTH, SLIDE_WIDTH, VISUAL_LEFT, VISUAL_WIDTH, Item, write_text
 from markitdoc.pptx.diagrams import flow_graph
 from markitdoc.pptx.flow.reader import Piece
 from markitdoc.pptx.photos import add_image, contained, image_ratio, photo_for
@@ -16,9 +16,9 @@ from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)
 
-equation_zoom = 2.0
-caption_height, credit_height = 0.5, 0.3
-code_sizes, code_leading, code_padding = (16, 14), 1.25, 0.25
+EQUATION_ZOOM = 2.0
+CAPTION_HEIGHT, CREDIT_HEIGHT = 0.5, 0.3
+CODE_SIZES, CODE_LEADING, CODE_PADDING = (16, 14), 1.25, 0.25
 
 
 # estimates wrapped line counts for a code sample at a font size
@@ -30,8 +30,8 @@ def code_layout(deck, lines, size, width):
 
 # splits code lines into slide-sized groups
 def code_chunks(deck, lines, size, room):
-    counts = code_layout(deck, lines, size, content_width - 2 * code_padding)
-    limit = max(1, int(room / (size * code_leading / 72)))
+    counts = code_layout(deck, lines, size, CONTENT_WIDTH - 2 * CODE_PADDING)
+    limit = max(1, int(room / (size * CODE_LEADING / 72)))
     chunks, current, used = [], [], 0
     for line, count in zip(lines, counts):
         if current and used + count > limit:
@@ -57,7 +57,7 @@ def landscape_diagram(deck, source):
 # measures how well a diagram image fits slide content
 def diagram_scale(path):
     with Image.open(path) as picture:
-        return min(content_width / picture.width, (body_height - 0.4) / picture.height)
+        return min(CONTENT_WIDTH / picture.width, (BODY_HEIGHT - 0.4) / picture.height)
 
 
 # converts infographic labels and descriptions into slide bullet items
@@ -76,15 +76,15 @@ def infographic_items(syntax):
 # chooses the position and size for a slide visual
 def visual_box(side, width_limit=None):
     if side:
-        return visual_left, body_top, visual_width, body_height
-    width = width_limit or content_width
-    return (slide_width - width) / 2, body_top, width, body_height
+        return VISUAL_LEFT, BODY_TOP, VISUAL_WIDTH, BODY_HEIGHT
+    width = width_limit or CONTENT_WIDTH
+    return (SLIDE_WIDTH - width) / 2, BODY_TOP, width, BODY_HEIGHT
 
 
 # adds a fitted picture and optional caption to the slide
 def place_picture(deck, slide, path, box, alt, caption=""):
     left, top, width, height = box
-    room = height - (caption_height if caption else 0)
+    room = height - (CAPTION_HEIGHT if caption else 0)
     add_image(slide, str(path), *contained(image_ratio(path), left, top, width, room), alt)
     if caption:
         write_text(deck, slide, literal(caption), left, top + room + 0.1, width, 14, "muted", italic=True, align=PP_ALIGN.CENTER, name="Caption")
@@ -94,7 +94,7 @@ def place_picture(deck, slide, path, box, alt, caption=""):
 def place_equation(deck, slide, piece, box):
     left, top, width, height = box
     stream, (natural_width, natural_height) = equation_png(deck, piece.data)
-    scale = min(equation_zoom, width * 0.9 / (natural_width / 25.4), height * 0.8 / (natural_height / 25.4))
+    scale = min(EQUATION_ZOOM, width * 0.9 / (natural_width / 25.4), height * 0.8 / (natural_height / 25.4))
     drawn_width, drawn_height = natural_width / 25.4 * scale, natural_height / 25.4 * scale
     add_image(slide, stream, left + (width - drawn_width) / 2, top + (height - drawn_height) / 2, drawn_width, drawn_height,
               f"Equation: {piece.data}")
@@ -104,10 +104,10 @@ def place_equation(deck, slide, piece, box):
 def place_figure(deck, slide, piece, box):
     path, caption, credit, _ = deck.figures[piece.data]
     left, top, width, height = box
-    photo_height = height - caption_height - credit_height
+    photo_height = height - CAPTION_HEIGHT - CREDIT_HEIGHT
     add_image(slide, photo_for(deck, path, width, photo_height), left, top, width, photo_height, caption or "Photograph")
     write_text(deck, slide, literal(caption), left, top + photo_height + 0.08, width, 14, "muted", italic=True, name="Caption")
-    write_text(deck, slide, literal(credit), left, top + photo_height + caption_height, width, 10, "muted", name="Credit")
+    write_text(deck, slide, literal(credit), left, top + photo_height + CAPTION_HEIGHT, width, 10, "muted", name="Credit")
 
 
 # prepares a visual piece for slide rendering

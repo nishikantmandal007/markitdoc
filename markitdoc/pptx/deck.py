@@ -16,29 +16,29 @@ from markitdoc.pdf.pages import PdfPages
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import lifted, office_font
 
-slide_width, slide_height = 13.333, 7.5
-side_margin = 0.6
-content_width = round(slide_width - 2 * side_margin, 3)
-title_top, title_height, rule_top = 0.4, 1.1, 1.62
-body_top, body_bottom = 1.95, 6.75
-body_height = body_bottom - body_top
-footer_top, footer_size = 7.0, 10
-text_width = 10.6
-side_text_width, visual_left = 4.3, 5.4
-visual_width = round(slide_width - side_margin - visual_left, 3)
-title_sizes = (30, 28, 26, 24)
-body_sizes = (24, 22, 20, 19, 18, 17, 16, 15, 14)
-standard_size, comfortable_size, smallest_size = 20, 18, 14
-line_factor, title_leading, gap_factor = 1.2, 1.12, 0.4
-width_factors = {"Calibri": 1.07, "Georgia": 0.9}
-bullet_indent, number_indent, level_indent = 0.34, 0.5, 0.34
-bullet_marks = ("•", "–", "◦")
-sentence_end = re.compile(r"(?<=[.!?])\s+")
-white = (255, 255, 255)
-soft_white = (226, 230, 240)
-layout_title_only = 5
-no_grid_table_style = "{2D5ABB26-0587-4C30-8999-92F81FD0307C}"
-brand_title_width = 11.5
+SLIDE_WIDTH, SLIDE_HEIGHT = 13.333, 7.5
+SIDE_MARGIN = 0.6
+CONTENT_WIDTH = round(SLIDE_WIDTH - 2 * SIDE_MARGIN, 3)
+TITLE_TOP, TITLE_HEIGHT, RULE_TOP = 0.4, 1.1, 1.62
+BODY_TOP, BODY_BOTTOM = 1.95, 6.75
+BODY_HEIGHT = BODY_BOTTOM - BODY_TOP
+FOOTER_TOP, FOOTER_SIZE = 7.0, 10
+TEXT_WIDTH = 10.6
+SIDE_TEXT_WIDTH, VISUAL_LEFT = 4.3, 5.4
+VISUAL_WIDTH = round(SLIDE_WIDTH - SIDE_MARGIN - VISUAL_LEFT, 3)
+TITLE_SIZES = (30, 28, 26, 24)
+BODY_SIZES = (24, 22, 20, 19, 18, 17, 16, 15, 14)
+STANDARD_SIZE, COMFORTABLE_SIZE, SMALLEST_SIZE = 20, 18, 14
+LINE_FACTOR, TITLE_LEADING, GAP_FACTOR = 1.2, 1.12, 0.4
+WIDTH_FACTORS = {"Calibri": 1.07, "Georgia": 0.9}
+BULLET_INDENT, NUMBER_INDENT, LEVEL_INDENT = 0.34, 0.5, 0.34
+BULLET_MARKS = ("•", "–", "◦")
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+WHITE = (255, 255, 255)
+SOFT_WHITE = (226, 230, 240)
+LAYOUT_TITLE_ONLY = 5
+NO_GRID_TABLE_STYLE = "{2D5ABB26-0587-4C30-8999-92F81FD0307C}"
+BRAND_TITLE_WIDTH = 11.5
 
 
 @dataclass(frozen=True)
@@ -57,10 +57,10 @@ class Item:
 # returns the left indent for a bullet, number, or paragraph
 def item_indent(item):
     if item.kind == "bullet":
-        return bullet_indent * (item.level + 1)
+        return BULLET_INDENT * (item.level + 1)
     if item.kind == "number":
-        return number_indent + level_indent * item.level
-    return level_indent * item.level
+        return NUMBER_INDENT + LEVEL_INDENT * item.level
+    return LEVEL_INDENT * item.level
 
 
 # splits items into groups that satisfy a layout constraint
@@ -77,13 +77,13 @@ class Deck:
     # sets up the rendering context and its document settings
     def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict):
         self.presentation = Presentation(str(theme.master)) if theme.master else Presentation()
-        self.presentation.slide_width = Inches(slide_width)
-        self.presentation.slide_height = Inches(slide_height)
+        self.presentation.slide_width = Inches(SLIDE_WIDTH)
+        self.presentation.slide_height = Inches(SLIDE_HEIGHT)
         self.theme, self.meta, self.work_folder = theme, meta, work_folder
         self.measurer = PdfPages(theme)
         self.measurer.add_page()
         self.heading_font, self.body_font = office_font(theme.fonts["heading"]), office_font(theme.fonts["body"])
-        self.width_factor = min(width_factors[self.body_font], width_factors[self.heading_font])
+        self.width_factor = min(WIDTH_FACTORS[self.body_font], WIDTH_FACTORS[self.heading_font])
         self.figures = {key[1]: value for key, value in images.items() if isinstance(key, tuple)}
         self.photos_by_block = {key: value for key, value in images.items() if not isinstance(key, tuple)}
         self.photos = str(meta.get("photos", "natural")).lower()
@@ -108,7 +108,7 @@ class Deck:
         return self.measured[key]
 
     # measures the height needed for text on a slide
-    def text_height(self, source, width, size, style="", leading=line_factor):
+    def text_height(self, source, width, size, style="", leading=LINE_FACTOR):
         return self.lines(source, width, size, style) * size * leading / 72
 
     # queues text to be added to the current slide notes
@@ -124,7 +124,7 @@ class Deck:
     # creates and styles a slide with its title and footer
     def new_slide(self, title=None, background="paper", footer=True, dark=False, standard=True):
         self.flush_notes()
-        layout = self.presentation.slide_layouts.get_by_name(self.theme.content_layout) if self.branded else self.presentation.slide_layouts[layout_title_only]
+        layout = self.presentation.slide_layouts.get_by_name(self.theme.content_layout) if self.branded else self.presentation.slide_layouts[LAYOUT_TITLE_ONLY]
         slide = self.presentation.slides.add_slide(layout)
         fill = slide.background.fill
         if background == "night":
@@ -141,8 +141,8 @@ class Deck:
         if self.branded and night:
             slide._element.set("showMasterSp", "0")
         if title is not None and standard:
-            place_title(self, slide, title, white if dark else "mood" if self.branded else "ink", width=brand_title_width if self.branded else content_width)
-            add_rect(self, slide, side_margin, rule_top, 1.2, 0.04, "mood", "Title rule")
+            place_title(self, slide, title, WHITE if dark else "mood" if self.branded else "ink", width=BRAND_TITLE_WIDTH if self.branded else CONTENT_WIDTH)
+            add_rect(self, slide, SIDE_MARGIN, RULE_TOP, 1.2, 0.04, "mood", "Title rule")
         if footer or self.branded:
             draw_footer(self, slide, night)
         return slide
@@ -202,12 +202,12 @@ def add_badge(deck, slide, left, top, size, text, role="mood"):
     run = paragraph.add_run()
     run.text = text
     run.font.size, run.font.bold, run.font.name = Pt(round(size * 30)), True, deck.heading_font
-    run.font.color.rgb = deck.color(white)
+    run.font.color.rgb = deck.color(WHITE)
     return circle
 
 
 # sets paragraph line spacing and space after
-def set_spacing(paragraph, size, leading=line_factor, after=gap_factor):
+def set_spacing(paragraph, size, leading=LINE_FACTOR, after=GAP_FACTOR):
     paragraph.line_spacing = Pt(round(size * leading, 1))
     paragraph.space_after = Pt(round(size * after, 1))
 
@@ -225,7 +225,7 @@ def add_bullet(deck, properties, level):
     color = etree.SubElement(properties, qn("a:buClr"))
     etree.SubElement(color, qn("a:srgbClr"), val=str(deck.color("mood")))
     etree.SubElement(properties, qn("a:buFont"), typeface="Arial")
-    etree.SubElement(properties, qn("a:buChar"), char=bullet_marks[min(level, len(bullet_marks) - 1)])
+    etree.SubElement(properties, qn("a:buChar"), char=BULLET_MARKS[min(level, len(BULLET_MARKS) - 1)])
 
 
 # adds one styled text run to a PowerPoint paragraph
@@ -268,9 +268,9 @@ def draw_item(deck, paragraph, item, size, role="body"):
     set_spacing(paragraph, size)
     heading = item.kind == "subheading"
     if item.kind == "bullet":
-        add_bullet(deck, hanging(paragraph, item_indent(item), bullet_indent), item.level)
+        add_bullet(deck, hanging(paragraph, item_indent(item), BULLET_INDENT), item.level)
     elif item.kind == "number":
-        hanging(paragraph, item_indent(item), number_indent)
+        hanging(paragraph, item_indent(item), NUMBER_INDENT)
         numeral = paragraph.add_run()
         numeral.text = f"{item.number}.\t"
         numeral.font.name, numeral.font.size, numeral.font.bold = deck.body_font, Pt(size), True
@@ -285,7 +285,7 @@ def draw_item(deck, paragraph, item, size, role="body"):
 # measures the height needed for one slide text item
 def item_height(deck, item, width, size):
     lines = deck.lines(item.source, width - item_indent(item), size, "B" if item.kind == "subheading" else "")
-    return lines * size * line_factor / 72 + size * gap_factor / 72
+    return lines * size * LINE_FACTOR / 72 + size * GAP_FACTOR / 72
 
 
 # measures the combined height of slide text items
@@ -304,7 +304,7 @@ def write_items(deck, slide, items, left, top, width, size, role="body", name="B
 
 # draws fitted text in a named slide text box
 def write_text(deck, slide, source, left, top, width, size, role="body", bold=False, italic=False, heading=False,
-               align=PP_ALIGN.LEFT, name="Text", leading=line_factor, height=None, anchor=MSO_ANCHOR.TOP):
+               align=PP_ALIGN.LEFT, name="Text", leading=LINE_FACTOR, height=None, anchor=MSO_ANCHOR.TOP):
     bold = bold or heading
     used = deck.text_height(source, width, size, "B" if bold else "", leading)
     shape = add_textbox(slide, left, top, width, height or used, name, anchor)
@@ -328,8 +328,8 @@ def title_fit(deck, source, width, sizes, lines, style):
 
 
 # sets and draws the title placeholder on a slide
-def place_title(deck, slide, source, role, left=side_margin, top=title_top, width=content_width, height=title_height,
-                sizes=title_sizes, lines=2, anchor=MSO_ANCHOR.BOTTOM, bold=True, italic=False, align=PP_ALIGN.LEFT):
+def place_title(deck, slide, source, role, left=SIDE_MARGIN, top=TITLE_TOP, width=CONTENT_WIDTH, height=TITLE_HEIGHT,
+                sizes=TITLE_SIZES, lines=2, anchor=MSO_ANCHOR.BOTTOM, bold=True, italic=False, align=PP_ALIGN.LEFT):
     style = "B" if bold else ""
     size, shown = title_fit(deck, source, width, sizes, lines, style)
     shape = slide.shapes.title
@@ -338,18 +338,18 @@ def place_title(deck, slide, source, role, left=side_margin, top=title_top, widt
     configure_frame(shape.text_frame, anchor)
     paragraph = shape.text_frame.paragraphs[0]
     paragraph.alignment = align
-    set_spacing(paragraph, size, title_leading, 0)
+    set_spacing(paragraph, size, TITLE_LEADING, 0)
     add_runs(deck, paragraph, shown, size, role, bold=bold, italic=italic, font=deck.heading_font)
-    return size, deck.text_height(shown, width, size, style, title_leading)
+    return size, deck.text_height(shown, width, size, style, TITLE_LEADING)
 
 
 # draws the branded footer and slide number
 def draw_brand_footer(deck, slide, dark):
-    role = soft_white if dark else "muted"
-    write_text(deck, slide, literal(deck.theme.footer_text), side_margin, footer_top, 6.2, footer_size, role, name="Footer")
-    write_text(deck, slide, literal(deck.theme.header_note), 6.9, footer_top, 4.8, footer_size, role, align=PP_ALIGN.RIGHT, name="Footer note")
+    role = SOFT_WHITE if dark else "muted"
+    write_text(deck, slide, literal(deck.theme.footer_text), SIDE_MARGIN, FOOTER_TOP, 6.2, FOOTER_SIZE, role, name="Footer")
+    write_text(deck, slide, literal(deck.theme.header_note), 6.9, FOOTER_TOP, 4.8, FOOTER_SIZE, role, align=PP_ALIGN.RIGHT, name="Footer note")
     if deck.slide_count > 1:
-        write_text(deck, slide, str(deck.slide_count), slide_width - side_margin - 1.0, footer_top, 1.0, footer_size, role, align=PP_ALIGN.RIGHT,
+        write_text(deck, slide, str(deck.slide_count), SLIDE_WIDTH - SIDE_MARGIN - 1.0, FOOTER_TOP, 1.0, FOOTER_SIZE, role, align=PP_ALIGN.RIGHT,
                    name="Slide number")
 
 
@@ -358,17 +358,17 @@ def draw_footer(deck, slide, dark=False):
     if deck.branded:
         return draw_brand_footer(deck, slide, dark)
     label = deck.title
-    while len(label) > 1 and deck.lines(literal(label), 9.4, footer_size) > 1:
+    while len(label) > 1 and deck.lines(literal(label), 9.4, FOOTER_SIZE) > 1:
         label = label[:-2].rstrip() + "…"
-    write_text(deck, slide, literal(label), side_margin, footer_top, 9.4, footer_size, "muted", name="Footer")
-    write_text(deck, slide, str(deck.slide_count), slide_width - side_margin - 1.0, footer_top, 1.0, footer_size, "muted",
+    write_text(deck, slide, literal(label), SIDE_MARGIN, FOOTER_TOP, 9.4, FOOTER_SIZE, "muted", name="Footer")
+    write_text(deck, slide, str(deck.slide_count), SLIDE_WIDTH - SIDE_MARGIN - 1.0, FOOTER_TOP, 1.0, FOOTER_SIZE, "muted",
                align=PP_ALIGN.RIGHT, name="Slide number")
 
 
 # keeps as much source text as fits within the available height
 def key_sentences(deck, source, width, height, size):
     kept = []
-    for sentence in sentence_end.split(source.strip()):
+    for sentence in SENTENCE_END.split(source.strip()):
         if deck.text_height(" ".join(kept + [sentence]), width, size) > height:
             break
         kept.append(sentence)
@@ -381,13 +381,13 @@ def key_sentences(deck, source, width, height, size):
 
 
 # chooses the largest text size that fits the available height
-def fitting_size(deck, items, width, height, sizes=body_sizes, cap=standard_size):
+def fitting_size(deck, items, width, height, sizes=BODY_SIZES, cap=STANDARD_SIZE):
     return next((size for size in sizes if size <= cap and stack_height(deck, items, width, size) <= height), None)
 
 
 # raises the text size limit when a short list has ample space
 def roomy_cap(deck, items, width, height):
-    return 24 if stack_height(deck, items, width, 24) <= height * 0.6 and len(items) <= 5 else standard_size
+    return 24 if stack_height(deck, items, width, 24) <= height * 0.6 and len(items) <= 5 else STANDARD_SIZE
 
 
 # fits list text to a slide and records any shortened content
@@ -396,7 +396,7 @@ def fitted_items(deck, items, width, height, label):
     size = fitting_size(deck, items, width, height, cap=cap)
     if size:
         return items, size
-    size = comfortable_size - 2
+    size = COMFORTABLE_SIZE - 2
     shown = [Item(key_sentences(deck, item.source, width - item_indent(item), height / len(items), size), item.kind, item.level,
                   item.number) for item in items]
     deck.note(f"{label}: " + " ".join(item.source for item in items))

@@ -3,7 +3,7 @@ import re
 import zipfile
 from pathlib import Path
 
-steady_dates = re.compile(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:(?:created|modified)>)")
+STEADY_DATES = re.compile(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:(?:created|modified)>)")
 
 
 # saves the presentation with stable package metadata
@@ -22,7 +22,7 @@ def steady_zip(content):
             if info.filename.endswith(".xlsx"):
                 data = steady_zip(data)
             elif info.filename == "docProps/core.xml" and is_workbook(source):
-                data = steady_dates.sub(rb"\g<1>2000-01-01T00:00:00Z\g<2>", data)
+                data = STEADY_DATES.sub(rb"\g<1>2000-01-01T00:00:00Z\g<2>", data)
             entry = zipfile.ZipInfo(info.filename, date_time=(1980, 1, 1, 0, 0, 0))
             entry.compress_type, entry.external_attr = zipfile.ZIP_DEFLATED, info.external_attr
             target.writestr(entry, data)

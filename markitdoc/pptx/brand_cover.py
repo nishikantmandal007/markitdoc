@@ -2,13 +2,13 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches
 
 from markitdoc.markup.inline import literal
-from markitdoc.pptx.deck import body_sizes, draw_footer, key_sentences, side_margin, slide_width, title_fit, write_text
+from markitdoc.pptx.deck import BODY_SIZES, SIDE_MARGIN, SLIDE_WIDTH, draw_footer, key_sentences, title_fit, write_text
 from markitdoc.utils.helpers import long_date
 
-cover_title_sizes = (40, 36, 32, 28)
-cover_width = slide_width - 2 * side_margin
-cover_logo_top, cover_logo_size, cover_stack_top, cover_stack_bottom = 0.4, 1.4, 2.0, 4.95
-cover_gap, tagline_height, subtitle_cap = 0.22, 0.35, 20
+COVER_TITLE_SIZES = (40, 36, 32, 28)
+COVER_WIDTH = SLIDE_WIDTH - 2 * SIDE_MARGIN
+COVER_LOGO_TOP, COVER_LOGO_SIZE, COVER_STACK_TOP, COVER_STACK_BOTTOM = 0.4, 1.4, 2.0, 4.95
+COVER_GAP, TAGLINE_HEIGHT, SUBTITLE_CAP = 0.22, 0.35, 20
 
 
 # finds the first slide shape whose text starts with a value
@@ -31,7 +31,7 @@ def move(shape, top):
 
 # chooses a subtitle size that fits the cover area
 def subtitle_size(deck, source, height):
-    return next((size for size in body_sizes if size <= subtitle_cap and deck.text_height(source, cover_width, size) <= height), 14)
+    return next((size for size in BODY_SIZES if size <= SUBTITLE_CAP and deck.text_height(source, COVER_WIDTH, size) <= height), 14)
 
 
 # draws the configured branded cover slide
@@ -42,34 +42,34 @@ def draw_brand_cover(deck, block):
     tagline = shape_with_text(slide, deck.theme.tagline) if deck.theme.tagline else None
     logo = next(shape for shape in slide.shapes if shape.shape_type == 13 and shape.width == shape.height)
     remove_sample_text(slide, deck.theme.sample_texts)
-    logo.left, logo.top = Inches((slide_width - cover_logo_size) / 2), Inches(cover_logo_top)
-    logo.width = logo.height = Inches(cover_logo_size)
+    logo.left, logo.top = Inches((SLIDE_WIDTH - COVER_LOGO_SIZE) / 2), Inches(COVER_LOGO_TOP)
+    logo.width = logo.height = Inches(COVER_LOGO_SIZE)
     title = slots.get("title") or deck.title
     kicker = slots.get("kicker", "")
     subtitle = slots.get("subtitle", "")
-    fixed = cover_stack_top + (0.45 if kicker else 0) + cover_gap + (tagline_height + cover_gap if tagline is not None else 0)
-    for sizes in (cover_title_sizes[index:] for index in range(len(cover_title_sizes))):
-        size, shown = title_fit(deck, title, cover_width, sizes, 2, "B")
-        title_room = deck.text_height(shown, cover_width, size, "B", 1.12)
-        if not subtitle or deck.text_height(subtitle, cover_width, 14) <= cover_stack_bottom - fixed - title_room:
+    fixed = COVER_STACK_TOP + (0.45 if kicker else 0) + COVER_GAP + (TAGLINE_HEIGHT + COVER_GAP if tagline is not None else 0)
+    for sizes in (COVER_TITLE_SIZES[index:] for index in range(len(COVER_TITLE_SIZES))):
+        size, shown = title_fit(deck, title, COVER_WIDTH, sizes, 2, "B")
+        title_room = deck.text_height(shown, COVER_WIDTH, size, "B", 1.12)
+        if not subtitle or deck.text_height(subtitle, COVER_WIDTH, 14) <= COVER_STACK_BOTTOM - fixed - title_room:
             break
-    top = cover_stack_top
+    top = COVER_STACK_TOP
     if kicker:
-        write_text(deck, slide, literal(kicker.upper()), side_margin, top, cover_width, 14, "mood", bold=True, align=PP_ALIGN.CENTER, name="Kicker")
+        write_text(deck, slide, literal(kicker.upper()), SIDE_MARGIN, top, COVER_WIDTH, 14, "mood", bold=True, align=PP_ALIGN.CENTER, name="Kicker")
         top += 0.45
-    write_text(deck, slide, shown, side_margin, top, cover_width, size, "mood", heading=True, leading=1.12, align=PP_ALIGN.CENTER, name="Title")
-    top += title_room + cover_gap
+    write_text(deck, slide, shown, SIDE_MARGIN, top, COVER_WIDTH, size, "mood", heading=True, leading=1.12, align=PP_ALIGN.CENTER, name="Title")
+    top += title_room + COVER_GAP
     if tagline is not None:
         move(tagline, top)
-        top += tagline_height + cover_gap
+        top += TAGLINE_HEIGHT + COVER_GAP
     if subtitle:
-        height = cover_stack_bottom - top
+        height = COVER_STACK_BOTTOM - top
         size = subtitle_size(deck, subtitle, height)
-        if deck.text_height(subtitle, cover_width, size) > height:
+        if deck.text_height(subtitle, COVER_WIDTH, size) > height:
             deck.note(f"Subtitle: {subtitle}")
-            subtitle = key_sentences(deck, subtitle, cover_width, height, size)
-        write_text(deck, slide, subtitle, side_margin, top, cover_width, size, "body", align=PP_ALIGN.CENTER, name="Subtitle")
+            subtitle = key_sentences(deck, subtitle, COVER_WIDTH, height, size)
+        write_text(deck, slide, subtitle, SIDE_MARGIN, top, COVER_WIDTH, size, "body", align=PP_ALIGN.CENTER, name="Subtitle")
     draw_footer(deck, slide)
     date = long_date(deck.meta.get("date", ""))
     if date:
-        write_text(deck, slide, literal(date), slide_width - side_margin - 3.7, 6.45, 3.7, 14, "muted", align=PP_ALIGN.RIGHT, name="Date")
+        write_text(deck, slide, literal(date), SLIDE_WIDTH - SIDE_MARGIN - 3.7, 6.45, 3.7, 14, "muted", align=PP_ALIGN.RIGHT, name="Date")

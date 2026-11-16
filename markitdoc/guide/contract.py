@@ -2,8 +2,8 @@ from markitdoc.errors import UnsupportedFormatError
 from markitdoc.markup.elements import CALLOUT_KINDS, CHART_SIZES, LIST_SCHEMES, PARAGRAPH_ALIGNMENTS, SPAN_COLORS, TABLE_STYLES
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.model_constants import FLOW_CONTAINERS
-from markitdoc.pptx.designed.titles import max_per_slide
-from markitdoc.pptx.render import drawers
+from markitdoc.pptx.designed.titles import MAX_PER_SLIDE
+from markitdoc.pptx.render import DRAWERS
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
 from markitdoc.visuals.diagrams import DIAGRAM_TYPES
 from markitdoc.visuals.infographics import INFOGRAPHIC_TEMPLATES
@@ -246,8 +246,8 @@ the PDF guide below defines the front matter, block syntax and markdown.
 
 # builds the slide design instructions for document generation
 def slides_contract() -> str:
-    slide_lines = "\n".join(f"- {name}: {LAYOUT_PURPOSES[name]}" + (f" (up to {max_per_slide[name]} items per slide; more continue on the next)"
-                                                                    if name in max_per_slide else "") for name in drawers)
+    slide_lines = "\n".join(f"- {name}: {LAYOUT_PURPOSES[name]}" + (f" (up to {MAX_PER_SLIDE[name]} items per slide; more continue on the next)"
+                                                                    if name in MAX_PER_SLIDE else "") for name in DRAWERS)
     return f"""SLIDE DESIGN GUIDE (pptx). The same markdown as PDF, rendered as 16:9 slides. Read this part first; the PDF guide
 below defines the front matter, block syntax and markdown, and applies unless this part says otherwise.
 

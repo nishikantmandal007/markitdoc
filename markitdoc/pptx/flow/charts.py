@@ -6,13 +6,13 @@ from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
 from markitdoc.markup.inline import plain_text
-from markitdoc.pptx.deck import tint, white
+from markitdoc.pptx.deck import WHITE, tint
 from markitdoc.pptx.photos import add_image
 from markitdoc.visuals.charts import render_chart
 
-chart_scale, chart_dpi = 1.6, 200
-chart_roles = ("mood", "second", "muted", "night", "success", "danger")
-native_charts = {"bar": XL_CHART_TYPE.COLUMN_CLUSTERED, "horizontal_bar": XL_CHART_TYPE.BAR_CLUSTERED, "stacked_bar": XL_CHART_TYPE.COLUMN_STACKED,
+CHART_SCALE, CHART_DPI = 1.6, 200
+CHART_ROLES = ("mood", "second", "muted", "night", "success", "danger")
+NATIVE_CHARTS = {"bar": XL_CHART_TYPE.COLUMN_CLUSTERED, "horizontal_bar": XL_CHART_TYPE.BAR_CLUSTERED, "stacked_bar": XL_CHART_TYPE.COLUMN_STACKED,
                  "line": XL_CHART_TYPE.LINE_MARKERS, "pie": XL_CHART_TYPE.PIE, "donut": XL_CHART_TYPE.DOUGHNUT}
 
 
@@ -20,7 +20,7 @@ native_charts = {"bar": XL_CHART_TYPE.COLUMN_CLUSTERED, "horizontal_bar": XL_CHA
 def chart_png(deck, data, width, height):
     data = {**data, "colors": ["#" + deck.theme.colors[role].lstrip("#") for role in ("mood", "second", "muted", "primary", "success", "danger")],
             "background": "#" + deck.theme.colors["paper"].lstrip("#"), "font": str(deck.theme.fonts["body"])}
-    return io.BytesIO(render_chart(data, width_inches=width / chart_scale, height_inches=height / chart_scale, dpi=chart_dpi))
+    return io.BytesIO(render_chart(data, width_inches=width / CHART_SCALE, height_inches=height / CHART_SCALE, dpi=CHART_DPI))
 
 
 # adds a native or rendered chart to a slide
@@ -29,7 +29,7 @@ def place_chart(deck, slide, piece, box):
     if data["type"] == "waterfall":
         place_waterfall(deck, slide, data, box)
         return
-    kind = native_charts.get(data["type"])
+    kind = NATIVE_CHARTS.get(data["type"])
     if kind is None:
         left, top, width, height = box
         add_image(slide, chart_png(deck, data, width, height), left, top, width, height, f"Chart: {data.get('title') or data['type']}")
@@ -93,7 +93,7 @@ def place_waterfall(deck, slide, data, box):
                 label.position = XL_LABEL_POSITION.INSIDE_BASE if step == "total" else XL_LABEL_POSITION.CENTER
                 font = label.text_frame.paragraphs[0].runs[0].font
                 font.size, font.bold, font.name = Pt(14 if step == "total" else 13), True, deck.body_font
-                font.color.rgb = deck.color(white)
+                font.color.rgb = deck.color(WHITE)
     value_axis, category_axis = chart.value_axis, chart.category_axis
     value_axis.visible, value_axis.has_major_gridlines = False, False
     category_axis.format.line.color.rgb = deck.color("rule")
@@ -104,7 +104,7 @@ def place_waterfall(deck, slide, data, box):
 
 # applies document fonts, colors, labels, and values to a chart
 def style_chart(deck, chart, data, round_chart, slide_title=""):
-    colors = [deck.color(role) for role in chart_roles]
+    colors = [deck.color(role) for role in CHART_ROLES]
     many = len(data["datasets"]) > 1
     if many and not round_chart:
         colors = [deck.color(tint(deck, "mood", 0.62)), deck.color("mood"), deck.color("night"), deck.color("muted")]
@@ -130,12 +130,12 @@ def style_chart(deck, chart, data, round_chart, slide_title=""):
         labels.font.color.rgb = deck.color("ink")
         if data["type"] == "stacked_bar":
             labels.position = XL_LABEL_POSITION.CENTER
-            labels.font.color.rgb = deck.color(white)
+            labels.font.color.rgb = deck.color(WHITE)
         elif not round_chart:
             labels.position = XL_LABEL_POSITION.OUTSIDE_END
     if round_chart:
         labels.show_value, labels.show_percentage, labels.number_format = False, True, "0%"
-        labels.font.color.rgb, labels.font.bold = deck.color(white), True
+        labels.font.color.rgb, labels.font.bold = deck.color(WHITE), True
         donut_colors = [deck.color(tint(deck, "mood", share)) for share in (0.0, 0.3, 0.5, 0.65, 0.78, 0.88)]
         for index, point in enumerate(chart.series[0].points):
             point.format.fill.solid()

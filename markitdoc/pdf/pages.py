@@ -6,8 +6,8 @@ from fpdf.enums import MethodReturnValue
 from PIL import Image
 
 from markitdoc.markup.blocks import slot_pieces
-from markitdoc.markup.inline import inline_runs, parser, SUBSCRIPTS, SUPERSCRIPTS
-from markitdoc.models.catalogue import Box, LAYOUTS, MARGIN, PAGE_HEIGHT, PAGE_WIDTH
+from markitdoc.markup.inline import SUBSCRIPTS, SUPERSCRIPTS, inline_runs, parser
+from markitdoc.models.catalogue import LAYOUTS, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, Box
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import lifted
 

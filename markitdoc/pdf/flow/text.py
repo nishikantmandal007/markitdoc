@@ -5,8 +5,8 @@ from dataclasses import replace
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
 from markitdoc.markup.elements import BULLET_MARKERS, CALLOUT_KINDS, LIST_SCHEMES, NUMBERING_SCHEMES
-from markitdoc.markup.inline import inline_maths, SUPERSCRIPT_DIGITS
-from markitdoc.pdf.flow.pages import FlowPages, BODY_SIZE, can_hyphenate, hanging_note, HIGHLIGHT_LINK, hyphenated
+from markitdoc.markup.inline import SUPERSCRIPT_DIGITS, inline_maths
+from markitdoc.pdf.flow.pages import BODY_SIZE, HIGHLIGHT_LINK, FlowPages, can_hyphenate, hanging_note, hyphenated
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 from markitdoc.visuals.icons import strip_icon

@@ -4,19 +4,19 @@ from pptx.enum.text import MSO_ANCHOR
 
 from markitdoc.markup.inline import literal
 from markitdoc.pptx.deck import (
-    body_sizes,
-    comfortable_size,
+    BODY_SIZES,
+    COMFORTABLE_SIZE,
+    SIDE_MARGIN,
+    STANDARD_SIZE,
+    TEXT_WIDTH,
     key_sentences,
     place_title,
-    side_margin,
-    standard_size,
-    text_width,
     title_fit,
     write_text,
 )
 
-column_gap, row_gap, subtitle_width = 0.4, 0.45, 9.6
-max_per_slide = {"keypoints": 4, "process": 5, "timeline": 6, "figures": 6, "comparison": 7}
+COLUMN_GAP, ROW_GAP, SUBTITLE_WIDTH = 0.4, 0.45, 9.6
+MAX_PER_SLIDE = {"keypoints": 4, "process": 5, "timeline": 6, "figures": 6, "comparison": 7}
 
 
 @dataclass(frozen=True)
@@ -43,37 +43,37 @@ def slide_titles(source):
 
 
 # chooses a text size or shortens the text to fit its box
-def fit_text(deck, source, width, height, label, cap=standard_size, style=""):
-    size = next((size for size in body_sizes if size <= cap and deck.text_height(source, width, size, style) <= height), None)
+def fit_text(deck, source, width, height, label, cap=STANDARD_SIZE, style=""):
+    size = next((size for size in BODY_SIZES if size <= cap and deck.text_height(source, width, size, style) <= height), None)
     if size:
         return source, size
     deck.note(f"{label}: {source}")
-    return key_sentences(deck, source, width, height, comfortable_size - 2), comfortable_size - 2
+    return key_sentences(deck, source, width, height, COMFORTABLE_SIZE - 2), COMFORTABLE_SIZE - 2
 
 
 # fits lead text to its standard slide box
 def lead_text(deck, source):
-    return fit_text(deck, source, text_width, 1.3, "Lead") if source else ("", 0)
+    return fit_text(deck, source, TEXT_WIDTH, 1.3, "Lead") if source else ("", 0)
 
 
 # measures the space needed for the slide lead text
 def lead_room(deck, source):
     shown, size = lead_text(deck, source)
-    return deck.text_height(shown, text_width, size) + 0.35 if source else 0.0
+    return deck.text_height(shown, TEXT_WIDTH, size) + 0.35 if source else 0.0
 
 
 # draws fitted lead text and returns the next available position
 def draw_lead(deck, slide, source, top):
     shown, size = lead_text(deck, source)
-    return top + write_text(deck, slide, shown, side_margin, top, text_width, size, "body", name="Lead") + 0.35 if source else top
+    return top + write_text(deck, slide, shown, SIDE_MARGIN, top, TEXT_WIDTH, size, "body", name="Lead") + 0.35 if source else top
 
 
 # fits a title group and measures its total height
 def plan_group(deck, kicker, title, subtitle, sizes, width):
     size, shown = title_fit(deck, title, width, sizes, 3, "B")
     height = deck.text_height(shown, width, size, "B", 1.12)
-    text, text_size = fit_text(deck, subtitle, min(width, subtitle_width), 1.4, "Subtitle", cap=22) if subtitle else ("", 0)
-    sub_height = deck.text_height(text, min(width, subtitle_width), text_size) if subtitle else 0
+    text, text_size = fit_text(deck, subtitle, min(width, SUBTITLE_WIDTH), 1.4, "Subtitle", cap=22) if subtitle else ("", 0)
+    sub_height = deck.text_height(text, min(width, SUBTITLE_WIDTH), text_size) if subtitle else 0
     return TitleGroup(kicker, shown, size, height, text, text_size, sub_height)
 
 
@@ -85,5 +85,5 @@ def draw_group(deck, slide, group, left, top, width, roles):
         top += 0.5
     place_title(deck, slide, group.title, title_role, left, top, width, group.title_height, (group.title_size,), 3, MSO_ANCHOR.TOP)
     if group.subtitle:
-        write_text(deck, slide, group.subtitle, left, top + group.title_height + 0.35, min(width, subtitle_width), group.subtitle_size,
+        write_text(deck, slide, group.subtitle, left, top + group.title_height + 0.35, min(width, SUBTITLE_WIDTH), group.subtitle_size,
                    subtitle_role, name="Subtitle")

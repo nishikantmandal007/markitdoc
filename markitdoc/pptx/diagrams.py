@@ -8,15 +8,15 @@ from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
 from markitdoc.markup.inline import plain_text
-from markitdoc.pptx.deck import add_rect, configure_frame, tint, white, write_text
-from markitdoc.visuals.diagrams import ARROW, first_line, LABELLED_LINK, readable, SETTING_WORDS
+from markitdoc.pptx.deck import WHITE, add_rect, configure_frame, tint, write_text
+from markitdoc.visuals.diagrams import ARROW, LABELLED_LINK, SETTING_WORDS, first_line, readable
 
-shape_marks = (("{{", "}}", MSO_SHAPE.HEXAGON), ("{", "}", MSO_SHAPE.DIAMOND), ("((", "))", MSO_SHAPE.OVAL), ("([", "])", MSO_SHAPE.ROUNDED_RECTANGLE),
+SHAPE_MARKS = (("{{", "}}", MSO_SHAPE.HEXAGON), ("{", "}", MSO_SHAPE.DIAMOND), ("((", "))", MSO_SHAPE.OVAL), ("([", "])", MSO_SHAPE.ROUNDED_RECTANGLE),
                ("[(", ")]", MSO_SHAPE.CAN), ("[[", "]]", MSO_SHAPE.RECTANGLE), ("[", "]", MSO_SHAPE.ROUNDED_RECTANGLE),
                ("(", ")", MSO_SHAPE.ROUNDED_RECTANGLE))
-node_part = re.compile(r"^\s*(\w+)\s*(.*?)\s*$")
-label_sizes = (16, 15, 14, 13, 12, 11)
-max_columns, max_rows, narrowest = 8, 4, 1.05
+NODE_PART = re.compile(r"^\s*(\w+)\s*(.*?)\s*$")
+LABEL_SIZES = (16, 15, 14, 13, 12, 11)
+MAX_COLUMNS, MAX_ROWS, NARROWEST = 8, 4, 1.05
 
 
 @dataclass
@@ -47,18 +47,18 @@ def flow_graph(source):
     if not edges or len(labels) < 2:
         return None
     columns = ranked(list(labels), edges)
-    if len(columns) > max_columns or max(len(column) for column in columns) > max_rows:
+    if len(columns) > MAX_COLUMNS or max(len(column) for column in columns) > MAX_ROWS:
         return None
     return Flow(labels, shapes, edges, columns)
 
 
 # reads a node name, label, and shape from a flowchart fragment
 def named_node(part, labels, shapes):
-    found = node_part.match(part)
+    found = NODE_PART.match(part)
     if not found:
         return None
     name, rest = found.groups()
-    for opening, closing, shape in shape_marks:
+    for opening, closing, shape in SHAPE_MARKS:
         if rest.startswith(opening) and rest.endswith(closing):
             labels[name] = readable(rest[len(opening):len(rest) - len(closing)]) or name
             shapes[name] = shape
@@ -134,7 +134,7 @@ def draw_flow(deck, slide, flow, box):
     count = len(flow.columns)
     gap = (0.95 if count <= 5 else 0.7) if any(label for _, _, label in flow.edges) else (0.6 if count <= 5 else 0.42)
     node_width = min(2.6, (width - gap * (count - 1)) / count)
-    if node_width < narrowest:
+    if node_width < NARROWEST:
         return False
     gap = (width - node_width * count) / max(1, count - 1) if count > 1 else 0
     decision_width = min(node_width * 1.45, node_width + gap * 0.85)
@@ -147,7 +147,7 @@ def draw_flow(deck, slide, flow, box):
         return (deck.lines(text, inner(name), size, "B") <= (4 if decided(flow, name) else 3)
                 and all(deck.lines(word, inner(name), size, "B") == 1 for word in text.split()))
 
-    size = next((size for size in label_sizes if all(fits(name, size) for name in flow.labels)), None)
+    size = next((size for size in LABEL_SIZES if all(fits(name, size) for name in flow.labels)), None)
     if size is None:
         return False
     node_height = max(0.95, max(deck.text_height(flow.labels[name], inner(name), size, "B") for name in flow.labels if not decided(flow, name))
@@ -199,7 +199,7 @@ def draw_node(deck, slide, flow, name, x, y, width, height, size, end_point):
     run = paragraph.add_run()
     run.text = plain_text(flow.labels[name])
     run.font.size, run.font.bold, run.font.name = Pt(size), True, deck.body_font
-    run.font.color.rgb = deck.color(white if fill == "mood" else "ink")
+    run.font.color.rgb = deck.color(WHITE if fill == "mood" else "ink")
     return shape
 
 

@@ -4,18 +4,18 @@ import re
 from fpdf.enums import XPos, YPos
 
 from markitdoc.markup.elements import (
+    LIST_SCHEMES,
+    PARAGRAPH_ALIGNMENTS,
+    TABLE_STYLES,
     closing_index,
     column_alignments,
     element_settings,
-    LIST_SCHEMES,
     only_display_maths,
-    PARAGRAPH_ALIGNMENTS,
     settings_from,
-    TABLE_STYLES,
     without_display_maths,
 )
 from markitdoc.markup.inline import ANCHOR, inline_runs, parser
-from markitdoc.pdf.flow.pages import FlowPages, BODY_SIZE, measured, place_notes, probe_of, top_height
+from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
     add_callout,

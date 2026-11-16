@@ -2,7 +2,7 @@ import io
 
 from markitdoc.models.catalogue import CONTENT_LIMIT, CONTENT_WIDTH, MARGIN, PAGE_WIDTH
 from markitdoc.models.document import Block
-from markitdoc.pdf.pages import PdfPages, FAINT_WHITE, WHITE
+from markitdoc.pdf.pages import FAINT_WHITE, WHITE, PdfPages
 from markitdoc.utils.helpers import lifted
 from markitdoc.visuals.icons import icon_svg, strip_icon
 

@@ -4,18 +4,18 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
-page_width, page_height, side_margin, top_margin = 21.0, 29.7, 2.2, 2.4
-text_width = page_width - 2 * side_margin
-body_size, small_size = 11, 9
-heading_sizes = {1: 22, 2: 16, 3: 13, 4: 11.5}
+PAGE_WIDTH, PAGE_HEIGHT, SIDE_MARGIN, TOP_MARGIN = 21.0, 29.7, 2.2, 2.4
+TEXT_WIDTH = PAGE_WIDTH - 2 * SIDE_MARGIN
+BODY_SIZE, SMALL_SIZE = 11, 9
+HEADING_SIZES = {1: 22, 2: 16, 3: 13, 4: 11.5}
 
 
 # sets the Word page size, margins, and orientation
 def setup_page(writer):
     section = writer.document.sections[0]
-    section.page_width, section.page_height = Cm(page_width), Cm(page_height)
-    section.left_margin = section.right_margin = Cm(side_margin)
-    section.top_margin, section.bottom_margin = Cm(top_margin), Cm(2.2)
+    section.page_width, section.page_height = Cm(PAGE_WIDTH), Cm(PAGE_HEIGHT)
+    section.left_margin = section.right_margin = Cm(SIDE_MARGIN)
+    section.top_margin, section.bottom_margin = Cm(TOP_MARGIN), Cm(2.2)
     section.header_distance = section.footer_distance = Cm(1.1)
 
 
@@ -52,7 +52,7 @@ def paragraph_style(writer, name, base="Normal"):
 def setup_styles(writer):
     styles = writer.document.styles
     normal = styles["Normal"]
-    style_font(normal, writer, body_size)
+    style_font(normal, writer, BODY_SIZE)
     style_spacing(normal, 0, 7, 1.18)
     language = str(writer.meta.get("lang", "en")) or "en"
     lang = OxmlElement("w:lang")
@@ -63,11 +63,11 @@ def setup_styles(writer):
     remove_borders(styles["Title"])
     style_font(styles["Subtitle"], writer, 14, "body")
     style_spacing(styles["Subtitle"], 0, 14, 1.2)
-    for level, size in heading_sizes.items():
+    for level, size in HEADING_SIZES.items():
         style = styles[f"Heading {level}"]
         style_font(style, writer, size, "mood" if level == 2 else "ink", bold=True, heading=level <= 3)
         style_spacing(style, {1: 20, 2: 16, 3: 12, 4: 10}[level], {1: 8, 2: 6, 3: 4, 4: 2}[level], 1.05, keep=True)
-    style_font(styles["Caption"], writer, small_size, "muted", italic=True)
+    style_font(styles["Caption"], writer, SMALL_SIZE, "muted", italic=True)
     style_spacing(styles["Caption"], 3, 12, 1.1)
     style_font(styles["Quote"], writer, 13, "ink", italic=True)
     style_spacing(styles["Quote"], 8, 10, 1.25)

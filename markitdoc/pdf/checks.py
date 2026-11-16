@@ -4,7 +4,7 @@ from dataclasses import replace
 from markitdoc.markup.blocks import prepared, slot_pieces
 from markitdoc.models.catalogue import CONTENT_LIMIT, LAYOUTS
 from markitdoc.models.document import Document
-from markitdoc.pdf.pages import PdfPages, SHRINK_STEPS
+from markitdoc.pdf.pages import SHRINK_STEPS, PdfPages
 from markitdoc.pdf.photos import MEASURING_PHOTO
 from markitdoc.pdf.render import draw_block
 from markitdoc.themes.themes import Theme

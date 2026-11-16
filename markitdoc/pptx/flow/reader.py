@@ -3,12 +3,12 @@ import re
 from dataclasses import dataclass
 
 from markitdoc.markup.elements import (
+    TABLE_STYLES,
     chart_data,
     closing_index,
     column_alignments,
     element_settings,
     only_display_maths,
-    TABLE_STYLES,
     without_display_maths,
 )
 from markitdoc.markup.inline import ANCHOR, parser, plain_text
@@ -17,10 +17,10 @@ from markitdoc.visuals.diagrams import chain_steps, diagram_title
 
 logger = logging.getLogger(__name__)
 
-footnote_mark = re.compile(r"\[\^([^\]]+)\]")
-checkbox = re.compile(r"^\[( |x|X)\]\s+")
-settings_tail = re.compile(r"\s*\{[^{}]*\}\s*$")
-page_break_marker = "+++"
+FOOTNOTE_MARK = re.compile(r"\[\^([^\]]+)\]")
+CHECKBOX = re.compile(r"^\[( |x|X)\]\s+")
+SETTINGS_TAIL = re.compile(r"\s*\{[^{}]*\}\s*$")
+PAGE_BREAK_MARKER = "+++"
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class Section:
     parts: list
 
 
-break_piece = Piece("break")
+BREAK_PIECE = Piece("break")
 
 
 class FlowReader:
@@ -66,8 +66,8 @@ class FlowReader:
 
     # converts footnote and checkbox syntax to visible text
     def source_of(self, inline):
-        source = footnote_mark.sub(self.number_of, inline.content)
-        return checkbox.sub(lambda match: "☐ " if match.group(1) == " " else "☑ ", source)
+        source = FOOTNOTE_MARK.sub(self.number_of, inline.content)
+        return CHECKBOX.sub(lambda match: "☐ " if match.group(1) == " " else "☑ ", source)
 
     # reads markdown tokens into slide content parts
     def read(self, tokens):
@@ -96,7 +96,7 @@ class FlowReader:
         elif kind == "math_block":
             self.parts.append(Piece("equation", token.content.strip()))
         elif kind == "hr":
-            self.parts.append(break_piece)
+            self.parts.append(BREAK_PIECE)
         elif kind == "blockquote_open":
             return self.quote(tokens, index)
         elif kind == "dt_open":
@@ -140,11 +140,11 @@ class FlowReader:
     def paragraph(self, tokens, index):
         inline, equations = without_display_maths(tokens[index + 1])
         picture = next((child for child in inline.children or [] if child.type == "image"), None)
-        source = settings_tail.sub("", self.source_of(tokens[index + 1] if not equations else inline)).strip()
+        source = SETTINGS_TAIL.sub("", self.source_of(tokens[index + 1] if not equations else inline)).strip()
         if picture is not None:
             self.parts.append(Piece("figure", picture.content or str(picture.attrs.get("alt", ""))))
-        elif source == page_break_marker:
-            self.parts.append(break_piece)
+        elif source == PAGE_BREAK_MARKER:
+            self.parts.append(BREAK_PIECE)
         elif source.startswith("Table:") and not self.lists:
             self.caption = source[6:].strip()
         elif source and not (equations and only_display_maths(tokens[index + 1])):

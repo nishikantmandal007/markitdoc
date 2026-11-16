@@ -10,11 +10,11 @@ from markitdoc.docx.flow.lists import add_list_item, new_list
 from markitdoc.docx.flow.tables import add_table, step_table
 from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, new_table
 from markitdoc.docx.writer import (
+    LIST_FORMATS,
     add_picture,
     bookmark,
     caption,
     first_paragraph,
-    list_formats,
     photo,
     plain,
     start_on_new_page,
@@ -22,22 +22,22 @@ from markitdoc.docx.writer import (
 )
 from markitdoc.markup.elements import (
     CALLOUT_KINDS,
+    TABLE_STYLES,
     chart_data,
     closing_index,
     element_settings,
     settings_from,
-    TABLE_STYLES,
     without_display_maths,
 )
-from markitdoc.markup.inline import Run, ANCHOR, inline_runs, parser
+from markitdoc.markup.inline import ANCHOR, Run, inline_runs, parser
 from markitdoc.visuals.charts import render_chart
-from markitdoc.visuals.diagrams import chain_steps, diagram_as_text, diagram_title, render_diagram, ZOOM
+from markitdoc.visuals.diagrams import ZOOM, chain_steps, diagram_as_text, diagram_title, render_diagram
 from markitdoc.visuals.equations import equation_png_bytes, mathtext_ready
 from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)
-alignments = {"center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}
-box_drawing = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
+ALIGNMENTS = {"center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}
+BOX_DRAWING = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
 
 # parses markdown and renders its tokens into the Word document
@@ -77,7 +77,7 @@ def render_tokens(writer, tokens):
             index += 3
             continue
         if kind in ("bullet_list_open", "ordered_list_open"):
-            scheme = pending if pending in list_formats else "decimal"
+            scheme = pending if pending in LIST_FORMATS else "decimal"
             ordered = kind == "ordered_list_open"
             stack.append(new_list(writer, ordered, scheme, int(token.attrs.get("start", 1) or 1) if ordered else 1))
             pending = ""
@@ -169,8 +169,8 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
         add_list_item(writer, stack, runs)
     elif text:
         paragraph = writer.body.add_paragraph(style="Lead" if style == "lead" else None)
-        if style in alignments:
-            paragraph.alignment = alignments[style]
+        if style in ALIGNMENTS:
+            paragraph.alignment = ALIGNMENTS[style]
         write_runs(writer, paragraph, runs)
     for equation in equations:
         add_equation(writer, equation)
@@ -257,7 +257,7 @@ def top_level_blocks(tokens):
 def add_fence(writer, language, content):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
     language = language.split("{")[0].strip()
-    if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in box_drawing) >= 6:
+    if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in BOX_DRAWING) >= 6:
         add_code(writer, content, 8.5)
         return
     if language == "chart":

@@ -5,12 +5,12 @@ import re
 from fpdf.enums import XPos, YPos
 from PIL import Image
 
-from markitdoc.markup.elements import chart_data, CHART_SIZES, settings_from
-from markitdoc.pdf.flow.pages import FlowPages, BODY_SIZE
+from markitdoc.markup.elements import CHART_SIZES, chart_data, settings_from
+from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages
 from markitdoc.pdf.flow.text import add_heading, add_list_item
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.charts import render_chart
-from markitdoc.visuals.diagrams import CANVAS_WIDTH, diagram_as_text, diagram_title, render_diagram, ZOOM
+from markitdoc.visuals.diagrams import CANVAS_WIDTH, ZOOM, diagram_as_text, diagram_title, render_diagram
 from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)

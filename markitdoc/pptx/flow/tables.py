@@ -6,24 +6,24 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-from markitdoc.markup.elements import NUMERIC_CELL, rating_level, SIGNED_NUMBER, TABLE_MARKS
+from markitdoc.markup.elements import NUMERIC_CELL, SIGNED_NUMBER, TABLE_MARKS, rating_level
 from markitdoc.markup.inline import plain_text
 from markitdoc.pdf.flow.tables import column_widths
 from markitdoc.pptx.deck import (
+    CONTENT_WIDTH,
+    NO_GRID_TABLE_STYLE,
+    SIDE_MARGIN,
+    WHITE,
     add_rect,
     add_runs,
-    content_width,
     key_sentences,
-    no_grid_table_style,
     set_spacing,
-    side_margin,
     tint,
-    white,
 )
 
-max_bullets, max_table_rows, max_lead_above = 6, 8, 1.15
-table_sizes = (18, 16, 14)
-cell_side, cell_vertical = 0.12, 0.08
+MAX_BULLETS, MAX_TABLE_ROWS, MAX_LEAD_ABOVE = 6, 8, 1.15
+TABLE_SIZES = (18, 16, 14)
+CELL_SIDE, CELL_VERTICAL = 0.12, 0.08
 
 
 # removes inline emphasis markers from table cell text
@@ -33,25 +33,25 @@ def table_cells(source):
 
 # measures the height needed for a slide table row
 def row_height(deck, row, widths, size, header):
-    lines = max(deck.lines(source, width - 2 * cell_side, size, "B" if header else "") for source, width in zip(row, widths))
-    return lines * size * 1.2 / 72 + 2 * cell_vertical
+    lines = max(deck.lines(source, width - 2 * CELL_SIDE, size, "B" if header else "") for source, width in zip(row, widths))
+    return lines * size * 1.2 / 72 + 2 * CELL_VERTICAL
 
 
 # shortens the tallest cell text until a table row fits
 def shortened_row(deck, row, widths, size, limit):
     row = list(row)
     while row_height(deck, row, widths, size, False) > limit:
-        position = max(range(len(row)), key=lambda column: deck.lines(row[column], widths[column] - 2 * cell_side, size))
-        row[position] = key_sentences(deck, row[position], widths[position] - 2 * cell_side, limit - 2 * cell_vertical, size)
+        position = max(range(len(row)), key=lambda column: deck.lines(row[column], widths[column] - 2 * CELL_SIDE, size))
+        row[position] = key_sentences(deck, row[position], widths[position] - 2 * CELL_SIDE, limit - 2 * CELL_VERTICAL, size)
     return tuple(row)
 
 
 # chooses table sizing and splits rows across slides
 def table_pages(deck, table, available):
     plans = []
-    for size in table_sizes:
+    for size in TABLE_SIZES:
         plain = [[table_cells(source) for source in row] for row in table.rows]
-        millimetres, _ = column_widths(deck.measurer, plain, content_width * 25.4, size)
+        millimetres, _ = column_widths(deck.measurer, plain, CONTENT_WIDTH * 25.4, size)
         widths = [width / 25.4 for width in millimetres]
         header = row_height(deck, table.rows[0], widths, size, True)
         body = [shortened_row(deck, row, widths, size, available - header) for row in table.rows[1:]]
@@ -65,7 +65,7 @@ def table_pages(deck, table, available):
 def pack_rows(rows, heights, room):
     pages, current, used = [], [], 0.0
     for row, height in zip(rows, heights):
-        if current and (used + height > room or len(current) >= max_table_rows):
+        if current and (used + height > room or len(current) >= MAX_TABLE_ROWS):
             pages.append(current)
             current, used = [], 0.0
         current.append(row)
@@ -123,8 +123,8 @@ def draw_harvey_ball(deck, slide, left, top, size, level):
 
 # sets cell text, alignment, fill, and borders for a slide table
 def style_cell(deck, cell, source, align, size, header, style, last, odd, first=False, highlight=False, rating=False):
-    cell.margin_left = cell.margin_right = Inches(cell_side)
-    cell.margin_top = cell.margin_bottom = Inches(cell_vertical)
+    cell.margin_left = cell.margin_right = Inches(CELL_SIDE)
+    cell.margin_top = cell.margin_bottom = Inches(CELL_VERTICAL)
     cell.vertical_anchor = MSO_ANCHOR.MIDDLE
     hairline = tint(deck, "mood", 0.75)
     for side in ("L", "R"):
@@ -148,17 +148,17 @@ def style_cell(deck, cell, source, align, size, header, style, last, odd, first=
         add_runs(deck, paragraph, mark[0], size + 2, mark[1], bold=True)
         return
     signed = SIGNED_NUMBER.match(plain_text(source)) if not header else None
-    role = (white if header else "mood" if highlight else ("success" if signed.group(1) == "+" else "danger") if signed
+    role = (WHITE if header else "mood" if highlight else ("success" if signed.group(1) == "+" else "danger") if signed
             else "ink" if first else "body")
     add_runs(deck, paragraph, source, size, role, bold=header or highlight or first)
 
 
 # draws a styled PowerPoint table with a repeated header
 def add_table(deck, slide, table, rows, widths, header_height, heights, size, top):
-    shape = slide.shapes.add_table(len(rows) + 1, len(widths), Inches(side_margin), Inches(top), Inches(sum(widths)),
+    shape = slide.shapes.add_table(len(rows) + 1, len(widths), Inches(SIDE_MARGIN), Inches(top), Inches(sum(widths)),
                                    Inches(header_height + sum(heights)))
     shape.name = "Table"
-    shape._element.graphic.graphicData.tbl.tblPr.find(qn("a:tableStyleId")).text = no_grid_table_style
+    shape._element.graphic.graphicData.tbl.tblPr.find(qn("a:tableStyleId")).text = NO_GRID_TABLE_STYLE
     grid = shape.table
     grid.horz_banding = False
     for column, width in enumerate(widths):
@@ -178,6 +178,6 @@ def add_table(deck, slide, table, rows, widths, header_height, heights, size, to
         y = top + header_height + sum(heights[:position - 1])
         for column in rated:
             ball = rating_level(row[column] if column < len(row) else "")
-            x = side_margin + sum(widths[:column])
+            x = SIDE_MARGIN + sum(widths[:column])
             diameter = min(0.3, heights[position - 1] * 0.6)
             draw_harvey_ball(deck, slide, x + widths[column] / 2 - diameter / 2, y + heights[position - 1] / 2 - diameter / 2, diameter, ball)

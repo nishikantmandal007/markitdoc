@@ -7,10 +7,10 @@ from pptx.oxml.ns import qn
 from pptx.util import Inches
 
 from markitdoc.markup.inline import literal
-from markitdoc.pptx.deck import add_rect, place_title, side_margin, slide_height, slide_width, soft_white, title_sizes, write_text
+from markitdoc.pptx.deck import SIDE_MARGIN, SLIDE_HEIGHT, SLIDE_WIDTH, SOFT_WHITE, TITLE_SIZES, add_rect, place_title, write_text
 from markitdoc.visuals.photo_fit import fitted_image
 
-photo_width_limit = 2400
+PHOTO_WIDTH_LIMIT = 2400
 
 
 # moves a picture behind other slide content
@@ -45,27 +45,27 @@ def overlay(deck, top, bottom, start=0.0):
 
 # places an image across the full slide with an optional overlay
 def full_bleed(deck, slide, image, fades, alt):
-    picture = add_image(slide, photo_for(deck, image[0], slide_width, slide_height, fades), 0, 0, slide_width, slide_height, alt,
+    picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT, alt,
                         "Background photo")
     send_to_back(slide, picture)
-    write_text(deck, slide, literal(image[2]), slide_width - side_margin - 6, 7.05, 6, 10, soft_white, align=PP_ALIGN.RIGHT, name="Credit")
+    write_text(deck, slide, literal(image[2]), SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE, align=PP_ALIGN.RIGHT, name="Credit")
 
 
 # places an image beside a text area on the slide
 def half_bleed(deck, slide, image, alt):
     side = deck.photo_side
     deck.photo_side = "left" if side == "right" else "right"
-    half = slide_width / 2
+    half = SLIDE_WIDTH / 2
     left = half if side == "right" else 0
-    add_image(slide, photo_for(deck, image[0], half, slide_height, overlay(deck, 0.0, 0.6, 0.82)), left, 0, half, slide_height, alt,
+    add_image(slide, photo_for(deck, image[0], half, SLIDE_HEIGHT, overlay(deck, 0.0, 0.6, 0.82)), left, 0, half, SLIDE_HEIGHT, alt,
               "Side photo")
-    write_text(deck, slide, literal(image[2]), left + 0.3, 7.05, half - 0.6, 10, soft_white, align=PP_ALIGN.RIGHT, name="Credit")
-    return (side_margin if side == "right" else half + 0.6), half - 1.2
+    write_text(deck, slide, literal(image[2]), left + 0.3, 7.05, half - 0.6, 10, SOFT_WHITE, align=PP_ALIGN.RIGHT, name="Credit")
+    return (SIDE_MARGIN if side == "right" else half + 0.6), half - 1.2
 
 
 # places a slide title within the available text column
 def side_title(deck, slide, title, left, width, role="ink"):
-    size, height = place_title(deck, slide, title, role, left, 0.65, width, 2.2, title_sizes + (22, 20), 4, MSO_ANCHOR.TOP)
+    size, height = place_title(deck, slide, title, role, left, 0.65, width, 2.2, TITLE_SIZES + (22, 20), 4, MSO_ANCHOR.TOP)
     add_rect(deck, slide, left, 0.65 + height + 0.18, 1.2, 0.04, "mood", "Title rule")
     return 0.65 + height + 0.55
 
@@ -74,8 +74,8 @@ def side_title(deck, slide, title, left, width, role="ink"):
 def photo_for(deck, path, width, height, fades=()):
     fitted = Path(fitted_image(Path(path), width * 100, height * 100, deck.work_folder, fades, deck.photos, deck.theme))
     with Image.open(fitted) as picture:
-        if picture.width > photo_width_limit:
-            picture.resize((photo_width_limit, round(picture.height * photo_width_limit / picture.width)), Image.LANCZOS).save(
+        if picture.width > PHOTO_WIDTH_LIMIT:
+            picture.resize((PHOTO_WIDTH_LIMIT, round(picture.height * PHOTO_WIDTH_LIMIT / picture.width)), Image.LANCZOS).save(
                 fitted, "JPEG", quality=88)
     return str(fitted)
 
