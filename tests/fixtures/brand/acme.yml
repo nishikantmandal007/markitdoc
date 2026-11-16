@@ -1,0 +1,42 @@
+name: acme
+brand: Acme Tools
+tagline: Simple tools for serious work
+logo: logo.png
+cover: dark
+locked: true
+master: acme.pptx
+content_layout: Title Only
+master_sample_text:
+  - Unlocking the full potential
+  - Presented by
+fonts:
+  heading: fonts/Inter-Bold.ttf
+  body: fonts/Inter-Regular.ttf
+  italic: fonts/Inter-Italic.ttf
+colors:
+  primary: "0F766E"
+  accent: "B45309"
+  ink: "111827"
+  body: "374151"
+  muted: "6B7280"
+  paper: "FFFFFF"
+  surface: "F3F4F6"
+  night: "0B2F2C"
+  rule: "E5E7EB"
+  success: "047857"
+  danger: "B91C1C"
+moods:
+  calm: "0F766E"
+  urgent: "B91C1C"
+  optimistic: "15803D"
+  analytical: "2563EB"
+  instructional: "7C3AED"
+  strategic: "B45309"
+header_note: Internal use only
+footer_text: "acme.example  |  Acme Tools Ltd"
+address:
+  - Acme Tools Ltd
+  - 1 Example Street
+  - hello@acme.example
+partners:
+  - {file: logo.png, height: 8}
