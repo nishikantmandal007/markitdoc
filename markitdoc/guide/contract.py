@@ -3,7 +3,8 @@ from markitdoc.visuals.infographics import infographic_templates
 from markitdoc.models.catalogue import layouts
 from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pptx.layouts import drawers, max_per_slide
-from markitdoc.pdf.flow import callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors, table_styles
+from markitdoc.markup.elements import (callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors,
+                                       table_styles)
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
 
 layout_purposes = {

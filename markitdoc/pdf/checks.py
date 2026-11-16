@@ -20,7 +20,7 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
                   credits=(), sparse: set | None = None) -> list[tuple[int, str]]:
     from markitdoc.visuals.diagrams import problems_in_diagram
     from markitdoc.visuals.infographics import problems_in_infographic
-    from markitdoc.pdf.flow import chart_data
+    from markitdoc.markup.elements import chart_data
     from markitdoc.themes.themes import load_theme
     measurer = PdfPages(theme or load_theme(None))
     measurer.add_page()

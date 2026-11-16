@@ -24,7 +24,7 @@ def test_should_render_the_guide_example_without_problems_in_every_font_pair():
 
 
 def test_should_teach_every_markdown_setting_the_renderer_understands():
-    from markitdoc.pdf.flow import callout_kinds, chart_sizes, paragraph_alignments, table_styles
+    from markitdoc.markup.elements import callout_kinds, chart_sizes, paragraph_alignments, table_styles
 
     contract = pdf_contract()
 
@@ -35,7 +35,7 @@ def test_should_teach_every_markdown_setting_the_renderer_understands():
 
 def test_should_teach_spans_list_styles_containers_and_fields():
     from markitdoc.models.model_constants import FLOW_CONTAINERS
-    from markitdoc.pdf.flow import list_schemes, span_colors
+    from markitdoc.markup.elements import list_schemes, span_colors
 
     contract = pdf_contract()
 

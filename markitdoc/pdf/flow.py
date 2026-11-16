@@ -1,11 +1,8 @@
-import copy
 import io
 from dataclasses import replace
-import math
 import re
 from functools import lru_cache
 
-import matplotlib
 import matplotlib.pyplot as plt
 import pyphen
 import ziamath
@@ -15,15 +12,18 @@ from fpdf.fonts import FontFace
 from PIL import Image
 
 import logging
-from markitdoc.visuals.charts import parse_chart_fence, render_chart
+from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import canvas_width, diagram_as_text, diagram_title, render_diagram, zoom
 from markitdoc.visuals.icons import strip_icon
 from markitdoc.visuals.infographics import render_infographic
 from markitdoc.markup.inline import anchor, inline_maths, inline_runs, parser, superscript_digits
-from markitdoc.models.catalogue import page_height, page_width
 from markitdoc.pdf.pages import PdfPages, escaped, inline_markup, runs_markup
 from markitdoc.visuals.photos import fitted_image
 from markitdoc.utils.helpers import lifted
+from markitdoc.markup.elements import (bullet_markers, callout_kinds, chart_data, chart_sizes, closing_index,
+                                       column_alignments, element_settings, list_schemes, numbering_schemes,
+                                       numeric_cell, only_display_maths, paragraph_alignments, settings_from,
+                                       table_styles, totals_row, without_display_maths)
 
 logger = logging.getLogger(__name__)
 page_break_marker = "+++"
@@ -34,15 +34,8 @@ margin = 25
 text_width = 160
 keep_with_next = 28
 minimum_column, readable_column, column_padding = 16, 26, 7
-numeric_cell = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
-callout_kinds = ("Note", "Action", "Risk", "Key figure")
-table_styles = ("lined", "striped", "boxed")
-chart_sizes = {"full": 1.0, "wide": 1.0, "half": 0.75}
 figure_ratio = 3 / 2
-totals_row = re.compile(r"^\W*(grand total|totals?|sum|gesamt|summe|insgesamt|total général)\b", re.I)
 box_drawing = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
-paragraph_alignments = {"center": "C", "right": "R", "justify": "J"}
-span_colors = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
 highlight_link = "§highlight"
 hyphenation_languages = {"en": "en_GB", "de": "de_DE", "fr": "fr", "es": "es"}
 long_word = re.compile(r"[^\W\d_]{7,}")
@@ -66,21 +59,6 @@ def hyphenated(text, lang):
                    for piece in pieces)
 indent_step = 8
 soft_break_share = 0.35
-bullet_markers = ("•", "–", "◦")
-
-
-def roman(number):
-    values = ((10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i"))
-    result = ""
-    for value, letters in values:
-        while number >= value:
-            result, number = result + letters, number - value
-    return result
-
-
-numbering_schemes = (str, lambda number: chr(96 + (number - 1) % 26 + 1), roman)
-list_schemes = {"decimal": str, "alpha": numbering_schemes[1], "upper-alpha": lambda number: numbering_schemes[1](number).upper(),
-                "roman": roman, "upper-roman": lambda number: roman(number).upper(), "legal": str}
 
 
 class FlowPages(PdfPages):
@@ -178,30 +156,6 @@ class FlowPages(PdfPages):
             self.set_font("Brand", "", 7.5)
             self.set_xy(margin, -13)
             self.cell(self.w - 2 * margin - 20, 5, footer)
-
-
-def without_display_maths(inline):
-    children = inline.children or []
-    equations = [child.content for child in children if child.type == "math_inline_double"]
-    if not equations:
-        return inline, []
-    kept = [child for child in children if child.type != "math_inline_double"]
-    while kept and kept[-1].type in ("softbreak", "hardbreak"):
-        kept.pop()
-    return replace_children(inline, kept), equations
-
-
-def replace_children(inline, children):
-    clone = copy.copy(inline)
-    clone.children = children
-    clone.content = "".join(child.content for child in children if child.type in ("text", "code_inline"))
-    return clone
-
-
-def only_display_maths(inline):
-    meaningful = [child for child in inline.children or [] if child.type not in ("softbreak", "hardbreak")
-                  and not (child.type == "text" and not child.content.strip())]
-    return len(meaningful) == 1 and meaningful[0].type == "math_inline_double"
 
 
 def place_notes(pdf, inline, note_texts, placed):
@@ -621,17 +575,6 @@ def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=2.5):
     pdf.ln(after * pdf.spacing)
 
 
-def column_alignments(tokens):
-    alignments = []
-    for token in tokens:
-        if token.type == "th_open":
-            style = str(token.attrs.get("style", ""))
-            alignments.append("CENTER" if "center" in style else "RIGHT" if "right" in style else "LEFT" if "left" in style else None)
-        elif token.type == "thead_close":
-            break
-    return alignments
-
-
 def add_notes(pdf: FlowPages, notes):
     pdf.ln(3)
     pdf.set_draw_color(*pdf.theme.rgb("rule"))
@@ -662,31 +605,6 @@ def add_figure(pdf: FlowPages, query: str):
     pdf.multi_cell(width, body_size * pdf.scale * 0.45, f"Figure {pdf.figure_count}. {escaped(caption)}{credit_link}", markdown=True, align="L",
                    new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(3)
-
-
-def element_settings(tokens, position):
-    if position + 1 >= len(tokens) or tokens[position].type != "paragraph_open":
-        return {}
-    text = tokens[position + 1].content.strip()
-    return settings_from(text[1:-1]) if text.startswith("{") and text.endswith("}") else {}
-
-
-def settings_from(text):
-    found = dict(re.findall(r"([a-z_]+)=([\w-]+)", text))
-    classes = re.findall(r"\.([\w-]+)", text)
-    return {**found, "class": classes[0]} if classes else found
-
-
-def closing_index(tokens, start, open_type, close_type):
-    depth = 0
-    for position in range(start, len(tokens)):
-        if tokens[position].type == open_type:
-            depth += 1
-        elif tokens[position].type == close_type:
-            depth -= 1
-            if depth == 0:
-                return position
-    return len(tokens) - 1
 
 
 def opening_height(pdf: FlowPages, tokens, position):
@@ -930,21 +848,6 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
             add_paragraph(pdf, "  ·  ".join(f"**{heading}:** {cell}" for heading, cell in zip(rows[0], row)))
     pdf.ln(4)
     pdf.back_to_portrait = pdf.w > pdf.h
-
-
-def chart_data(content):
-    data = parse_chart_fence(content.splitlines())
-    if data and "values" in data and not data.get("datasets"):
-        data["datasets"] = [{"values": data.pop("values")}]
-    datasets = data.get("datasets") if data else None
-    if (not isinstance(datasets, list) or not datasets or not all(isinstance(dataset, dict) for dataset in datasets)
-            or not all(isinstance(value, (int, float)) and math.isfinite(value) for dataset in datasets
-                       for value in (dataset.get("values") or [None]))):
-        return None
-    labels = data.get("labels") or []
-    if labels and any(len(dataset.get("values") or []) != len(labels) for dataset in data["datasets"]):
-        return None
-    return data
 
 
 def room_for(pdf: FlowPages, width, height, reserve):
