@@ -154,9 +154,9 @@ def add_caption(pdf: FlowPages, text: str):
 
 
 # draws a section heading and tracks its outline level
-def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0, look=None):
+def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0, look=None, numbered=True):
     plain_text = text.replace("**", "").replace("__", "")
-    if pdf.numbering and 2 <= level <= 4:
+    if pdf.numbering and numbered and 2 <= level <= 4:
         pdf.headings[level - 1] += 1
         pdf.headings[level:] = [0] * (4 - level)
         plain_text = ".".join(str(number) for number in pdf.headings[1:level]) + "  " + plain_text
@@ -322,11 +322,10 @@ def add_dropcap(pdf: FlowPages, plan, align, indent, look):
 
 
 # draws a list entry with its caption, dot leaders and right-aligned page number, both linked to the target
-def add_leader_row(pdf: FlowPages, runs, last=False):
+def add_leader_row(pdf: FlowPages, runs, last=False, look=None):
     name, _, number = "".join(run.text for run in runs).rpartition("\t")
     link = next((run.link for run in runs if run.link), "")
-    pdf.set_font("Brand", "", BODY_SIZE * pdf.scale)
-    pdf.set_text_color(*pdf.theme.rgb("body"))
+    apply_look(pdf, look, "Brand", BODY_SIZE * pdf.scale)
     name = name[:90]
     leader = " ." * max(0, int((pdf.area - LEADER_NUMBER - pdf.get_string_width(name)) / pdf.get_string_width(" .")))
     if pdf.will_page_break(6):

@@ -72,7 +72,7 @@ def test_should_serve_each_format_its_own_guide_from_the_package():
 
     import markitdoc
 
-    assert markitdoc.guide("pptx").startswith("SLIDE DESIGN GUIDE") and markitdoc.guide() == pdf_contract()
+    assert "SLIDE DESIGN GUIDE" in markitdoc.guide("pptx") and markitdoc.guide().endswith(pdf_contract())
     with pytest.raises(markitdoc.UnsupportedFormatError):
         markitdoc.guide("odt")
 

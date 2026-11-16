@@ -7,7 +7,7 @@ from mdit_py_plugins.container import container_plugin
 
 from markitdoc.markup.blocks import as_flow, balanced, prepared
 from markitdoc.markup.fields import field_values
-from markitdoc.markup.inline import ANCHOR, parser
+from markitdoc.markup.inline import ANCHOR, UNNUMBERED, parser
 from markitdoc.models.catalogue import SECTIONED_LAYOUTS, TRAILING_HEADINGS
 from markitdoc.models.document import Document
 from markitdoc.models.model_constants import FLOW_CONTAINERS, PAGE_SWITCH
@@ -77,7 +77,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     pdf.photos = str(document.meta.get("photos", "natural")).lower()
     pdf.work_folder = work_folder
     pdf.targets = frozenset(match.group(1) for block in blocks for line in block.body.splitlines()
-                            if line.lstrip().startswith("#") and (match := ANCHOR.search(line))) | frozenset(numbering.targets if numbering else ())
+                            if line.lstrip().startswith("#") and (match := ANCHOR.search(UNNUMBERED.sub("", line)))) | frozenset(numbering.targets if numbering else ())
     pdf.numbers = numbering.targets if numbering else {}
     pdf.numbering = str(document.meta.get("numbering", "")).lower() == "decimal" or bool(numbering and numbering.section_numbers)
     pdf.header_text, pdf.footer_text, pdf.classification, pdf.watermark = (str(document.meta.get(key, "")).strip().strip("'\"")

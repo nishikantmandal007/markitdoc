@@ -17,7 +17,7 @@ from markitdoc.markup.elements import (
     without_display_maths,
     written_image,
 )
-from markitdoc.markup.inline import ANCHOR, inline_runs, parser
+from markitdoc.markup.inline import ANCHOR, UNNUMBERED, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.model_constants import PAGE_SWITCH
 from markitdoc.pdf.flow.boxes import add_picture, draw_frame, end_float, float_check, page_extents
@@ -95,10 +95,11 @@ def render_tokens(pdf: FlowPages, tokens):
             continue
         if token.type == "heading_open":
             level = int(token.tag[1])
-            target = ANCHOR.search(tokens[index + 1].content)
-            text = ANCHOR.sub("", inline_markup(tokens[index + 1], pdf.targets))
+            written = UNNUMBERED.sub("", tokens[index + 1].content)
+            target = ANCHOR.search(written)
+            text = ANCHOR.sub("", UNNUMBERED.sub("", inline_markup(tokens[index + 1], pdf.targets)))
             add_heading(pdf, text, level, target.group(1) if target else None, opening_height(pdf, tokens, index + 3),
-                        pdf.look(f"h{min(level, 4)}"))
+                        pdf.look(f"h{min(level, 4)}"), written == tokens[index + 1].content)
             section_start = level <= 2
             index += 3
             continue
@@ -116,7 +117,7 @@ def render_tokens(pdf: FlowPages, tokens):
             align = PARAGRAPH_ALIGNMENTS.get(style) or (look.align if look and look.align else "L")
             labelled = parse_attributes(settings_line.group(1)).id if settings_line else ""
             if "\t" in inline.content and pdf.styles and not list_stack:
-                add_leader_row(pdf, inline_runs(inline, pdf.targets), index + 4 >= len(tokens) or "\t" not in tokens[index + 4].content)
+                add_leader_row(pdf, inline_runs(inline, pdf.targets), index + 4 >= len(tokens) or "\t" not in tokens[index + 4].content, look)
                 index += 3
                 continue
             if settings_line:
@@ -145,6 +146,8 @@ def render_tokens(pdf: FlowPages, tokens):
                 continue
             written = written_image(inline.content) if picture is not None and pdf.styles else None
             framed = look is not None and picture is None and look.borders
+            if labelled in pdf.numbers and pdf.numbers[labelled].kind == "reference":
+                pdf.mark_target(labelled)
             if framed:
                 pdf.ln(1.5)
                 frame_top, frame_page = pdf.get_y(), pdf.page_no()

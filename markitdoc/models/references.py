@@ -2,11 +2,11 @@ from dataclasses import dataclass, field, replace
 from difflib import get_close_matches
 
 from markitdoc.markup.elements import IMAGE_WRITTEN, chart_data, written_image
-from markitdoc.markup.inline import ANCHOR, literal, plain_text
+from markitdoc.markup.inline import ANCHOR, UNNUMBERED, literal, plain_text
 from markitdoc.markup.latex import latex_text
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.document import Document
-from markitdoc.models.editorial import citation_style, citation_text, cited_keys, load_refs, with_editorial
+from markitdoc.models.editorial import citation_style, citation_text, cited_keys, load_refs, reference_id, with_editorial
 from markitdoc.models.model_constants import (
     CAPTION_LABELS,
     EQUATION_ID,
@@ -125,13 +125,14 @@ def number_lines(lines, state, first_line=1, inject=True):
             out.append(line)
             continue
         if heading := HEADING_LINE.match(stripped):
-            level, anchor = len(heading.group(1)), ANCHOR.search(heading.group(2))
-            numbered = state.section_numbers and 2 <= level <= 4
+            written = UNNUMBERED.sub("", heading.group(2))
+            level, anchor = len(heading.group(1)), ANCHOR.search(written)
+            numbered = state.section_numbers and 2 <= level <= 4 and written == heading.group(2)
             if numbered:
                 state.headings[level - 1] += 1
                 state.headings[level:] = [0] * (4 - level)
             if anchor:
-                title = plain_text(ANCHOR.sub("", heading.group(2)))
+                title = plain_text(ANCHOR.sub("", written))
                 digits = ".".join(str(item) for item in state.headings[1:level]) if numbered else ""
                 label = state.references["section"].replace("{n}", digits) if digits else title
                 add_target(state, Target(anchor.group(1), "section", digits, label, "", title, number))
@@ -176,6 +177,8 @@ def number_document(document, sheet=None, inject=True):
     state.refs = load_refs(document.meta, options_in_use().style_folders)[0]
     state.cited = cited_keys([text for block in blocks for text in (block.body, *block.slots.values(), *(part for item in block.items for part in item))], state)
     if inject:
+        for key in state.cited:
+            add_target(state, Target(reference_id(key), "reference", "", "", "", "", 0))
         blocks, listed = with_editorial(blocks, state, document.meta)
         state.wants_pages = state.wants_pages or listed
     return Document(document.meta, tuple(blocks)), state
@@ -204,7 +207,7 @@ def page_piece(target, mode, pages):
 def reference_markup(match, state, mode, pages):
     ids = [part.strip().lstrip("@") for part in match.group(2).split(";")]
     if not match.group(3) and all(ident in state.refs and ident not in state.targets for ident in ids):
-        return citation_text(ids, state)
+        return citation_text(ids, state, mode != "pptx")
     targets = [state.targets.get(ident) for ident in ids]
     links = mode != "pptx"
     if match.group(3):

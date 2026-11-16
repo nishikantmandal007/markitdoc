@@ -56,6 +56,32 @@ markitdoc guide pptx                         # the markdown guide for slides
 `markitdoc.guide("pdf" | "pptx" | "docx")` returns the full markdown guide for a format: layouts, slots and their word
 limits, charts, diagrams and front-matter settings. Give it to the model as instructions, then render what it writes.
 
+### Language v2
+
+`markitdoc: 2` in the front matter turns on a typesetting language shared by PDF, Word and PowerPoint: named styles, rules by
+element, boxes, columns, images, page masters, cross-references and citations. Documents without it render exactly as before.
+
+```markdown
+---
+markitdoc: 2
+set:
+  h2: {color: accent}
+styles:
+  pull: {size: l, align: center, border: top}
+---
+## Evidence {#evidence}
+
+The [riparian buffer]{.term} tripled; see [@evidence].
+
+::: box {border=thin padding=m bg=surface}
+A boxed note.
+:::
+```
+
+`markitdoc check report.md --json --format pptx` reports problems, with a note for each feature the format approximates or
+ignores. `markitdoc guide pdf --level core` prints the language card, and `markitdoc skill -o folder` writes a SKILL.md
+with reference files for an AI model.
+
 ### Brands
 
 Two neutral themes ship with the library (`professional`, `editorial`), with ten palettes and five font pairs. A brand is

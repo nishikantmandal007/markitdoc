@@ -13,7 +13,7 @@ LIST_KINDS = {"figures": ("figure", "List of figures"), "tables": ("table", "Lis
 REFERENCES_BLOCK = re.compile(r"^:::+[ \t]*references[ \t]*\n(?::::*[ \t]*(?:\n|$))?", re.M)
 LIST_BLOCK = re.compile(r"^:::+[ \t]*list-of-(figures|tables)[ \t]*\n(?::::*[ \t]*(?:\n|$))?", re.M)
 REFERENCES_TITLE = "References"
-NO_DROPCAP = " {dropcap=0}"
+UNNUMBERED_MARK = " {.unnumbered}"
 
 
 # the refs file entries as {key: entry} and the problem found, empty when none; the file is read from the first style folder
@@ -63,12 +63,20 @@ def short_authors(entry):
     return "" if not names else names[0] + " et al." if len(names) > 2 else " and ".join(names)
 
 
+# the id of a reference list entry, which a citation links to
+def reference_id(key):
+    return f"ref-{key}"
+
+
 # the text a citation of these keys stands for: "[1, 2]" or "(de Wit and Jansen, 2021; Brook, 2020)"
-def citation_text(keys, state):
+def citation_text(keys, state, links=True):
+    def linked(key, text):
+        return f"[{literal(text)}](#{reference_id(key)})" if links else literal(text)
+
     if state.style == "numeric":
-        return literal("[" + ", ".join(str(state.cited.index(key) + 1) for key in keys) + "]")
-    return literal("(" + "; ".join(", ".join(part for part in (short_authors(state.refs[key]), str(state.refs[key].get("year", ""))) if part)
-                                   for key in keys) + ")")
+        return "\\[" + ", ".join(linked(key, str(state.cited.index(key) + 1)) for key in keys) + "\\]"
+    return "(" + "; ".join(linked(key, ", ".join(part for part in (short_authors(state.refs[key]), str(state.refs[key].get("year", ""))) if part))
+                           for key in keys) + ")"
 
 
 # one reference list entry as markdown: authors (year). Title. Journal. link
@@ -87,8 +95,8 @@ def entry_text(entry):
 def references_markup(state):
     keys = state.cited if state.style == "numeric" else sorted(
         state.cited, key=lambda key: (short_authors(state.refs[key]).lower(), str(state.refs[key].get("year", ""))))
-    items = [(f"\\[{number}\\] " if state.style == "numeric" else "") + entry_text(state.refs[key]) + NO_DROPCAP for number, key in enumerate(keys, 1)]
-    return f"## {REFERENCES_TITLE}\n\n" + "\n\n".join(items) if items else ""
+    items = [(f"\\[{number}\\] " if state.style == "numeric" else "") + entry_text(state.refs[key]) + f" {{#{reference_id(key)} dropcap=0}}" for number, key in enumerate(keys, 1)]
+    return f"## {REFERENCES_TITLE}{UNNUMBERED_MARK}\n\n" + "\n\n".join(items) if items else ""
 
 
 # the keys of a document's citations in order of first use: ids that name a reference and no target
@@ -107,7 +115,7 @@ def list_markup(kind, state):
     name, title = LIST_KINDS[kind]
     targets = [target for target in state.targets.values() if target.kind == name]
     lines = [f"[{literal(f'{target.mark}. {target.text}' if target.text else target.mark + '.')}](#{target.id})\t[@{target.id} page]" for target in targets]
-    return f"**{title}**{NO_DROPCAP}\n\n" + "\n\n".join(lines) if lines else ""
+    return f"## {title}{UNNUMBERED_MARK}\n\n" + "\n\n".join(lines) if lines else ""
 
 
 # the list kinds a front matter lists: value asks for, such as "[figures, tables]"

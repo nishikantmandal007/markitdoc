@@ -10,7 +10,7 @@ def test_should_render_a_markdown_file_to_the_format_of_the_output_suffix(tmp_pa
 
 
 def test_should_print_the_guide_and_fail_cleanly_on_an_unknown_suffix(tmp_path, capsys):
-    assert main(["guide", "pptx"]) == 0 and capsys.readouterr().out.startswith("SLIDE DESIGN GUIDE")
+    assert main(["guide", "pptx"]) == 0 and "SLIDE DESIGN GUIDE" in capsys.readouterr().out
     source = tmp_path / "note.md"
     source.write_text("# Note")
 
