@@ -1,14 +1,19 @@
 import copy
 import math
 import re
+from pathlib import Path
+
+from PIL import Image
 
 from markitdoc.markup.inline import plain_text
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.themes.theme_constants import IMAGE_SUFFIXES
 from markitdoc.visuals.charts import parse_chart_fence
 
 NUMERIC_CELL = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
 CALLOUT_KINDS = ("Note", "Action", "Risk", "Key figure")
 TABLE_STYLES = ("lined", "striped", "boxed")
+IMAGE_WRITTEN = re.compile(r"!\[([^\]]*)\]\(([^)\s]*)\)(?:\{([^{}]*)\})?")
 CHART_SIZES = {"full": 1.0, "wide": 1.0, "half": 0.75}
 TOTALS_ROW = re.compile(r"^\W*(grand total|totals?|sum|gesamt|summe|insgesamt|total général)\b", re.I)
 PARAGRAPH_ALIGNMENTS = {"center": "C", "right": "R", "justify": "J"}
@@ -124,3 +129,18 @@ def rating_level(source):
     text = plain_text(source).strip().lower()
     found = re.fullmatch(r"([0-4])\s*/\s*4", text)
     return int(found.group(1)) if found else RATING_WORDS.get(text)
+
+
+# the match of a markdown image written with a real file path, None for photo-query images such as ![harbour](figure)
+def written_image(text):
+    found = IMAGE_WRITTEN.search(text)
+    return found if found and "://" not in found.group(2) and Path(found.group(2)).suffix.lower() in IMAGE_SUFFIXES else None
+
+
+# the natural size in mm at 96 dpi of an image file, None when it is missing or unreadable
+def image_size(path):
+    try:
+        with Image.open(path) as picture:
+            return tuple(pixels * 25.4 / 96 for pixels in picture.size)
+    except (OSError, ValueError):
+        return None

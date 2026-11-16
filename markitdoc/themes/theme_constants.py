@@ -43,9 +43,24 @@ TONES = {"formal": ("professional", "navy"), "warm": ("editorial", "terracotta")
          "technical": ("professional", "ocean"), "celebratory": ("editorial", "forest"), "neutral": ("professional", "graphite")}
 
 STYLE_FILE_SUFFIX = ".style.yml"
-PLANNED_SECTIONS = ("page", "pages", "fields", "allow", "refs")
+PLANNED_SECTIONS = ("page", "pages", "fields", "refs")
 STYLE_PROPERTIES = ("font", "size", "color", "weight", "italic", "align", "caps", "tracking")
 STYLE_ONLY_PROPERTIES = ("kind", "based-on")
+BORDER_SIDES = ("top", "bottom", "left", "right")
+BOX_PROPERTIES = ("border", *(f"border-{side}" for side in BORDER_SIDES), "padding", "bg", "radius", "width")
+LAYOUT_ATTRIBUTES = ("ratio", "gap", "side", "caption")
+BORDER_WORDS = ("none", "thin", "thick", *BORDER_SIDES)
+BORDER_WIDTHS_PT = {"thin": 0.5, "thick": 1.5}
+PADDING_MM = {"xs": 1, "s": 2, "m": 4, "l": 6, "xl": 9}
+RADIUS_MM = {"s": 1, "m": 2, "l": 4}
+COLUMN_RATIOS = ("1:1", "1:2", "2:1", "1:3", "3:1")
+COLUMN_GAP_MM = 8
+POINT_MM = 0.3528
+LENGTH_UNIT = re.compile(r"^(\d+(?:\.\d+)?)\s*(mm|pt)$")
+FRACTION = re.compile(r"^(\d+)\s*/\s*(\d+)$")
+PERCENT = re.compile(r"^(\d+(?:\.\d+)?)\s*%$")
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")
+IMAGE_SIDES = ("left", "right")
 SCALE_WORDS = {"xs": 0.8, "s": 0.9, "m": 1.0, "l": 1.25, "xl": 1.6, "xxl": 2.0}
 STYLE_ALIGNS = {"left": "L", "center": "C", "right": "R", "justify": "J"}
 STYLE_COLOR_ROLES = {"ink": "ink", "body": "body", "muted": "muted", "accent": "mood", "second": "second", "surface": "surface",
@@ -75,5 +90,5 @@ ENGINE_DEFAULTS = {
 BUILTIN_CLASSES = ("left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
                    "roman", "upper-roman", "legal", "underline", "highlight", "accent", "second", "muted", "danger", "success",
                    "callout", "aside")
-PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "numbering", "hyphenate", "repeat", "caption", "border",
-                            "padding", "radius", "bg", "dropcap", "indent", "orientation", "lang")
+PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "numbering", "hyphenate", "repeat", "caption", "dropcap",
+                            "indent", "orientation", "lang")

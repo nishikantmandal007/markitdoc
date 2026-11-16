@@ -6,7 +6,7 @@ from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, language_version
 from markitdoc.models.model_constants import DIV_CLOSE, DIV_OPEN, KNOWN_KEYS, PLANNED_KEYS
 from markitdoc.models.style_checks import SPAN_ATTRIBUTES, style_findings
-from markitdoc.themes.theme_constants import STYLE_PROPERTIES
+from markitdoc.themes.theme_constants import BOX_PROPERTIES, LAYOUT_ATTRIBUTES, STYLE_PROPERTIES
 
 VERSION_LINE = re.compile(r"^markitdoc\s*:", re.IGNORECASE)
 
@@ -21,7 +21,7 @@ class Finding:
 
 # warns about each attribute key no renderer reads: planned keys are named as such, others get the closest key
 def unknown_keys(text, line, v2=False):
-    findings, taken = [], STYLE_PROPERTIES + ("italic",) if v2 else ()
+    findings, taken = [], STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + ("italic",) if v2 else ()
     planned, known = tuple(key for key in PLANNED_KEYS if key not in taken), KNOWN_KEYS + taken
     for key in parse_attributes(text).values:
         if key in planned:

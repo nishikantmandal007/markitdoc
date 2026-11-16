@@ -7,11 +7,22 @@ import yaml
 from markitdoc.models.attributes import KEY_ALIASES, VALUE_ALIASES
 from markitdoc.themes.theme_constants import (
     BODY_POINTS,
+    BORDER_SIDES,
+    BORDER_WIDTHS_PT,
+    BOX_PROPERTIES,
     BUNDLED_FONTS,
+    COLUMN_GAP_MM,
+    COLUMN_RATIOS,
     ENGINE_DEFAULTS,
     FONT_WORDS,
+    FRACTION,
     HEX_STYLE_COLOR,
+    LENGTH_UNIT,
     MAX_BASED_ON,
+    PADDING_MM,
+    PERCENT,
+    POINT_MM,
+    RADIUS_MM,
     SCALE_WORDS,
     SIZE_POINTS,
     STYLE_ALIGNS,
@@ -51,6 +62,15 @@ class TextStyle:
     align: str | None = None
     caps: str | None = None
     tracking: float | None = None
+    borders: dict | None = None
+    padding: float | None = None
+    fill: tuple | None = None
+    radius: float | None = None
+    width: str | None = None
+
+    # does the look carry any box property: border, padding, background, radius or width
+    def boxed(self):
+        return bool(self.borders) or any(item is not None for item in (self.padding, self.fill, self.radius, self.width))
 
 
 # a rule from yaml as {property: (value, source)}, aliases applied, other keys dropped
@@ -58,7 +78,7 @@ def tagged(rule, source):
     found = {}
     for key, value in (rule if isinstance(rule, dict) else {}).items():
         key = KEY_ALIASES.get(str(key).lower(), str(key).lower())
-        if key in STYLE_PROPERTIES:
+        if key in STYLE_PROPERTIES + BOX_PROPERTIES:
             found[key] = (VALUE_ALIASES.get(value.lower(), value) if isinstance(value, str) else value, source)
     return found
 
@@ -127,6 +147,7 @@ class Stylesheet:
         for layer in [*self.layers, *self.locked]:
             self.colors.update({str(name): value for name, value in section(layer, "colors").items()})
             self.faces.update({str(name): face_of(value, layer.folder) for name, value in section(layer, "fonts").items()})
+        self.raw_allowed = all(str(section(layer, "allow").get("raw")).lower() != "false" for layer in self.layers)
         self.style_names = {str(name) for layer in self.layers for name in section(layer, "styles")}
         self.base = self.points(self.cascade_base(None).get("size", (None,))[0], BODY_POINTS) or BODY_POINTS
 
@@ -173,18 +194,24 @@ class Stylesheet:
         return found
 
     # every property of an element as {property: (value, source)}: text, element rules, named styles, inline keys, locked brands
-    def resolve(self, selector=None, classes=(), inline=None, parent=None, where=""):
+    def resolve(self, selector=None, classes=(), inline=None, parent=None, where="", context=None):
         self.dropped = []
-        found = dict(parent) if parent is not None else self.cascade_base(selector)
+        found = {key: item for key, item in parent.items() if key not in BOX_PROPERTIES} if parent is not None else self.cascade_base(selector)
+        for key, item in (context or {}).items() if parent is None else ():
+            if key not in found or found[key][1].endswith(":text"):
+                found[key] = item
         for name in classes:
             found.update(self.named(name))
+        if inline and not self.raw_allowed:
+            logger.warning("Raw style keys ignored because a style file sets allow: {raw: false}: %s", ", ".join(inline))
+            inline = None
         found.update(self.tag(inline or {}, f"line {where} attributes" if where else "inline attributes"))
         found.update(self.locked_props(selector or "", classes))
         return found
 
     # the same as resolve, converted to values a renderer can use
-    def look(self, selector=None, classes=(), inline=None, parent=None, where=""):
-        return self.style_of(self.resolve(selector, classes, inline, None if parent is None else parent.props, where))
+    def look(self, selector=None, classes=(), inline=None, parent=None, where="", context=None):
+        return self.style_of(self.resolve(selector, classes, inline, None if parent is None else parent.props, where, context))
 
     # a span's look from its own class and raw key pairs, inheriting from the paragraph look
     def span_look(self, pairs, parent):
@@ -199,6 +226,52 @@ class Stylesheet:
             return SCALE_WORDS[text] * (base or self.base)
         found = SIZE_POINTS.match(text)
         return float(found.group(1)) if found else None
+
+    # millimetres from a length: a scale word of the given table, mm, pt, or a fraction or percent of full; None when it is none of these
+    def length(self, value, full=None, scale=None):
+        text = str(value).strip().lower()
+        if scale and text in scale:
+            return float(scale[text])
+        if found := LENGTH_UNIT.match(text):
+            return float(found.group(1)) * (1 if found.group(2) == "mm" else POINT_MM)
+        if full is not None and (found := FRACTION.match(text)) and int(found.group(2)):
+            return full * int(found.group(1)) / int(found.group(2))
+        if full is not None and (found := PERCENT.match(text)):
+            return full * float(found.group(1)) / 100
+        return None
+
+    # the column weights and gap in mm of a columns container's attributes, an even split when the ratio is not a supported one
+    def columns(self, values):
+        ratio = str(values.get("ratio", "1:1"))
+        gap = self.length(values["gap"], scale=PADDING_MM) if "gap" in values else None
+        return tuple(int(weight) for weight in (ratio if ratio in COLUMN_RATIOS else "1:1").split(":")), COLUMN_GAP_MM if gap is None else gap
+
+    # an RGB tuple from a colour value, None when it is not a colour
+    def rgb_of(self, value):
+        digits = self.hex_of(value)
+        return tuple(int(digits[index:index + 2], 16) for index in (0, 2, 4)) if digits else None
+
+    # the border edges of resolved values as {side: (width in mm, rgb)}; border sets edges first, border-top and the like refine them
+    def edges_of(self, value):
+        edges = {}
+        for key in ("border", *(f"border-{side}" for side in BORDER_SIDES)):
+            if key not in value:
+                continue
+            words = str(value[key]).split()
+            sides = [key[7:]] if "-" in key else [word.lower() for word in words if word.lower() in BORDER_SIDES] or BORDER_SIDES
+            if any(word.lower() == "none" for word in words):
+                edges = {side: edge for side, edge in edges.items() if side not in sides}
+                continue
+            width, rgb = BORDER_WIDTHS_PT["thin"] * POINT_MM, self.theme.rgb("rule") if self.theme else (0, 0, 0)
+            for word in words:
+                if word.lower() in BORDER_WIDTHS_PT:
+                    width = BORDER_WIDTHS_PT[word.lower()] * POINT_MM
+                elif (found := self.length(word)) is not None:
+                    width = found
+                elif word.lower() not in BORDER_SIDES and (colour := self.rgb_of(word)):
+                    rgb = colour
+            edges.update({side: (width, rgb) for side in sides})
+        return edges
 
     # a hex string from a colour value: hex, a name under colors:, or a role
     def hex_of(self, value, depth=0):
@@ -227,4 +300,9 @@ class Stylesheet:
             italic=italic if isinstance(italic, bool) else {"true": True, "false": False}.get(str(italic).lower()),
             align=STYLE_ALIGNS.get(str(value.get("align", "")).lower()),
             caps=str(value["caps"]).lower() if str(value.get("caps", "")).lower() in ("small", "all") else None,
-            tracking=TRACKING_POINTS.get(str(value.get("tracking", "")).lower()))
+            tracking=TRACKING_POINTS.get(str(value.get("tracking", "")).lower()),
+            borders=self.edges_of(value),
+            padding=self.length(value["padding"], scale=PADDING_MM) if "padding" in value else None,
+            fill=self.rgb_of(value["bg"]) if "bg" in value else None,
+            radius=self.length(value["radius"], scale=RADIUS_MM) if "radius" in value else None,
+            width=str(value["width"]) if "width" in value else None)
