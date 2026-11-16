@@ -18,6 +18,7 @@ from markitdoc.docx.writer import (
     bookmark,
     caption,
     first_paragraph,
+    master_section,
     photo,
     plain,
     start_on_new_page,
@@ -36,6 +37,7 @@ from markitdoc.markup.elements import (
 )
 from markitdoc.markup.inline import ANCHOR, Run, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.models.model_constants import PAGE_SWITCH
 from markitdoc.options import options_in_use
 from markitdoc.themes.theme_constants import POINT_MM, STYLE_PROPERTIES
 from markitdoc.visuals.charts import render_chart
@@ -156,6 +158,10 @@ def add_heading(writer, level, inline):
 def add_paragraph_token(writer, tokens, index, stack, pending):
     inline, equations = without_display_maths(tokens[index + 1])
     content = inline.content.strip()
+    if writer.styles and (switch := PAGE_SWITCH.match(content)):
+        values = parse_attributes(switch.group(1)).values
+        master_section(writer, str(values.get("page") or writer.master_name), values.get("numbers") == "restart")
+        return ""
     settings = re.search(r"\n?\{([^{}]*)\}\s*$", content)
     style = settings_from(settings.group(1)).get("class", "") if settings else ""
     if settings and not content[:settings.start()].strip():

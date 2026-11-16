@@ -148,6 +148,8 @@ def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0,
         pdf.current_section = plain_text
     if pdf.will_page_break(max(KEEP_WITH_NEXT, size * 0.5 + 8 + following)):
         pdf.add_page()
+    if level == 2 and pdf.styles:
+        pdf.page_section.setdefault(pdf.page_no(), plain_text)
     if level <= 3:
         pdf.start_section(plain_text, level=level - 1, strict=False)
     if target and target in pdf.targets:

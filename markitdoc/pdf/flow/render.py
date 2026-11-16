@@ -18,6 +18,7 @@ from markitdoc.markup.elements import (
 )
 from markitdoc.markup.inline import ANCHOR, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.models.model_constants import PAGE_SWITCH
 from markitdoc.pdf.flow.boxes import add_picture, draw_frame, end_float, float_check, page_extents
 from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
@@ -64,6 +65,12 @@ def render_tokens(pdf: FlowPages, tokens):
     while index < len(tokens):
         token = tokens[index]
         float_check(pdf, token)
+        if pdf.styles and token.type == "paragraph_open" and token.level == 0 and (switch := PAGE_SWITCH.match(tokens[index + 1].content.strip())):
+            queue_switch(pdf, switch.group(1))
+            pdf.back_to_portrait = False
+            pdf.add_page()
+            index += 3
+            continue
         if pdf.back_to_portrait and token.level == 0 and token.type.endswith("_open"):
             pdf.back_to_portrait = False
             pdf.add_page(orientation="P")
@@ -204,6 +211,12 @@ def render_tokens(pdf: FlowPages, tokens):
     remaining = [(number, note) for number, note in enumerate(notes, 1) if number - 1 not in placed]
     if remaining:
         add_notes(pdf, remaining)
+
+
+# names the page master and number restart for the next page from the attributes of a +++ line
+def queue_switch(pdf: FlowPages, attributes):
+    values = parse_attributes(attributes).values
+    pdf.next_master, pdf.restart = str(values.get("page") or pdf.master_name), values.get("numbers") == "restart"
 
 
 # measures the page count and final-page fill for flowing content

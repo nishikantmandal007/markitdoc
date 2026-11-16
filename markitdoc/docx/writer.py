@@ -6,12 +6,13 @@ from pathlib import Path
 
 import docx
 from docx.enum.section import WD_ORIENT, WD_SECTION
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 from markitdoc.docx.styles import PAGE_HEIGHT, PAGE_WIDTH, SIDE_MARGIN, TEXT_WIDTH, border_bottom, setup_page, setup_styles
+from markitdoc.markup.fields import field_values, replace_fields
 from markitdoc.markup.inline import Run
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
@@ -20,6 +21,7 @@ from markitdoc.utils.helpers import MONO_FONT, lifted, long_date, office_font
 from markitdoc.visuals.photo_fit import fitted_image
 
 WHITE = (255, 255, 255)
+NUMBER_FORMATS = {"arabic": "decimal", "roman": "lowerRoman", "Roman": "upperRoman", "alpha": "lowerLetter", "none": "none"}
 BULLET_MARKS = ("•", "–", "◦")
 WORD_ALIGNS = {"L": WD_ALIGN_PARAGRAPH.LEFT, "C": WD_ALIGN_PARAGRAPH.CENTER, "R": WD_ALIGN_PARAGRAPH.RIGHT, "J": WD_ALIGN_PARAGRAPH.JUSTIFY}
 LIST_FORMATS = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "upperLetter", "roman": "lowerRoman", "upper-roman": "upperRoman",
@@ -41,7 +43,7 @@ class Writer:
         self.headings = [0, 0, 0, 0]
         self.figure_count = self.table_count = 0
         self.notes, self.targets, self.lists = [], set(), {}
-        self.bookmark_id = 0
+        self.bookmark_id, self.master_name = 0, "default"
         self.titled = self.started = self.break_next = False
         self.pending_caption = self.skip_title = ""
         self.body, self.width = self.document, TEXT_WIDTH
@@ -319,6 +321,44 @@ def page_fields(writer, paragraph, template):
                 run.font.size, run.font.color.rgb = Pt(8.5), writer.rgb("muted")
         elif piece:
             plain(writer, paragraph, piece, 8.5, "muted")
+
+
+# gives a Word section the paper, orientation, margins, page number format and header and footer slots of a page master
+def apply_master(writer, section, master, restart=False):
+    top, right, bottom, left = master.margins
+    section.orientation = WD_ORIENT.LANDSCAPE if master.width > master.height else WD_ORIENT.PORTRAIT
+    section.page_width, section.page_height = Cm(master.width / 10), Cm(master.height / 10)
+    section.left_margin, section.right_margin, section.top_margin, section.bottom_margin = (Cm(size / 10) for size in (left, right, top, bottom))
+    writer.width = (master.width - left - right) / 10
+    for old in section._sectPr.findall(qn("w:pgNumType")):
+        section._sectPr.remove(old)
+    numbering = OxmlElement("w:pgNumType")
+    numbering.set(qn("w:fmt"), NUMBER_FORMATS.get(master.numbers, "decimal"))
+    if restart:
+        numbering.set(qn("w:start"), "1")
+    section._sectPr.find(qn("w:pgMar")).addnext(numbering)
+    values = field_values(writer.styles, writer.meta)
+    for part, template in ((section.header, master.header), (section.footer, master.footer)):
+        if template is None:
+            continue
+        part.is_linked_to_previous = False
+        paragraph = part.paragraphs[0]
+        for child in list(paragraph._p):
+            paragraph._p.remove(child)
+        if template.strip().lower() == "none":
+            continue
+        slots = [slot.strip() for slot in (replace_fields(template, values).split("|", 2) + ["", ""])[:3]]
+        paragraph.paragraph_format.tab_stops.add_tab_stop(Cm(writer.width / 2), WD_TAB_ALIGNMENT.CENTER)
+        paragraph.paragraph_format.tab_stops.add_tab_stop(Cm(writer.width), WD_TAB_ALIGNMENT.RIGHT)
+        page_fields(writer, paragraph, "\t".join(slots))
+
+
+# starts a new Word section on a new page under the named page master
+def master_section(writer, name, restart):
+    writer.master_name = name
+    section = writer.document.add_section(WD_SECTION.NEW_PAGE)
+    section.different_first_page_header_footer = False
+    apply_master(writer, section, writer.styles.master(name), restart)
 
 
 # returns the usable Word page width in centimetres

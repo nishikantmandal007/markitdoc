@@ -6,10 +6,11 @@ from fpdf import ViewerPreferences
 from mdit_py_plugins.container import container_plugin
 
 from markitdoc.markup.blocks import as_flow, balanced, prepared
+from markitdoc.markup.fields import field_values
 from markitdoc.markup.inline import ANCHOR, parser
 from markitdoc.models.catalogue import SECTIONED_LAYOUTS, TRAILING_HEADINGS
 from markitdoc.models.document import Document
-from markitdoc.models.model_constants import FLOW_CONTAINERS
+from markitdoc.models.model_constants import FLOW_CONTAINERS, PAGE_SWITCH
 from markitdoc.pdf.designed.openers import (
     draw_chapter,
     draw_closing,
@@ -60,14 +61,16 @@ def draw_block(pdf, block, image, work_folder, credits):
 # renders a document as a PDF file
 def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=(), styles=None):
     from markitdoc.pdf.flow.pages import FlowPages
-    from markitdoc.pdf.flow.render import fitted_spacing, render_flow, render_toc
+    from markitdoc.pdf.flow.render import fitted_spacing, queue_switch, render_flow, render_toc
     images = images or {}
     blocks = balanced([prepared(block) for block in document.blocks], theme)
     first = blocks[0]
     title = first.slots.get("title") or next((line.lstrip("# ").strip() for line in first.body.splitlines()
                                              if line.startswith("# ")), "Document")
-    pdf = FlowPages(theme, title, document.meta.get("style") == "plain", text_of(document, theme) + str(credits))
+    pdf = FlowPages(theme, title, document.meta.get("style") == "plain", text_of(document, theme) + str(credits)
+                    + (str(styles.fields) + str([layer.data.get("pages") for layer in styles.layers]) if styles else ""))
     pdf.use_styles(styles)
+    pdf.field_values = field_values(styles, document.meta) if styles else {}
     pdf.table_style = str(document.meta.get("tables", "lined")).lower()
     pdf.flow_images = {key[1]: path for key, path in images.items() if isinstance(key, tuple)}
     pdf.photos = str(document.meta.get("photos", "natural")).lower()
@@ -90,23 +93,31 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     toc_at = 1 if first.layout == "cover" and len(blocks) > 1 else 0
     wants_toc = document.meta.get("toc") in ("true", "yes", "on")
     for index, block in enumerate(blocks):
-        fresh_page = False
+        fresh_page, text, switch = False, block.body, None
+        first_line, _, rest = block.body.lstrip().partition("\n")
+        if pdf.styles and block.layout == "flow" and (found := PAGE_SWITCH.match(first_line.strip())):
+            text, switch = rest, found.group(1)
         if wants_toc and index == toc_at:
             pdf.decorate = True
-            pdf.set_auto_page_break(True, margin=22)
+            pdf.set_auto_page_break(True, margin=pdf.bottom)
             pdf.add_page()
+            if switch:
+                queue_switch(pdf, switch)
             pdf.decorate = block.layout == "flow"
             pdf.insert_toc_placeholder(render_toc, pages=1, allow_extra_pages=True)
             fresh_page = block.layout != "flow"
-        if block.layout == "flow" and not block.body.strip():
+        if block.layout == "flow" and not text.strip():
             continue
         if block.layout == "flow":
             pdf.decorate = True
-            pdf.set_auto_page_break(True, margin=22)
-            if not (wants_toc and index == toc_at) and (index == 0 or blocks[index - 1].layout != "flow"):
+            pdf.set_auto_page_break(True, margin=pdf.bottom)
+            after_toc = wants_toc and index == toc_at
+            if switch and not after_toc:
+                queue_switch(pdf, switch)
+            if not after_toc and (index == 0 or blocks[index - 1].layout != "flow" or switch):
                 pdf.add_page()
             next_is_designed = index + 1 < len(blocks) and blocks[index + 1].layout != "flow"
-            body = TRAILING_HEADINGS.sub("", block.body.rstrip()) if next_is_designed else block.body
+            body = TRAILING_HEADINGS.sub("", text.rstrip()) if next_is_designed else text
             if not body.strip():
                 continue
             pdf.spacing = fitted_spacing(pdf, body) if next_is_designed else 1.0
@@ -123,13 +134,14 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
             pdf.tightness = float(block.slots.get("tightness", 1.0))
             picture = images.get(index)
             pdf.photo_credit = picture[2:4] if picture else None
-            draw_block(pdf, block, picture[0] if picture else None, work_folder, ())
+            with pdf.centred():
+                draw_block(pdf, block, picture[0] if picture else None, work_folder, ())
             pdf.photo_credit = None
             pdf.tightness = 1.0
         except Exception:
             logger.exception("Page %d (%s) failed to draw; shown as text instead", index + 1, block.layout)
             pdf.decorate = True
-            pdf.set_auto_page_break(True, margin=22)
+            pdf.set_auto_page_break(True, margin=pdf.bottom)
             pdf.fill_page("paper")
             pdf.set_xy(pdf.l_margin, 24)
             render_flow(pdf, as_flow(block).body)
