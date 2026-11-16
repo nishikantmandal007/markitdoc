@@ -170,6 +170,8 @@ PLANNING
 - A designed page must be full; never the same designed layout twice in a row. Quote and closing pages only
   with images: true; otherwise end with a normal ## section.
 - Length: a designed page is one page; a flow page holds about 450 words. Hit the length the user asked for.
+- Chapter body: use two substantial paragraphs, one per column (roughly 80-100 words each); text is measured, so use
+  the page-fit check rather than adding filler when the content is shorter.
 - Facts: never invent specific dates, years or figures; use what the user gave, well-known history, or clearly
   labelled sample figures.
 - images: true -> add 'image: <query>' to the cover and to 1-3 chapter or feature pages: 2-4 English words naming a
