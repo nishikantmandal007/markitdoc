@@ -1,6 +1,6 @@
 import time
 
-import fitz
+import pymupdf as fitz
 from helpers import generate_document
 
 paragraph = ("AI-Safe detects personal data, replaces it with realistic fakes and restores the real values in the answer. "

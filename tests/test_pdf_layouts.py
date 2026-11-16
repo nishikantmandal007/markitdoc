@@ -1,5 +1,5 @@
 
-import fitz
+import pymupdf as fitz
 from helpers import generate_document
 
 from markitdoc.models.document import parse_document

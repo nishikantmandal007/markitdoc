@@ -1,7 +1,7 @@
 import io
 import os
 
-import fitz
+import pymupdf as fitz
 import pytest
 import requests
 from helpers import generate_document

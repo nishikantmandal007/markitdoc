@@ -3,8 +3,8 @@ import logging
 import re
 from functools import lru_cache
 
-import fitz
 import matplotlib.pyplot as plt
+import pymupdf as fitz
 import ziamath
 from fpdf import FPDF
 
