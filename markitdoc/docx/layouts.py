@@ -18,7 +18,7 @@ from markitdoc.markup.inline import inline_runs, parser, plain_text
 from markitdoc.markup.blocks import paragraphs, prepared
 from markitdoc.utils.helpers import creation_date, long_date
 from markitdoc.themes.brands import brand_hooks
-from markitdoc.pptx.layouts import gantt_plan, unit_name
+from markitdoc.visuals.gantt import gantt_plan, unit_name
 from markitdoc.themes.themes import Theme
 
 logger = logging.getLogger(__name__)
