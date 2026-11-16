@@ -12,10 +12,12 @@ from markitdoc.themes.themes import Theme
 tightness_steps = (1.0, 0.92, 0.85)
 
 
+# returns the validation messages for every page in the document
 def problems_in(document: Document, theme: Theme | None = None) -> list[str]:
     return [message for _, message in page_problems(document, theme)]
 
 
+# checks page content for layout, length, chart, diagram, and image problems
 def page_problems(document: Document, theme: Theme | None = None, with_images: bool = False, fitted: dict | None = None,
                   credits=(), sparse: set | None = None) -> list[tuple[int, str]]:
     from markitdoc.markup.elements import chart_data
@@ -83,6 +85,7 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
     return found
 
 
+# extracts matching code fences from a markdown body
 def fences(body, language):
     found = []
     for suffix, content in re.findall(rf"```{language}([^\n]*)\n(.*?)```", body, re.S):

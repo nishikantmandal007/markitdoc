@@ -37,30 +37,36 @@ class DocumentImage:
     artist: str
     licence: str
 
+    # adds a numbered figure caption with its optional credit and source
     @property
     def caption(self):
         return re.sub(r"\s*\([^)]*\)", "", self.title.rsplit(".", 1)[0]).replace("_", " ").strip()
 
+    # returns the Wikimedia Commons page for the image
     @property
     def source(self):
         return "https://commons.wikimedia.org/wiki/File:" + quote(self.title.replace(" ", "_"))
 
+    # formats a compact image credit for display
     @property
     def short_credit(self):
         return f"Photo: {self.author}, {self.licence}, Wikimedia Commons"
 
+    # extracts a short author name from image attribution text
     @property
     def author(self):
         name = re.sub(r"(?i)^.*?\b(?:taken|photographed|created|uploaded|made)\s+by\s+|^(?:photo|photograph|image)\s*(?:by|:)\s*", "", self.artist)
         name = re.split(r"\.\s|[(\[;|]|\s—\s", name)[0].strip(" ,.")
         return name if 2 <= len(name) <= 40 else name[:40].rsplit(" ", 1)[0] if name else "Unknown"
 
+    # formats the full image credit and source attribution
     @property
     def credit(self):
         name = re.sub(r"\s*\([^)]*\)", "", self.title.rsplit(".", 1)[0]).replace("_", " ").strip()
         return f"{name} — {self.artist}, {self.licence}, via Wikimedia Commons"
 
 
+# finds distinct images for the requested document sections
 def find_images(wanted: dict, ratios: dict) -> dict:
     found, used = {}, set()
     for key, query in wanted.items():
@@ -72,6 +78,7 @@ def find_images(wanted: dict, ratios: dict) -> dict:
     return found
 
 
+# reuses a remembered image or searches for a suitable match
 def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | None:
     words = re.sub(r"[^\w\s,.-]", " ", query)[:max_query_length].split()
     if not words:
@@ -85,6 +92,7 @@ def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | No
     return image
 
 
+# loads saved image choices, returning an empty mapping if unavailable
 def remembered_choices():
     try:
         return json.loads(choices_file.read_text())
@@ -92,6 +100,7 @@ def remembered_choices():
         return {}
 
 
+# saves the selected image for reuse with the same search
 def remember_choice(query, image):
     choices = remembered_choices()
     choices[query] = {"sha1": image.path.stem, "title": image.title, "artist": image.artist, "licence": image.licence}
@@ -102,6 +111,7 @@ def remember_choice(query, image):
         logger.warning("Could not remember image choice: %s", type(error).__name__)
 
 
+# searches Wikimedia for a permitted image matching the query
 def search_image(words, ratio, used):
     full, shorter = " ".join(words), " ".join(words[-3:])
     name = next((plain(word) for word in words if len(word) > 3), "")
@@ -119,6 +129,7 @@ def search_image(words, ratio, used):
     return None
 
 
+# queries Wikimedia Commons for matching image files
 def search(text):
     try:
         response = requests.get(commons_api, headers=client_headers, timeout=15, params={
@@ -130,10 +141,12 @@ def search(text):
         return []
 
 
+# removes accents and lowercases text for image-title matching
 def plain(text):
     return "".join(letter for letter in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(letter))
 
 
+# filters and ranks image search results by license, content, and shape
 def candidates(pages, ratio, used, words, needs_every_word, anchor=""):
     for page in pages:
         info = page["imageinfo"][0]
@@ -155,6 +168,7 @@ def candidates(pages, ratio, used, words, needs_every_word, anchor=""):
             yield (-matches, page.get("index", 99) + (1 if needs_every_word is None else 4) * fit), url, title, artist[:60], licence, info["sha1"]
 
 
+# validates a downloaded image and saves a JPEG copy
 def save_safe_copy(url, path: Path):
     content = download(url)
     if content is None:
@@ -170,6 +184,7 @@ def save_safe_copy(url, path: Path):
         return False
 
 
+# downloads an image with bounded retries for rate limiting
 def download(url):
     for attempt in range(3):
         try:

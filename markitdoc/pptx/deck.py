@@ -48,11 +48,13 @@ class Item:
     level: int = 0
     number: int = 0
 
+    # checks whether a slide item is a bullet or number
     @property
     def listed(self):
         return self.kind in ("bullet", "number")
 
 
+# returns the left indent for a bullet, number, or paragraph
 def item_indent(item):
     if item.kind == "bullet":
         return bullet_indent * (item.level + 1)
@@ -61,6 +63,7 @@ def item_indent(item):
     return level_indent * item.level
 
 
+# splits items into groups that satisfy a layout constraint
 def split_to_fit(items, fits):
     if len(items) < 2 or fits(items):
         return [items]
@@ -71,6 +74,7 @@ def split_to_fit(items, fits):
 
 
 class Deck:
+    # sets up the rendering context and its document settings
     def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict):
         self.presentation = Presentation(str(theme.master)) if theme.master else Presentation()
         self.presentation.slide_width = Inches(slide_width)
@@ -91,9 +95,11 @@ class Deck:
         if self.branded:
             self.drop_slides_after(1)
 
+    # returns a theme color as a PowerPoint color value
     def color(self, role):
         return RGBColor(*(role if isinstance(role, tuple) else self.theme.rgb(role)))
 
+    # measures and caches how many lines text needs at a given width
     def lines(self, source, width, size, style=""):
         key = (source, round(width, 3), size, style)
         if key not in self.measured:
@@ -101,17 +107,21 @@ class Deck:
             self.measured[key] = self.measurer.line_count(source, box) if source.strip() else 0
         return self.measured[key]
 
+    # measures the height needed for text on a slide
     def text_height(self, source, width, size, style="", leading=line_factor):
         return self.lines(source, width, size, style) * size * leading / 72
 
+    # queues text to be added to the current slide notes
     def note(self, text):
         self.notes.append(text)
 
+    # writes queued notes to the current slide before it changes
     def flush_notes(self):
         if self.slide is not None and self.notes:
             self.slide.notes_slide.notes_text_frame.text = "\n\n".join(self.notes)
         self.notes = []
 
+    # creates and styles a slide with its title and footer
     def new_slide(self, title=None, background="paper", footer=True, dark=False, standard=True):
         self.flush_notes()
         layout = self.presentation.slide_layouts.get_by_name(self.theme.content_layout) if self.branded else self.presentation.slide_layouts[layout_title_only]
@@ -137,6 +147,7 @@ class Deck:
             draw_footer(self, slide, night)
         return slide
 
+    # removes slides after the requested slide count
     def drop_slides_after(self, count):
         ids = self.presentation.slides._sldIdLst
         for slide_id in list(ids)[count:]:
@@ -144,11 +155,13 @@ class Deck:
             ids.remove(slide_id)
         self.slide, self.notes = None, []
 
+    # returns the number of slides in the presentation
     @property
     def slide_count(self):
         return len(self.presentation.slides)
 
 
+# creates a named slide text box with the requested frame settings
 def add_textbox(slide, left, top, width, height, name, anchor=MSO_ANCHOR.TOP, inset=0):
     shape = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(height))
     shape.name = name
@@ -156,6 +169,7 @@ def add_textbox(slide, left, top, width, height, name, anchor=MSO_ANCHOR.TOP, in
     return shape
 
 
+# sets wrapping, margins, and vertical alignment for a text frame
 def configure_frame(frame, anchor=MSO_ANCHOR.TOP, inset=0):
     frame.word_wrap = True
     frame.auto_size = MSO_AUTO_SIZE.NONE
@@ -163,6 +177,7 @@ def configure_frame(frame, anchor=MSO_ANCHOR.TOP, inset=0):
     frame.vertical_anchor = anchor
 
 
+# adds a filled and named shape to a slide
 def add_rect(deck, slide, left, top, width, height, role, name="Shape", shape=MSO_SHAPE.RECTANGLE):
     drawn = slide.shapes.add_shape(shape, Inches(left), Inches(top), Inches(width), Inches(height))
     drawn.name = name
@@ -173,10 +188,12 @@ def add_rect(deck, slide, left, top, width, height, role, name="Shape", shape=MS
     return drawn
 
 
+# lightens a theme color by the requested share
 def tint(deck, role, share):
     return lifted(deck.theme.rgb(role), share)
 
 
+# draws a centered circular label on a slide
 def add_badge(deck, slide, left, top, size, text, role="mood"):
     circle = add_rect(deck, slide, left, top, size, size, role, "Badge", MSO_SHAPE.OVAL)
     configure_frame(circle.text_frame, MSO_ANCHOR.MIDDLE, 0)
@@ -189,11 +206,13 @@ def add_badge(deck, slide, left, top, size, text, role="mood"):
     return circle
 
 
+# sets paragraph line spacing and space after
 def set_spacing(paragraph, size, leading=line_factor, after=gap_factor):
     paragraph.line_spacing = Pt(round(size * leading, 1))
     paragraph.space_after = Pt(round(size * after, 1))
 
 
+# sets the left and hanging indents for a paragraph
 def hanging(paragraph, indent, hang):
     properties = paragraph._p.get_or_add_pPr()
     properties.set("marL", str(int(Inches(indent))))
@@ -201,6 +220,7 @@ def hanging(paragraph, indent, hang):
     return properties
 
 
+# sets the color, font, and character for a bullet list item
 def add_bullet(deck, properties, level):
     color = etree.SubElement(properties, qn("a:buClr"))
     etree.SubElement(color, qn("a:srgbClr"), val=str(deck.color("mood")))
@@ -208,6 +228,7 @@ def add_bullet(deck, properties, level):
     etree.SubElement(properties, qn("a:buChar"), char=bullet_marks[min(level, len(bullet_marks) - 1)])
 
 
+# adds one styled text run to a PowerPoint paragraph
 def draw_run(deck, paragraph, run, text, size, role, bold, italic, font):
     drawn = paragraph.add_run()
     drawn.text = text
@@ -232,6 +253,7 @@ def draw_run(deck, paragraph, run, text, size, role, bold, italic, font):
         drawn.hyperlink.address = run.link
 
 
+# adds formatted inline text to a PowerPoint paragraph
 def add_runs(deck, paragraph, source, size, role="body", bold=False, italic=False, font=None):
     for run in runs_of(source):
         for position, piece in enumerate(run.text.split("\n")):
@@ -241,6 +263,7 @@ def add_runs(deck, paragraph, source, size, role="body", bold=False, italic=Fals
                 draw_run(deck, paragraph, run, piece, size, role, bold, italic, font)
 
 
+# formats a paragraph as a heading, bullet, number, or text item
 def draw_item(deck, paragraph, item, size, role="body"):
     set_spacing(paragraph, size)
     heading = item.kind == "subheading"
@@ -259,15 +282,18 @@ def draw_item(deck, paragraph, item, size, role="body"):
              font=deck.heading_font if heading else None)
 
 
+# measures the height needed for one slide text item
 def item_height(deck, item, width, size):
     lines = deck.lines(item.source, width - item_indent(item), size, "B" if item.kind == "subheading" else "")
     return lines * size * line_factor / 72 + size * gap_factor / 72
 
 
+# measures the combined height of slide text items
 def stack_height(deck, items, width, size):
     return sum(item_height(deck, item, width, size) for item in items)
 
 
+# draws a sequence of formatted items in a slide text box
 def write_items(deck, slide, items, left, top, width, size, role="body", name="Body"):
     height = stack_height(deck, items, width, size)
     frame = add_textbox(slide, left, top, width, height, name).text_frame
@@ -276,6 +302,7 @@ def write_items(deck, slide, items, left, top, width, size, role="body", name="B
     return height
 
 
+# draws fitted text in a named slide text box
 def write_text(deck, slide, source, left, top, width, size, role="body", bold=False, italic=False, heading=False,
                align=PP_ALIGN.LEFT, name="Text", leading=line_factor, height=None, anchor=MSO_ANCHOR.TOP):
     bold = bold or heading
@@ -288,6 +315,7 @@ def write_text(deck, slide, source, left, top, width, size, role="body", bold=Fa
     return used
 
 
+# fits a title to its line limit and records the full text if shortened
 def title_fit(deck, source, width, sizes, lines, style):
     for size in sizes:
         if deck.lines(source, width, size, style) <= lines:
@@ -299,6 +327,7 @@ def title_fit(deck, source, width, sizes, lines, style):
     return sizes[-1], " ".join(words) + "…"
 
 
+# sets and draws the title placeholder on a slide
 def place_title(deck, slide, source, role, left=side_margin, top=title_top, width=content_width, height=title_height,
                 sizes=title_sizes, lines=2, anchor=MSO_ANCHOR.BOTTOM, bold=True, italic=False, align=PP_ALIGN.LEFT):
     style = "B" if bold else ""
@@ -314,6 +343,7 @@ def place_title(deck, slide, source, role, left=side_margin, top=title_top, widt
     return size, deck.text_height(shown, width, size, style, title_leading)
 
 
+# draws the branded footer and slide number
 def draw_brand_footer(deck, slide, dark):
     role = soft_white if dark else "muted"
     write_text(deck, slide, literal(deck.theme.footer_text), side_margin, footer_top, 6.2, footer_size, role, name="Footer")
@@ -323,6 +353,7 @@ def draw_brand_footer(deck, slide, dark):
                    name="Slide number")
 
 
+# draws the branded or plain footer and slide number
 def draw_footer(deck, slide, dark=False):
     if deck.branded:
         return draw_brand_footer(deck, slide, dark)
@@ -334,6 +365,7 @@ def draw_footer(deck, slide, dark=False):
                align=PP_ALIGN.RIGHT, name="Slide number")
 
 
+# keeps as much source text as fits within the available height
 def key_sentences(deck, source, width, height, size):
     kept = []
     for sentence in sentence_end.split(source.strip()):
@@ -348,14 +380,17 @@ def key_sentences(deck, source, width, height, size):
     return " ".join(words) + "…"
 
 
+# chooses the largest text size that fits the available height
 def fitting_size(deck, items, width, height, sizes=body_sizes, cap=standard_size):
     return next((size for size in sizes if size <= cap and stack_height(deck, items, width, size) <= height), None)
 
 
+# raises the text size limit when a short list has ample space
 def roomy_cap(deck, items, width, height):
     return 24 if stack_height(deck, items, width, 24) <= height * 0.6 and len(items) <= 5 else standard_size
 
 
+# fits list text to a slide and records any shortened content
 def fitted_items(deck, items, width, height, label):
     cap = roomy_cap(deck, items, width, height)
     size = fitting_size(deck, items, width, height, cap=cap)
@@ -368,6 +403,7 @@ def fitted_items(deck, items, width, height, label):
     return shown, size
 
 
+# fits and draws slide items inside a text column
 def write_column(deck, slide, items, left, top, width, bottom, label="Full text"):
     if not items:
         return top

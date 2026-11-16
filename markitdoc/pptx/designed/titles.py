@@ -29,17 +29,20 @@ class TitleGroup:
     subtitle_size: int
     subtitle_height: float
 
+    # returns the total height of the title group
     @property
     def total(self):
         return (0.5 if self.kicker else 0) + self.title_height + (0.35 + self.subtitle_height if self.subtitle else 0)
 
 
+# yields the supplied title followed by continuation titles
 def slide_titles(source):
     yield source
     while True:
         yield f"{source} (cont.)"
 
 
+# chooses a text size or shortens the text to fit its box
 def fit_text(deck, source, width, height, label, cap=standard_size, style=""):
     size = next((size for size in body_sizes if size <= cap and deck.text_height(source, width, size, style) <= height), None)
     if size:
@@ -48,20 +51,24 @@ def fit_text(deck, source, width, height, label, cap=standard_size, style=""):
     return key_sentences(deck, source, width, height, comfortable_size - 2), comfortable_size - 2
 
 
+# fits lead text to its standard slide box
 def lead_text(deck, source):
     return fit_text(deck, source, text_width, 1.3, "Lead") if source else ("", 0)
 
 
+# measures the space needed for the slide lead text
 def lead_room(deck, source):
     shown, size = lead_text(deck, source)
     return deck.text_height(shown, text_width, size) + 0.35 if source else 0.0
 
 
+# draws fitted lead text and returns the next available position
 def draw_lead(deck, slide, source, top):
     shown, size = lead_text(deck, source)
     return top + write_text(deck, slide, shown, side_margin, top, text_width, size, "body", name="Lead") + 0.35 if source else top
 
 
+# fits a title group and measures its total height
 def plan_group(deck, kicker, title, subtitle, sizes, width):
     size, shown = title_fit(deck, title, width, sizes, 3, "B")
     height = deck.text_height(shown, width, size, "B", 1.12)
@@ -70,6 +77,7 @@ def plan_group(deck, kicker, title, subtitle, sizes, width):
     return TitleGroup(kicker, shown, size, height, text, text_size, sub_height)
 
 
+# draws the kicker, title, and subtitle for an opener
 def draw_group(deck, slide, group, left, top, width, roles):
     title_role, kicker_role, subtitle_role = roles
     if group.kicker:

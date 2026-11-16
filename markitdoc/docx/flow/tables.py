@@ -14,6 +14,7 @@ from markitdoc.markup.inline import inline_runs, parser
 numeric_cell = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")
 
 
+# removes inline emphasis markers from table cell text
 def table_cells(tokens):
     rows, row = [], None
     for token in tokens:
@@ -27,6 +28,7 @@ def table_cells(tokens):
     return rows
 
 
+# draws a styled PowerPoint table with a repeated header
 def add_table(writer, tokens, style):
     rows = table_cells(tokens)
     if not rows:
@@ -102,10 +104,12 @@ def add_table(writer, tokens, style):
         landscape_section(writer, False)
 
 
+# returns the plain text from inline runs in a table cell
 def inline_runs_text(token):
     return "".join(run.text for run in inline_runs(token))
 
 
+# draws a circular rating symbol as a PNG image
 @lru_cache(maxsize=None)
 def harvey_png(level, color):
     size = 96
@@ -121,6 +125,7 @@ def harvey_png(level, color):
     return io.BytesIO(buffer.getvalue())
 
 
+# draws process steps as a numbered table in Word
 def step_table(writer, steps):
     table = new_table(writer, len(steps), 2, [1.4, writer.width - 1.4])
     for row, (title, detail) in enumerate(steps):

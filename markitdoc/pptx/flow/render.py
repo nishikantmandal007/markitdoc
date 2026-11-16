@@ -53,6 +53,7 @@ from markitdoc.utils.helpers import mono_font
 opening_limit = 220
 
 
+# yields a slide title and continuation titles
 def title_stream(title, continued=False):
     if not continued:
         yield literal(title)
@@ -60,10 +61,12 @@ def title_stream(title, continued=False):
         yield literal(title) + " (cont.)"
 
 
+# counts the listed items in a slide group
 def bullet_count(items):
     return sum(item.listed for item in items)
 
 
+# moves a trailing subheading to the next slide group
 def settled(groups):
     for position, group in enumerate(groups[:-1]):
         if group and group[-1].kind == "subheading" and len(group) > 1:
@@ -72,6 +75,7 @@ def settled(groups):
     return groups
 
 
+# draws text items across as many slides as needed
 def draw_text_slides(deck, titles, items):
     def fits(group):
         return bullet_count(group) <= max_bullets and stack_height(deck, group, text_width, comfortable_size) <= body_height
@@ -116,10 +120,12 @@ def draw_text_slides(deck, titles, items):
         write_items(deck, slide, shown, side_margin, body_top, text_width, size)
 
 
+# checks whether lead text fits above a slide visual within its item limit
 def lead_fits(deck, lead, width, height):
     return stack_height(deck, lead, width, comfortable_size) <= height and bullet_count(lead) <= max_bullets - 1
 
 
+# attaches short paragraphs after equations when they fit
 def with_trailing_text(deck, parts):
     result = []
     for part in parts:
@@ -133,10 +139,12 @@ def with_trailing_text(deck, parts):
     return result
 
 
+# checks whether a slide piece can join a photo gallery
 def gallery_photo(deck, part):
     return isinstance(part, Piece) and part.kind == "figure" and part.data in deck.figures and not part.after
 
 
+# groups nearby images and visuals for slide rendering
 def with_photo_text(deck, parts):
     result, index = [], 0
     while index < len(parts):
@@ -158,6 +166,7 @@ def with_photo_text(deck, parts):
     return result
 
 
+# renders slide content parts and batches adjacent photos into galleries
 def draw_parts(deck, titles, parts):
     pending, gallery = [], []
 
@@ -188,6 +197,7 @@ def draw_parts(deck, titles, parts):
         draw_text_slides(deck, titles, pending)
 
 
+# draws several matched photos together on one slide
 def draw_gallery(deck, titles, pieces):
     slide = deck.new_slide(next(titles))
     gap = 0.25
@@ -201,6 +211,7 @@ def draw_gallery(deck, titles, pieces):
         write_text(deck, slide, literal(caption), left, body_top + height + 0.1, width, 14, "muted", italic=True, name="Caption")
 
 
+# draws a photo beside its related slide text
 def draw_photo_slide(deck, titles, items, piece):
     path, caption, credit, _ = deck.figures[piece.data]
     title = next(titles)
@@ -216,11 +227,13 @@ def draw_photo_slide(deck, titles, items, piece):
     write_text(deck, slide, literal(caption), side_margin, 6.35, content_width - 6.5, 16, soft_white, italic=True, name="Caption")
 
 
+# chooses the slide renderer for a visual content piece
 def draw_piece(deck, titles, lead, piece):
     drawer = {"table": draw_table, "code": draw_code, "steps": draw_steps}.get(piece.kind, draw_visual)
     drawer(deck, titles, lead, piece)
 
 
+# renders a process visual with any fitting lead text
 def draw_steps(deck, titles, lead, piece):
     lead_text = " ".join(plain_text(item.source) for item in lead)
     if lead and not lead_fits(deck, lead, text_width, 1.2):
@@ -229,6 +242,7 @@ def draw_steps(deck, titles, lead, piece):
     deck.draw_designed(deck, Block("process", {"title": next(titles), **({"lead": lead_text} if lead_text else {})}, piece.data))
 
 
+# places lead text above a slide visual when it fits
 def lead_above(deck, titles, lead):
     if not lead:
         return 0.0
@@ -238,6 +252,7 @@ def lead_above(deck, titles, lead):
     return 0.0
 
 
+# splits and draws a table across one or more slides
 def draw_table(deck, titles, lead, piece):
     lead_room = lead_above(deck, titles, lead)
     shown_lead = lead if lead_room else []
@@ -259,6 +274,7 @@ def draw_table(deck, titles, lead, piece):
         start += len(rows)
 
 
+# splits and draws a code sample across slides
 def draw_code(deck, titles, lead, piece):
     lead_room = lead_above(deck, titles, lead)
     lines = piece.data.expandtabs(4).split("\n")
@@ -281,6 +297,7 @@ def draw_code(deck, titles, lead, piece):
             run.font.name, run.font.size, run.font.color.rgb = mono_font, Pt(size), deck.color("ink")
 
 
+# renders a visual piece or falls back to readable slide text
 def draw_visual(deck, titles, lead, piece):
     visual = prepared_visual(deck, piece)
     if visual is None:
@@ -322,6 +339,7 @@ def draw_visual(deck, titles, lead, piece):
                                                                    piece.caption))(deck, slide, visual, box)
 
 
+# removes a short opening paragraph to use as a slide lead
 def take_opening(parts):
     first = next((part for part in parts if isinstance(part, Item)), None)
     if first and first is parts[0] and first.kind == "paragraph" and len(first.source) <= opening_limit:
@@ -330,6 +348,7 @@ def take_opening(parts):
     return ""
 
 
+# renders each parsed markdown section as slides
 def draw_sections(deck, sections, draw_designed):
     for section in sections:
         parts = list(section.parts)
@@ -347,6 +366,7 @@ def draw_sections(deck, sections, draw_designed):
         draw_parts(deck, title_stream(title, continued), parts)
 
 
+# draws a flowchart with positioned nodes and connectors
 def draw_flow(deck, markdown, draw_designed):
     deck.draw_designed = draw_designed
     draw_sections(deck, read_sections(deck, markdown), draw_designed)

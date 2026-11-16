@@ -15,15 +15,18 @@ hyphenation_languages = {"en": "en_GB", "de": "de_DE", "fr": "fr", "es": "es"}
 long_word = re.compile(r"[^\W\d_]{7,}")
 
 
+# loads the hyphenation dictionary for a supported language
 @lru_cache(maxsize=8)
 def hyphenator(lang):
     return pyphen.Pyphen(lang=hyphenation_languages.get(lang.split("-")[0].split("_")[0], "en_GB"))
 
 
+# checks whether a language has a hyphenation dictionary
 def can_hyphenate(lang):
     return (lang or "en").split("-")[0].split("_")[0] in hyphenation_languages
 
 
+# adds soft hyphens to long words outside markdown links
 def hyphenated(text, lang):
     if not can_hyphenate(lang):
         return text
@@ -34,6 +37,7 @@ def hyphenated(text, lang):
 
 
 class FlowPages(PdfPages):
+    # sets up the rendering context and its document settings
     def __init__(self, theme, title, plain):
         super().__init__(theme)
         self.document_title, self.plain, self.decorate = title, plain, True
@@ -52,12 +56,14 @@ class FlowPages(PdfPages):
         self.set_auto_page_break(True, margin=22)
         self.set_margins(margin, 20, margin)
 
+    # saves highlight link positions or adds an ordinary PDF link
     def link(self, x, y, w, h, link, *args, **kwargs):
         if link == highlight_link:
             self.highlights.append((self.page, x, y, w, h))
             return None
         return super().link(x, y, w, h, link, *args, **kwargs)
 
+    # paints saved highlight rectangles on their original PDF pages
     def paint_highlights(self):
         current = self.page
         for page, x, y, w, h in self.highlights:
@@ -67,6 +73,7 @@ class FlowPages(PdfPages):
                 self.rect(x - 0.4, y - 0.5, w + 0.8, h + 0.9, "F")
         self.page, self.highlights = current, []
 
+    # adds a page and resets portrait tracking when needed
     def add_page(self, *args, **kwargs):
         super().add_page(*args, **kwargs)
         if self.auto_page_break and self.decorate:
@@ -74,10 +81,12 @@ class FlowPages(PdfPages):
         if self.w < self.h:
             self.back_to_portrait = False
 
+    # returns the usable horizontal width inside the page margins
     @property
     def area(self):
         return self.w - self.l_margin - self.r_margin
 
+    # draws the running header and records decorated flow pages
     def header(self):
         if self.decorate:
             self.flow_pages.add(self.page_no())
@@ -100,6 +109,7 @@ class FlowPages(PdfPages):
         self.line(margin, 15, self.w - margin, 15)
         self.set_xy(self.l_margin, self.t_margin)
 
+    # draws the watermark and classification label on the page
     def draw_marks(self):
         if self.watermark:
             with self.local_context(fill_opacity=0.07, text_color=self.theme.rgb("ink")):
@@ -113,6 +123,7 @@ class FlowPages(PdfPages):
             self.set_xy(0, 3.5)
             self.cell(self.w, 4, self.classification.upper(), align="C")
 
+    # draws page marks, footnotes, and footer text
     def footer(self):
         self.draw_marks()
         if self.page_no() not in self.flow_pages:
@@ -130,6 +141,7 @@ class FlowPages(PdfPages):
             self.cell(self.w - 2 * margin - 20, 5, footer)
 
 
+# places new footnotes at the bottom of the current PDF page
 def place_notes(pdf, inline, note_texts, placed):
     if not note_texts:
         return
@@ -140,6 +152,7 @@ def place_notes(pdf, inline, note_texts, placed):
     place_page_notes(pdf, inline, note_texts, placed)
 
 
+# measures the height needed to draw one footnote
 def note_height(pdf, number, text):
     pdf.set_font("Brand", "", body_size * pdf.scale * 0.8)
     lines = pdf.multi_cell(pdf.w - 2 * margin, body_size * pdf.scale * 0.42, f"{number} {text}", markdown=True,
@@ -147,6 +160,7 @@ def note_height(pdf, number, text):
     return len(lines) * body_size * pdf.scale * 0.42 + 1
 
 
+# draws the footnotes assigned to the current PDF page
 def draw_page_notes(pdf):
     notes = pdf.page_notes.get(pdf.page_no())
     if not notes:
@@ -163,6 +177,7 @@ def draw_page_notes(pdf):
         pdf.ln(1)
 
 
+# draws a footnote with its number hanging beside the text
 def hanging_note(pdf, number, text, width, scale):
     size = body_size * pdf.scale * scale
     left = pdf.get_x()
@@ -172,6 +187,7 @@ def hanging_note(pdf, number, text, width, scale):
     pdf.multi_cell(width - 4, size * 0.52, text, markdown=True, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
+# assigns unplaced footnotes referenced by a paragraph to its page
 def place_page_notes(pdf, inline, note_texts, placed):
     references = [child.meta["id"] for child in inline.children or [] if child.type == "footnote_ref"]
     fresh = [(str(reference + 1).translate(superscript_digits), note_texts[reference]) for reference in references
@@ -189,6 +205,7 @@ def place_page_notes(pdf, inline, note_texts, placed):
 FlowPages.draw_page_notes = draw_page_notes
 
 
+# fills page, title, date, and section placeholders in footer text
 def page_fields(pdf, text):
     return (text.replace("{page}", str(pdf.page_no())).replace("{pages}", "{nb}")
             .replace("{title}", pdf.document_title).replace("{date}", pdf.meta_date).replace("{section}", pdf.current_section))[:110]
@@ -197,6 +214,7 @@ def page_fields(pdf, text):
 FlowPages.fields = page_fields
 
 
+# copies PDF layout settings into a temporary measuring document
 def probe_of(pdf: FlowPages, y=None):
     probe = FlowPages(pdf.theme, pdf.document_title, pdf.plain)
     for name in ("scale", "table_style", "lang", "targets", "flow_images", "numbering", "notes_at_page_bottom", "header_text",
@@ -210,6 +228,7 @@ def probe_of(pdf: FlowPages, y=None):
     return probe
 
 
+# measures the height and page count of rendered content
 def measured(pdf: FlowPages, draw):
     probe = probe_of(pdf)
     start = probe.get_y()
@@ -218,6 +237,7 @@ def measured(pdf: FlowPages, draw):
     return probe.get_y() - start + pages * (probe.page_break_trigger - probe.t_margin), pages > 0
 
 
+# measures how much space content uses from the top of a page
 def top_height(pdf: FlowPages, draw):
     probe = probe_of(pdf, pdf.t_margin)
     draw(probe)

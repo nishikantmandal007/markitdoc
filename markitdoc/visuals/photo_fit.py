@@ -7,6 +7,7 @@ from PIL import Image, ImageFilter, ImageOps
 from markitdoc.utils.helpers import lifted
 
 
+# finds the crop with the most visual detail at the target shape
 def interest_box(picture, target):
     small = picture.copy()
     small.thumbnail((160, 160))
@@ -35,6 +36,7 @@ def interest_box(picture, target):
             int(min(picture.height, top * scale + box_height)))
 
 
+# applies the requested photo treatment after adjusting contrast
 def treated(picture, treatment, theme):
     picture = ImageOps.autocontrast(picture, cutoff=1)
     if treatment == "mono":
@@ -44,6 +46,7 @@ def treated(picture, treatment, theme):
     return picture
 
 
+# crops, treats, fades, and saves an image at the requested size
 def fitted_image(path: Path, width, height, work_folder: Path, fades=(), treatment="natural", theme=None):
     picture = Image.open(path).convert("RGB")
     picture = treated(picture.crop(interest_box(picture, width / height)), treatment, theme)

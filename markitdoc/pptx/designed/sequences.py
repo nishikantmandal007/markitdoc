@@ -26,14 +26,17 @@ column_presets = ((22, 18), (20, 16), (18, 16), (16, 14))
 comparison_presets = ((22, 0), (20, 0), (18, 0), (16, 0), (14, 0))
 
 
+# returns the first sizing preset that fits the available height
 def fitting_preset(presets, height_of, group, available):
     return next((preset for preset in presets if height_of(group, preset) <= available), None)
 
 
+# splits items into rows that fit the slide width and height
 def split_rows(deck, items, cap, height_of, presets, available):
     return split_to_fit(list(items), lambda group: len(group) <= cap and fitting_preset(presets, height_of, group, available) is not None)
 
 
+# measures the height needed for a group of keypoints
 def keypoint_height(deck, group, preset):
     head, text = preset
     width = content_width - 1.6
@@ -41,6 +44,7 @@ def keypoint_height(deck, group, preset):
                              for item in group) + 0.2)
 
 
+# splits and draws key findings across slides
 def draw_keypoints(deck, block, image):
     slots = block.slots
     room = body_height - lead_room(deck, slots.get("lead", ""))
@@ -64,12 +68,14 @@ def draw_keypoints(deck, block, image):
         start += len(group)
 
 
+# measures the height needed for a horizontal process row
 def horizontal_height(deck, group, preset):
     width = (content_width - 0.3 * (len(group) - 1)) / len(group)
     return (1.0 + max(deck.text_height(item[0], width, preset[0], "B") for item in group) + 0.08
             + max(deck.text_height(item[-1], width, preset[1]) if item[-1] else 0 for item in group))
 
 
+# splits and draws process steps across slides
 def draw_process(deck, block, image):
     slots = block.slots
     items = [item for item in block.items if item and item[0]]
@@ -108,6 +114,7 @@ def draw_process(deck, block, image):
         start += len(group)
 
 
+# draws timeline ranges as a Gantt chart on a slide
 def draw_gantt(deck, block, plan):
     slots = block.slots
     unit, first, last, periods = plan
@@ -139,6 +146,7 @@ def draw_gantt(deck, block, plan):
             deck.note(f"{plain_text(item[1])}: {plain_text(detail)}")
 
 
+# draws timeline entries as a Gantt chart or dated slide rows
 def draw_timeline(deck, block, image):
     slots = block.slots
     items = [item for item in block.items if item and item[0]]
@@ -177,6 +185,7 @@ def draw_timeline(deck, block, image):
                 write_text(deck, slide, item[-1], left, top + 0.95 + heading_room + 0.08, width, preset[1], "body", name="Description")
 
 
+# draws two comparison columns across one or more slides
 def draw_comparison(deck, block, image):
     slots = block.slots
     column = (content_width - 0.4) / 2
@@ -235,6 +244,7 @@ def draw_comparison(deck, block, image):
                        name="Takeaway")
 
 
+# draws up to four items in a two-by-two slide matrix
 def draw_matrix(deck, block, image):
     slots = block.slots
     slide = deck.new_slide(slots["title"])

@@ -6,12 +6,14 @@ from pathlib import Path
 steady_dates = re.compile(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:(?:created|modified)>)")
 
 
+# saves the presentation with stable package metadata
 def save_presentation(presentation, output_path: Path):
     buffer = io.BytesIO()
     presentation.save(buffer)
     output_path.write_bytes(steady_zip(buffer.getvalue()))
 
 
+# writes ZIP entries with stable timestamps and attributes
 def steady_zip(content):
     output = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(content)) as source, zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
@@ -27,5 +29,6 @@ def steady_zip(content):
     return output.getvalue()
 
 
+# checks whether a ZIP package contains an Excel workbook
 def is_workbook(archive):
     return "xl/workbook.xml" in archive.namelist()

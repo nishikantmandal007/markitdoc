@@ -26,15 +26,18 @@ table_sizes = (18, 16, 14)
 cell_side, cell_vertical = 0.12, 0.08
 
 
+# removes inline emphasis markers from table cell text
 def table_cells(source):
     return source.replace("**", "").replace("__", "")
 
 
+# measures the height needed for a slide table row
 def row_height(deck, row, widths, size, header):
     lines = max(deck.lines(source, width - 2 * cell_side, size, "B" if header else "") for source, width in zip(row, widths))
     return lines * size * 1.2 / 72 + 2 * cell_vertical
 
 
+# shortens the tallest cell text until a table row fits
 def shortened_row(deck, row, widths, size, limit):
     row = list(row)
     while row_height(deck, row, widths, size, False) > limit:
@@ -43,6 +46,7 @@ def shortened_row(deck, row, widths, size, limit):
     return tuple(row)
 
 
+# chooses table sizing and splits rows across slides
 def table_pages(deck, table, available):
     plans = []
     for size in table_sizes:
@@ -57,6 +61,7 @@ def table_pages(deck, table, available):
     return min(plans, key=lambda plan: plan[:2])
 
 
+# groups table rows into pages that fit the available height
 def pack_rows(rows, heights, room):
     pages, current, used = [], [], 0.0
     for row, height in zip(rows, heights):
@@ -72,6 +77,7 @@ def pack_rows(rows, heights, room):
     return balanced if fits and len(balanced) == len(pages) else pages
 
 
+# chooses a declared or numeric alignment for a table column
 def cell_align(table, column):
     declared = table.aligns[column] if column < len(table.aligns) else None
     numbers = all(numeric_cell.match(table_cells(row[column]).strip()) for row in table.rows[1:] if column < len(row) and row[column].strip())
@@ -79,6 +85,7 @@ def cell_align(table, column):
     return {"RIGHT": PP_ALIGN.RIGHT, "CENTER": PP_ALIGN.CENTER}.get(pick, PP_ALIGN.LEFT)
 
 
+# adds or removes one border on a PowerPoint table cell
 def add_border(deck, cell, side, role, points):
     properties = cell._tc.get_or_add_tcPr()
     line = etree.SubElement(properties, qn(f"a:ln{side}"), w=str(int(points * 12700)), cap="flat", cmpd="sng", algn="ctr")
@@ -89,10 +96,12 @@ def add_border(deck, cell, side, role, points):
     etree.SubElement(line, qn("a:prstDash"), val="solid")
 
 
+# checks whether cell text can be shown as a rating symbol
 def rating_ball(source):
     return rating_level(source) is not None
 
 
+# draws a circle filled to represent a rating level
 def draw_harvey_ball(deck, slide, left, top, size, level):
     outline = add_rect(deck, slide, left, top, size, size, "paper", "Harvey ball", MSO_SHAPE.OVAL)
     outline.line.color.rgb, outline.line.width = deck.color("mood"), Pt(1.25)
@@ -112,6 +121,7 @@ def draw_harvey_ball(deck, slide, left, top, size, level):
         shape.line.fill.background()
 
 
+# sets cell text, alignment, fill, and borders for a slide table
 def style_cell(deck, cell, source, align, size, header, style, last, odd, first=False, highlight=False, rating=False):
     cell.margin_left = cell.margin_right = Inches(cell_side)
     cell.margin_top = cell.margin_bottom = Inches(cell_vertical)
@@ -143,6 +153,7 @@ def style_cell(deck, cell, source, align, size, header, style, last, odd, first=
     add_runs(deck, paragraph, source, size, role, bold=header or highlight or first)
 
 
+# draws a styled PowerPoint table with a repeated header
 def add_table(deck, slide, table, rows, widths, header_height, heights, size, top):
     shape = slide.shapes.add_table(len(rows) + 1, len(widths), Inches(side_margin), Inches(top), Inches(sum(widths)),
                                    Inches(header_height + sum(heights)))

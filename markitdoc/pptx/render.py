@@ -31,16 +31,19 @@ drawers = {"cover": draw_cover, "divider": draw_divider, "quote": draw_quote, "c
            "comparison": draw_comparison, "matrix": draw_matrix, "chapter": draw_chapter, "feature": draw_feature}
 
 
+# checks whether a block has enough content to render
 def drawable(block):
     slot = required_slots.get(block.layout)
     return (slot is not None and bool(block.slots.get(slot)) and len([item for item in block.items if item and item[0]]) >= needs_items.get(block.layout, 0)
             and (block.layout != "comparison" or bool(block.slots.get("left") and block.slots.get("right"))))
 
 
+# dispatches designed blocks to their PowerPoint renderers
 def draw_designed(deck, block, image=None):
     drawers[block.layout](deck, block, image)
 
 
+# dispatches a designed block to its PowerPoint slide renderer
 def draw_block(deck, index, block):
     before = deck.slide_count
     try:
@@ -57,18 +60,21 @@ def draw_block(deck, index, block):
         draw_flow(deck, as_flow(block).body, draw_designed)
 
 
+# chooses a title for the presentation from its content
 def deck_title(blocks, meta):
     first = blocks[0]
     return (meta.get("title") or first.slots.get("title") or next((line.lstrip("# ").strip() for line in first.body.splitlines()
                                                                 if line.startswith("# ")), "") or "Presentation")
 
 
+# adds document notes to the presentation notes page
 def draw_notes_slide(deck):
     if deck.footnotes:
         items = [Item(f"{text}", "number", 0, number) for number, (_, text) in enumerate(deck.footnotes, 1)]
         draw_text_slides(deck, title_stream("Notes"), items)
 
 
+# sets presentation metadata from the document and user
 def stamp_metadata(deck, user_email, title):
     properties = deck.presentation.core_properties
     moment = creation_date(deck.meta.get("date"))
@@ -83,6 +89,7 @@ def stamp_metadata(deck, user_email, title):
     properties.category = "generated-document"
 
 
+# renders a document as a PowerPoint presentation
 def render_pptx(document: Document, theme: Theme, output_path: Path, images=None, user_email=""):
     started = time.perf_counter()
     blocks = balanced([prepared(block) for block in document.blocks], theme)

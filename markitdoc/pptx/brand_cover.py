@@ -11,10 +11,12 @@ cover_logo_top, cover_logo_size, cover_stack_top, cover_stack_bottom = 0.4, 1.4,
 cover_gap, tagline_height, subtitle_cap = 0.22, 0.35, 20
 
 
+# finds the first slide shape whose text starts with a value
 def shape_with_text(slide, start):
     return next((shape for shape in slide.shapes if shape.has_text_frame and shape.text_frame.text.strip().startswith(start)), None)
 
 
+# removes template shapes that contain sample text
 def remove_sample_text(slide, sample_texts):
     for start in sample_texts:
         shape = shape_with_text(slide, start)
@@ -22,14 +24,17 @@ def remove_sample_text(slide, sample_texts):
             shape._element.getparent().remove(shape._element)
 
 
+# sets a slide shape top position in inches
 def move(shape, top):
     shape.top = Inches(top)
 
 
+# chooses a subtitle size that fits the cover area
 def subtitle_size(deck, source, height):
     return next((size for size in body_sizes if size <= subtitle_cap and deck.text_height(source, cover_width, size) <= height), 14)
 
 
+# draws the configured branded cover slide
 def draw_brand_cover(deck, block):
     slots = block.slots if block else {}
     slide = deck.presentation.slides[0]

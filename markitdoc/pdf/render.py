@@ -40,12 +40,14 @@ drawers = {"cover": draw_cover, "summary": draw_summary, "divider": draw_divider
            "comparison": draw_comparison, "process": draw_process, "timeline": draw_timeline, "feature": draw_feature}
 
 
+# dispatches a designed block to its PDF page renderer
 def draw_block(pdf, block, image, work_folder, credits):
     if block.layout == "closing":
         return draw_closing(pdf, block, image, work_folder, credits)
     return drawers[block.layout](pdf, block, image, work_folder)
 
 
+# renders a document as a PDF file
 def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=()):
     from markitdoc.pdf.flow.pages import FlowPages
     from markitdoc.pdf.flow.render import fitted_spacing, render_flow, render_toc

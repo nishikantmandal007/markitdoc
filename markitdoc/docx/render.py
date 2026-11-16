@@ -40,17 +40,20 @@ section_level = {"divider": 1, "chapter": 1, "summary": 1, "closing": 1}
 document_photo_ratios = {"cover": 16 / 9, "chapter": 16 / 9, "feature": 16 / 9}
 
 
+# converts inline source text into styled runs
 def runs_of(writer, source):
     tokens = parser.parseInline(source or "")
     return inline_runs(tokens[0], writer.targets) if tokens else []
 
 
+# adds a styled paragraph from inline markdown text
 def text_paragraph(writer, source, style=None, role=None, size=None, bold=False, italic=False):
     paragraph = writer.body.add_paragraph(style=style)
     write_runs(writer, paragraph, runs_of(writer, source), size=size, role=role, bold=bold, italic=italic)
     return paragraph
 
 
+# adds a block title and optional kicker to the Word document
 def heading(writer, block, default="", kicker=""):
     title = block.slots.get("title") or default
     if not title:
@@ -62,22 +65,26 @@ def heading(writer, block, default="", kicker=""):
     write_runs(writer, paragraph, runs_of(writer, title))
 
 
+# adds the block lead as a styled Word paragraph
 def lead(writer, block):
     if block.slots.get("lead"):
         text_paragraph(writer, block.slots["lead"], "Lead")
 
 
+# adds each body paragraph to the Word document
 def body(writer, block):
     for text in paragraphs(block.slots.get("body", "")):
         text_paragraph(writer, text)
 
 
+# adds a block photo and its caption when an image is available
 def block_photo(writer, image, alt):
     if image:
         photo(writer, image[0], writer.width, writer.width / (16 / 9), alt)
         caption(writer, image[1] or alt, image[2], image[3])
 
 
+# draws the cover block with its title, image, logo, and subtitle
 def draw_cover(writer, block, image):
     slots = block.slots
     if brand_hooks(writer.theme.name).docx_cover:
@@ -107,6 +114,7 @@ def draw_cover(writer, block, image):
     page_break(writer)
 
 
+# draws the Word cover with the configured brand hook
 def draw_brand_cover(writer, slots):
     brand_hooks(writer.theme.name).docx_cover(writer.document, plain_text(slots.get("title", writer.title)),
                                               lambda paragraph, color, sz="6", space="1": border_bottom(paragraph, color, int(sz), int(space)))
@@ -117,6 +125,7 @@ def draw_brand_cover(writer, slots):
         text_paragraph(writer, slots["subtitle"], "Lead")
 
 
+# draws key figures as a grid of Word table cells
 def figure_cells(writer, items, dark_first=True):
     items = [item for item in items if item and item[0]]
     if not items:
@@ -144,6 +153,7 @@ def figure_cells(writer, items, dark_first=True):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# draws an executive summary page with key figures
 def draw_summary(writer, block, image):
     heading(writer, block, "Executive summary")
     lead(writer, block)
@@ -151,6 +161,7 @@ def draw_summary(writer, block, image):
     body(writer, block)
 
 
+# draws a figures block with its heading, lead, figure cards, and body text
 def draw_figures(writer, block, image):
     heading(writer, block)
     lead(writer, block)
@@ -158,6 +169,7 @@ def draw_figures(writer, block, image):
     body(writer, block)
 
 
+# starts a new Word page and adds a section divider
 def draw_divider(writer, block, image):
     if writer.started:
         page_break(writer)
@@ -168,6 +180,7 @@ def draw_divider(writer, block, image):
             text_paragraph(writer, "→  " + item[0], role="body")
 
 
+# adds a chapter heading, image, body, and optional quote
 def draw_chapter(writer, block, image):
     heading(writer, block, kicker=block.slots.get("number", ""))
     lead(writer, block)
@@ -177,6 +190,7 @@ def draw_chapter(writer, block, image):
         text_paragraph(writer, block.slots["quote"], "Quote")
 
 
+# draws key findings as numbered Word table rows
 def draw_keypoints(writer, block, image):
     heading(writer, block, "Key findings")
     lead(writer, block)
@@ -197,12 +211,14 @@ def draw_keypoints(writer, block, image):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# draws process steps in a Word table
 def draw_process(writer, block, image):
     heading(writer, block)
     lead(writer, block)
     step_table(writer, [(item[0], item[-1] if len(item) > 1 else "") for item in block.items if item and item[0]])
 
 
+# draws timeline entries as a Gantt chart or Word table
 def draw_timeline(writer, block, image):
     heading(writer, block, "Timeline")
     lead(writer, block)
@@ -227,6 +243,7 @@ def draw_timeline(writer, block, image):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# draws timeline ranges as a Word Gantt chart
 def draw_gantt(writer, items, plan):
     unit, first, last, periods = plan
     columns = last - first + 1
@@ -261,6 +278,7 @@ def draw_gantt(writer, items, plan):
             write_runs(writer, paragraph, runs_of(writer, f"**{item[1]}** — {item[2]}"), 10)
 
 
+# draws two sets of comparison items in a Word table
 def draw_comparison(writer, block, image):
     heading(writer, block)
     lead(writer, block)
@@ -285,6 +303,7 @@ def draw_comparison(writer, block, image):
         add_callout(writer, "", [runs_of(writer, f"**{slots['takeaway']}**")])
 
 
+# draws up to four items in a two-by-two Word table
 def draw_matrix(writer, block, image):
     heading(writer, block)
     lead(writer, block)
@@ -303,6 +322,7 @@ def draw_matrix(writer, block, image):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# adds a styled pull quote and its optional attribution to Word
 def draw_quote(writer, block, image):
     slots = block.slots
     paragraph = text_paragraph(writer, f"“{slots.get('quote', '')}”", "Quote", size=17)
@@ -313,6 +333,7 @@ def draw_quote(writer, block, image):
         text_paragraph(writer, slots["context"], role="muted", size=10)
 
 
+# adds a feature image, body, and figure cards to Word
 def draw_feature(writer, block, image):
     heading(writer, block)
     block_photo(writer, image, block.slots.get("image", "Photograph"))
@@ -320,6 +341,7 @@ def draw_feature(writer, block, image):
     figure_cells(writer, block.items, dark_first=False)
 
 
+# adds the closing content and any available contact details
 def draw_closing(writer, block, image):
     if block.slots.get("quote"):
         draw_quote(writer, block, image)
@@ -332,6 +354,7 @@ drawers = {"cover": draw_cover, "summary": draw_summary, "figures": draw_figures
            "matrix": draw_matrix, "quote": draw_quote, "feature": draw_feature, "closing": draw_closing}
 
 
+# inserts an automatic contents section into the Word document
 def insert_contents(writer):
     title = writer.body.add_paragraph(style="Heading 1")
     plain(writer, title, "Contents")
@@ -340,6 +363,7 @@ def insert_contents(writer):
     return title, marker
 
 
+# fills the Word contents field with its heading and page settings
 def fill_contents(writer, title, marker):
     entries = [(paragraph.style.name, paragraph.text) for paragraph in writer.document.paragraphs
                if paragraph.style.name in ("Heading 1", "Heading 2") and paragraph._p is not title._p and paragraph.text.strip()]
@@ -361,6 +385,7 @@ def fill_contents(writer, title, marker):
     previous._p.append(end)
 
 
+# renders a document as an editable Word file
 def render_docx(document: Document, theme: Theme, output_path: Path, images=None, user_email=""):
     started = time.perf_counter()
     images = images or {}

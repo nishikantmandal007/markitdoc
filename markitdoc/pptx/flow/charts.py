@@ -16,12 +16,14 @@ native_charts = {"bar": XL_CHART_TYPE.COLUMN_CLUSTERED, "horizontal_bar": XL_CHA
                  "line": XL_CHART_TYPE.LINE_MARKERS, "pie": XL_CHART_TYPE.PIE, "donut": XL_CHART_TYPE.DOUGHNUT}
 
 
+# renders chart data as a themed PNG for a slide
 def chart_png(deck, data, width, height):
     data = {**data, "colors": ["#" + deck.theme.colors[role].lstrip("#") for role in ("mood", "second", "muted", "primary", "success", "danger")],
             "background": "#" + deck.theme.colors["paper"].lstrip("#"), "font": str(deck.theme.fonts["body"])}
     return io.BytesIO(render_chart(data, width_inches=width / chart_scale, height_inches=height / chart_scale, dpi=chart_dpi))
 
 
+# adds a native or rendered chart to a slide
 def place_chart(deck, slide, piece, box):
     data = piece.data
     if data["type"] == "waterfall":
@@ -42,6 +44,7 @@ def place_chart(deck, slide, piece, box):
     style_chart(deck, graphic.chart, data, kind in (XL_CHART_TYPE.PIE, XL_CHART_TYPE.DOUGHNUT), deck.section_title)
 
 
+# converts waterfall values into cumulative chart steps
 def waterfall_steps(data):
     labels = [str(label) for label in data.get("labels") or []]
     values = [float(value) for value in data["datasets"][0]["values"]]
@@ -56,6 +59,7 @@ def waterfall_steps(data):
     return steps
 
 
+# builds and styles a native waterfall chart on a slide
 def place_waterfall(deck, slide, data, box):
     steps = waterfall_steps(data)
     values = CategoryChartData()
@@ -98,6 +102,7 @@ def place_waterfall(deck, slide, data, box):
     category_axis.major_tick_mark = XL_TICK_MARK.NONE
 
 
+# applies document fonts, colors, labels, and values to a chart
 def style_chart(deck, chart, data, round_chart, slide_title=""):
     colors = [deck.color(role) for role in chart_roles]
     many = len(data["datasets"]) > 1

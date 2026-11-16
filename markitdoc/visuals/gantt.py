@@ -7,6 +7,7 @@ month_numbers = {name.lower(): number for number, name in enumerate(calendar.mon
 range_split = re.compile(r"\s*(?:–|—|-|\bto\b)\s*")
 
 
+# parses a quarter, month, or year and resolves its year
 def moment(text, year):
     text = text.strip().rstrip(".")
     found = re.fullmatch(r"(?i)Q([1-4])\s*'?(\d{2}|\d{4})?", text)
@@ -19,12 +20,14 @@ def moment(text, year):
     return ("year", 0, int(found.group(1))) if found else None
 
 
+# expands a two-digit year or keeps the supplied full year
 def full_year(text, year):
     if not text:
         return year
     return int(text) + 2000 if len(text) == 2 else int(text)
 
 
+# parses a date range into comparable calendar periods
 def period(text):
     parts = [part for part in range_split.split(plain_text(text).strip()) if part]
     if not 1 <= len(parts) <= 2:
@@ -38,6 +41,7 @@ def period(text):
     return (start[0], first, last) if last >= first else None
 
 
+# checks whether timeline entries fit a compact Gantt chart
 def gantt_plan(items):
     periods = [period(item[0]) for item in items]
     if len(items) < 3 or not all(periods) or len({found[0] for found in periods}) != 1 or not any(found[2] > found[1] for found in periods):
@@ -46,6 +50,7 @@ def gantt_plan(items):
     return (periods[0][0], first, last, periods) if last - first < 24 else None
 
 
+# formats a period index as a year, month, or quarter label
 def unit_name(unit, value):
     if unit == "quarter":
         return f"Q{value % 4 + 1} {value // 4}"

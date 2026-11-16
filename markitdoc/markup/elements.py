@@ -20,6 +20,7 @@ table_marks = {**{word: ("✓", "success") for word in ("yes", "✓", "✔", "su
                **{word: ("✕", "danger") for word in ("no", "✕", "✗", "x", "not supported", "none", "false", "not included")}}
 
 
+# formats a number as a lowercase Roman numeral
 def roman(number):
     values = ((10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i"))
     result = ""
@@ -34,6 +35,7 @@ list_schemes = {"decimal": str, "alpha": numbering_schemes[1], "upper-alpha": la
                 "roman": roman, "upper-roman": lambda number: roman(number).upper(), "legal": str}
 
 
+# separates display equations from the surrounding inline content
 def without_display_maths(inline):
     children = inline.children or []
     equations = [child.content for child in children if child.type == "math_inline_double"]
@@ -45,6 +47,7 @@ def without_display_maths(inline):
     return replace_children(inline, kept), equations
 
 
+# copies an inline token with new children and refreshed plain text content
 def replace_children(inline, children):
     clone = copy.copy(inline)
     clone.children = children
@@ -52,12 +55,14 @@ def replace_children(inline, children):
     return clone
 
 
+# checks whether an inline token contains only a display equation
 def only_display_maths(inline):
     meaningful = [child for child in inline.children or [] if child.type not in ("softbreak", "hardbreak")
                   and not (child.type == "text" and not child.content.strip())]
     return len(meaningful) == 1 and meaningful[0].type == "math_inline_double"
 
 
+# reads text alignment settings from markdown table headers
 def column_alignments(tokens):
     alignments = []
     for token in tokens:
@@ -69,6 +74,7 @@ def column_alignments(tokens):
     return alignments
 
 
+# reads settings attached to a markdown paragraph
 def element_settings(tokens, position):
     if position + 1 >= len(tokens) or tokens[position].type != "paragraph_open":
         return {}
@@ -76,12 +82,14 @@ def element_settings(tokens, position):
     return settings_from(text[1:-1]) if text.startswith("{") and text.endswith("}") else {}
 
 
+# parses key-value settings and a class name from text
 def settings_from(text):
     found = dict(re.findall(r"([a-z_]+)=([\w-]+)", text))
     classes = re.findall(r"\.([\w-]+)", text)
     return {**found, "class": classes[0]} if classes else found
 
 
+# finds the matching closing token for a nested token block
 def closing_index(tokens, start, open_type, close_type):
     depth = 0
     for position in range(start, len(tokens)):
@@ -94,6 +102,7 @@ def closing_index(tokens, start, open_type, close_type):
     return len(tokens) - 1
 
 
+# parses and validates chart data from a code fence
 def chart_data(content):
     data = parse_chart_fence(content.splitlines())
     if data and "values" in data and not data.get("datasets"):
@@ -109,6 +118,7 @@ def chart_data(content):
     return data
 
 
+# converts a rating label or fraction to a level from zero to four
 def rating_level(source):
     text = plain_text(source).strip().lower()
     found = re.fullmatch(r"([0-4])\s*/\s*4", text)

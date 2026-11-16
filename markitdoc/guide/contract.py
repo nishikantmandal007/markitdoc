@@ -76,11 +76,13 @@ body: The programme now moves upstream, where the same methods can protect three
 contract_infographics = ("sequence-steps-badge-card", "list-grid-badge-card", "list-pyramid-badge-card")
 
 
+# estimates how many words fit in a designed text box
 def approximate_words(box, lines):
     average_width = 0.62 if "B" in box.style else 0.55
     return max(1, round(0.9 * lines * box.width / (box.size * 0.3528 * average_width) / 6.2))
 
 
+# describes the word limit and requirement for a layout slot
 def slot_rule(name, box):
     most = approximate_words(box, box.lines)
     rule = f"{name} ~{most} words" if most > 3 else f"{name} 1-3 words"
@@ -89,6 +91,7 @@ def slot_rule(name, box):
     return rule + ("" if box.required else ", optional")
 
 
+# describes the text and item limits for a document layout
 def layout_rule(name, layout):
     parts = [slot_rule(slot, box) for slot, box in layout.boxes.items()]
     low, high, limits = layout.items
@@ -102,6 +105,7 @@ def layout_rule(name, layout):
     return f"- {name}: {layout_purposes[name]}." + (f"\n    {'; '.join(parts)}" if parts else "")
 
 
+# builds the PDF design instructions for document generation
 def pdf_contract() -> str:
     infographics = "\n".join(f"  - {name} ({infographic_templates[name][0]}): {infographic_templates[name][1]}"
                               for name in contract_infographics)
@@ -220,6 +224,7 @@ FLOW PAGES
 {infographics}"""
 
 
+# builds the Word document instructions for document generation
 def word_contract() -> str:
     return f"""WORD DOCUMENT GUIDE (docx). The same markdown as PDF, rendered as an editable Word document: real headings,
 an automatic contents page (toc: true), styled tables, numbered lists, footnotes and page numbers. Read this part first;
@@ -239,6 +244,7 @@ the PDF guide below defines the front matter, block syntax and markdown.
 {pdf_contract()}"""
 
 
+# builds the slide design instructions for document generation
 def slides_contract() -> str:
     slide_lines = "\n".join(f"- {name}: {layout_purposes[name]}" + (f" (up to {max_per_slide[name]} items per slide; more continue on the next)"
                                                                     if name in max_per_slide else "") for name in drawers)
