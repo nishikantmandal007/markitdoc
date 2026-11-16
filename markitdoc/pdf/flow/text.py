@@ -6,7 +6,16 @@ from fpdf.enums import MethodReturnValue, XPos, YPos
 
 from markitdoc.markup.elements import BULLET_MARKERS, CALLOUT_KINDS, LIST_SCHEMES, NUMBERING_SCHEMES
 from markitdoc.markup.inline import SUPERSCRIPT_DIGITS, inline_maths
-from markitdoc.pdf.flow.pages import BODY_SIZE, HIGHLIGHT_LINK, FlowPages, can_hyphenate, hanging_note, hyphenated
+from markitdoc.pdf.flow.pages import (
+    BODY_SIZE,
+    HIGHLIGHT_LINK,
+    LINE_MM,
+    LINE_RATIO,
+    FlowPages,
+    can_hyphenate,
+    hanging_note,
+    hyphenated,
+)
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 from markitdoc.visuals.icons import strip_icon
@@ -14,7 +23,8 @@ from markitdoc.visuals.photo_fit import fitted_image
 
 logger = logging.getLogger(__name__)
 
-HEADING_SIZES = {1: 24, 2: 17, 3: 13, 4: 11}
+HEADING_SIZES = {1: 24, 2: 14.5, 3: 12, 4: 10.5}
+HEADING_ABOVE, HEADING_BELOW, PARAGRAPH_AFTER = 7, 2.5, 3
 TEXT_WIDTH = 160
 KEEP_WITH_NEXT = 28
 FIGURE_RATIO = 3 / 2
@@ -46,7 +56,7 @@ def needs_runs(runs):
 
 
 # draws styled text runs with alignment and paragraph spacing
-def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=2.5):
+def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=PARAGRAPH_AFTER):
     if align == "J" and not can_hyphenate(pdf.lang):
         align = "L"
     size = BODY_SIZE * pdf.scale
@@ -54,7 +64,7 @@ def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=2.5):
     pdf.set_font("Brand", "", size)
     with pdf.text_columns(text_align={"C": "CENTER", "R": "RIGHT", "J": "JUSTIFY"}.get(align, "LEFT"),
                           l_margin=pdf.l_margin + indent, r_margin=pdf.w - pdf.l_margin - indent - width,
-                          line_height=0.52 / 0.3528 * pdf.spacing) as columns:
+                          line_height=LINE_RATIO * pdf.spacing) as columns:
         with columns.paragraph() as paragraph:
             for run in runs:
                 text = hyphenated(run.text, pdf.lang) if (align == "J" or pdf.narrow) and not run.code else run.text
@@ -120,20 +130,15 @@ def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0)
         pdf.start_section(plain_text, level=level - 1, strict=False)
     if target and target in pdf.targets:
         pdf.set_link(name=target, page=pdf.page_no(), y=pdf.get_y())
-    pdf.ln(4 if level > 1 else 2)
+    pdf.ln(HEADING_ABOVE - PARAGRAPH_AFTER)
     pdf.set_font("Head" if level <= 3 else "Brand", "B", size)
     pdf.set_text_color(*pdf.theme.rgb("ink"))
     pdf.multi_cell(min(TEXT_WIDTH, pdf.area), size * 0.42, plain_text, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if level == 2 and not pdf.plain:
-        pdf.set_fill_color(*pdf.theme.rgb("mood"))
-        pdf.rect(pdf.l_margin, pdf.get_y() + 1, 14, 0.9, "F")
-        pdf.ln(4)
-    else:
-        pdf.ln(2)
+    pdf.ln(HEADING_BELOW)
 
 
 # draws a paragraph with the requested alignment and leading
-def add_paragraph(pdf: FlowPages, text: str, align="L", indent=0, lead=False, after=2.5):
+def add_paragraph(pdf: FlowPages, text: str, align="L", indent=0, lead=False, after=PARAGRAPH_AFTER, following=0):
     if align == "J" and not can_hyphenate(pdf.lang):
         align = "L"
     if align == "J" or pdf.narrow:
@@ -141,8 +146,10 @@ def add_paragraph(pdf: FlowPages, text: str, align="L", indent=0, lead=False, af
     size = BODY_SIZE * pdf.scale * (1.2 if lead else 1)
     pdf.set_font("Brand", "", size)
     pdf.set_text_color(*pdf.theme.rgb("ink" if lead else "body"))
-    width, line_height = min(TEXT_WIDTH, pdf.area) - indent, size * 0.52 * pdf.spacing
+    width, line_height = min(TEXT_WIDTH, pdf.area) - indent, size * LINE_MM * pdf.spacing
     lines = len(pdf.multi_cell(width, line_height, text, markdown=True, dry_run=True, output=MethodReturnValue.LINES))
+    if following and lines <= 2 and pdf.will_page_break(lines * line_height + after + following):
+        pdf.add_page()
     room = int((pdf.page_break_trigger - pdf.get_y()) // line_height)
     if lines >= 2 and (room < 2 or (lines - room == 1)) and room < lines:
         pdf.add_page()
@@ -185,7 +192,7 @@ def add_list_item(pdf: FlowPages, text: str, list_stack, runs=()):
         draw_runs(pdf, runs, "L", indent + 2, min(TEXT_WIDTH, pdf.area) - indent - 2, after=1)
         return
     pdf.set_x(pdf.l_margin + indent + 2)
-    pdf.multi_cell(min(TEXT_WIDTH, pdf.area) - indent - 2, (BODY_SIZE * pdf.scale) * 0.52 * pdf.spacing, text, markdown=True, align="L",
+    pdf.multi_cell(min(TEXT_WIDTH, pdf.area) - indent - 2, (BODY_SIZE * pdf.scale) * LINE_MM * pdf.spacing, text, markdown=True, align="L",
                    new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(1 * pdf.spacing)
 
@@ -215,11 +222,11 @@ def add_callout(pdf: FlowPages, text: str):
     pdf.set_font("Brand", "", (BODY_SIZE * pdf.scale))
     pdf.set_text_color(*pdf.theme.rgb("ink"))
     label = f"**{kind.upper()}**   " if kind else ""
-    lines = pdf.multi_cell(pdf.area - 10, (BODY_SIZE * pdf.scale) * 0.52, label + body, markdown=True, dry_run=True, output=MethodReturnValue.LINES)
-    if pdf.will_page_break(len(lines) * (BODY_SIZE * pdf.scale) * 0.52 + 8):
+    lines = pdf.multi_cell(pdf.area - 10, (BODY_SIZE * pdf.scale) * LINE_MM, label + body, markdown=True, dry_run=True, output=MethodReturnValue.LINES)
+    if pdf.will_page_break(len(lines) * (BODY_SIZE * pdf.scale) * LINE_MM + 8):
         pdf.add_page()
     top, page = pdf.get_y(), pdf.page_no()
-    pdf.multi_cell(0, (BODY_SIZE * pdf.scale) * 0.52, label + body, markdown=True, fill=True, padding=(3, 4, 3, 6), align="L",
+    pdf.multi_cell(0, (BODY_SIZE * pdf.scale) * LINE_MM, label + body, markdown=True, fill=True, padding=(3, 4, 3, 6), align="L",
                    new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     if pdf.page_no() == page:
         pdf.set_fill_color(*pdf.theme.rgb(role))

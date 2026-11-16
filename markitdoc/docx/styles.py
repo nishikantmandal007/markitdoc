@@ -6,8 +6,9 @@ from docx.shared import Cm, Pt
 
 PAGE_WIDTH, PAGE_HEIGHT, SIDE_MARGIN, TOP_MARGIN = 21.0, 29.7, 2.2, 2.4
 TEXT_WIDTH = PAGE_WIDTH - 2 * SIDE_MARGIN
-BODY_SIZE, SMALL_SIZE = 11, 9
-HEADING_SIZES = {1: 22, 2: 16, 3: 13, 4: 11.5}
+BODY_SIZE, SMALL_SIZE = 10, 9
+HEADING_SIZES = {1: 24, 2: 14.5, 3: 12, 4: 10.5}
+HEADING_ABOVE, HEADING_BELOW = 20, 7
 
 
 # sets the Word page size, margins, and orientation
@@ -53,7 +54,7 @@ def setup_styles(writer):
     styles = writer.document.styles
     normal = styles["Normal"]
     style_font(normal, writer, BODY_SIZE)
-    style_spacing(normal, 0, 7, 1.18)
+    style_spacing(normal, 0, 8, 1.18)
     language = str(writer.meta.get("lang", "en")) or "en"
     lang = OxmlElement("w:lang")
     lang.set(qn("w:val"), {"en": "en-GB", "de": "de-DE", "fr": "fr-FR", "es": "es-ES", "hi": "hi-IN"}.get(language, language))
@@ -66,7 +67,7 @@ def setup_styles(writer):
     for level, size in HEADING_SIZES.items():
         style = styles[f"Heading {level}"]
         style_font(style, writer, size, "mood" if level == 2 else "ink", bold=True, heading=level <= 3)
-        style_spacing(style, {1: 20, 2: 16, 3: 12, 4: 10}[level], {1: 8, 2: 6, 3: 4, 4: 2}[level], 1.05, keep=True)
+        style_spacing(style, HEADING_ABOVE, HEADING_BELOW, 1.05, keep=True)
     style_font(styles["Caption"], writer, SMALL_SIZE, "muted", italic=True)
     style_spacing(styles["Caption"], 3, 12, 1.1)
     style_font(styles["Quote"], writer, 13, "ink", italic=True)
