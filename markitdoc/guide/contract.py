@@ -2,8 +2,8 @@ from markitdoc.errors import UnsupportedFormatError
 from markitdoc.markup.elements import callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors, table_styles
 from markitdoc.models.catalogue import layouts
 from markitdoc.models.model_constants import FLOW_CONTAINERS
-from markitdoc.pptx.layouts import drawers
-from markitdoc.pptx.titles import max_per_slide
+from markitdoc.pptx.designed.titles import max_per_slide
+from markitdoc.pptx.render import drawers
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
 from markitdoc.visuals.diagrams import diagram_types
 from markitdoc.visuals.infographics import infographic_templates

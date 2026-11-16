@@ -4,9 +4,9 @@ from dataclasses import replace
 from markitdoc.markup.blocks import prepared, slot_pieces
 from markitdoc.models.catalogue import content_limit, layouts
 from markitdoc.models.document import Document
-from markitdoc.pdf.layouts import draw_block
 from markitdoc.pdf.pages import PdfPages, shrink_steps
 from markitdoc.pdf.photos import measuring_photo
+from markitdoc.pdf.render import draw_block
 from markitdoc.themes.themes import Theme
 
 tightness_steps = (1.0, 0.92, 0.85)

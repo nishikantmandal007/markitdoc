@@ -6,8 +6,8 @@ from fpdf.enums import XPos, YPos
 from PIL import Image
 
 from markitdoc.markup.elements import chart_data, chart_sizes, settings_from
-from markitdoc.pdf.flow_pages import FlowPages, body_size
-from markitdoc.pdf.flow_text import add_heading, add_list_item
+from markitdoc.pdf.flow.pages import FlowPages, body_size
+from markitdoc.pdf.flow.text import add_heading, add_list_item
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import canvas_width, diagram_as_text, diagram_title, render_diagram, zoom

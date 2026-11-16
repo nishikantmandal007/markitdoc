@@ -23,8 +23,8 @@ from markitdoc.pptx.deck import (
     write_items,
     write_text,
 )
+from markitdoc.pptx.designed.titles import column_gap, draw_lead, fit_text, lead_room, max_per_slide, row_gap, slide_titles
 from markitdoc.pptx.photos import half_bleed, side_title
-from markitdoc.pptx.titles import column_gap, draw_lead, fit_text, lead_room, max_per_slide, row_gap, slide_titles
 
 figure_presets = ((60, 20, 18), (52, 20, 16), (44, 18, 16), (40, 18, 14), (32, 16, 14))
 

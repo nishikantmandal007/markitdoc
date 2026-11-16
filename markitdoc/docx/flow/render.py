@@ -6,7 +6,10 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
 from PIL import Image
 
-from markitdoc.docx.document import (
+from markitdoc.docx.flow.lists import add_list_item, new_list
+from markitdoc.docx.flow.tables import add_table, step_table
+from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, new_table
+from markitdoc.docx.writer import (
     add_picture,
     bookmark,
     caption,
@@ -17,9 +20,6 @@ from markitdoc.docx.document import (
     start_on_new_page,
     write_runs,
 )
-from markitdoc.docx.lists import add_list_item, new_list
-from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, new_table
-from markitdoc.docx.tables import add_table, step_table
 from markitdoc.markup.elements import (
     callout_kinds,
     chart_data,

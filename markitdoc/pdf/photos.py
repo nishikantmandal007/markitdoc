@@ -1,5 +1,5 @@
 from markitdoc.pdf.pages import white
-from markitdoc.visuals.photos import fitted_image
+from markitdoc.visuals.photo_fit import fitted_image
 
 measuring_photo = "measuring photo"
 

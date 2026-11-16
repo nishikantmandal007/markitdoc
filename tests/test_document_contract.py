@@ -60,7 +60,7 @@ def test_should_teach_every_diagram_type_and_no_icons():
 
 def test_should_give_slides_their_own_guide_with_every_slide_type():
     from markitdoc.guide.contract import slides_contract
-    from markitdoc.pptx.layouts import drawers
+    from markitdoc.pptx.render import drawers
 
     guide = slides_contract()
 

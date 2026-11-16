@@ -5,14 +5,14 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
-from markitdoc.docx.layouts import document_photo_ratios, render_docx
+from markitdoc.docx.render import document_photo_ratios, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
 from markitdoc.models.catalogue import layouts
 from markitdoc.models.document import Document, parse_document
 from markitdoc.pdf.checks import page_problems
-from markitdoc.pdf.layouts import render_pdf
-from markitdoc.pptx.layouts import render_pptx, slide_photo_ratios
+from markitdoc.pdf.render import render_pdf
+from markitdoc.pptx.render import render_pptx, slide_photo_ratios
 from markitdoc.themes.themes import theme_for
 from markitdoc.visuals.images import find_images
 

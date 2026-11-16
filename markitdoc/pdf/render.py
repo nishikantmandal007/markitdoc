@@ -9,8 +9,23 @@ from markitdoc.markup.blocks import as_flow, balanced, prepared
 from markitdoc.markup.inline import anchor, parser
 from markitdoc.models.catalogue import sectioned_layouts, trailing_headings
 from markitdoc.models.document import Document
-from markitdoc.pdf.openers import draw_chapter, draw_closing, draw_cover, draw_divider, draw_feature, draw_quote, draw_summary
-from markitdoc.pdf.sections import draw_comparison, draw_figures, draw_keypoints, draw_matrix, draw_process, draw_timeline
+from markitdoc.pdf.designed.openers import (
+    draw_chapter,
+    draw_closing,
+    draw_cover,
+    draw_divider,
+    draw_feature,
+    draw_quote,
+    draw_summary,
+)
+from markitdoc.pdf.designed.sections import (
+    draw_comparison,
+    draw_figures,
+    draw_keypoints,
+    draw_matrix,
+    draw_process,
+    draw_timeline,
+)
 from markitdoc.themes.theme_constants import TEXT_SIZES
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import creation_date
@@ -32,8 +47,8 @@ def draw_block(pdf, block, image, work_folder, credits):
 
 
 def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder: Path, images=None, credits=()):
-    from markitdoc.pdf.flow import fitted_spacing, render_flow, render_toc
-    from markitdoc.pdf.flow_pages import FlowPages
+    from markitdoc.pdf.flow.pages import FlowPages
+    from markitdoc.pdf.flow.render import fitted_spacing, render_flow, render_toc
     images = images or {}
     blocks = balanced([prepared(block) for block in document.blocks], theme)
     first = blocks[0]

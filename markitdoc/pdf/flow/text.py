@@ -6,11 +6,11 @@ from fpdf.enums import MethodReturnValue, XPos, YPos
 
 from markitdoc.markup.elements import bullet_markers, callout_kinds, list_schemes, numbering_schemes
 from markitdoc.markup.inline import inline_maths, superscript_digits
-from markitdoc.pdf.flow_pages import FlowPages, body_size, can_hyphenate, hanging_note, highlight_link, hyphenated
+from markitdoc.pdf.flow.pages import FlowPages, body_size, can_hyphenate, hanging_note, highlight_link, hyphenated
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 from markitdoc.visuals.icons import strip_icon
-from markitdoc.visuals.photos import fitted_image
+from markitdoc.visuals.photo_fit import fitted_image
 
 logger = logging.getLogger(__name__)
 
