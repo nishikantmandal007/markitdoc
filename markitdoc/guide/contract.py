@@ -178,7 +178,9 @@ PLANNING
   labelled sample figures.
 - images: true -> add 'image: <query>' to the cover and to 1-3 chapter or feature pages: 2-4 English words naming a
   concrete, photographable subject an encyclopedia photo archive holds (a landmark, object, vehicle, machine, place,
-  historic event). Never moods, lifestyle scenes, people's or company names, user data or document content.
+  historic event). Be specific: subject + setting + light, like "reed marsh at sunrise", "heron in reeds", "stone
+  bridge in fog", never abstract words like "growth" or "teamwork". Never moods, lifestyle scenes, people's or
+  company names, user data or document content.
 - When changing an existing document, return the full markdown with only the requested change.
 
 MARKDOWN YOU CAN USE IN NORMAL PAGES (settings go on their own line DIRECTLY under the block they style)
