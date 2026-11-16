@@ -27,6 +27,7 @@ from markitdoc.pdf.designed.sections import (
     draw_process,
     draw_timeline,
 )
+from markitdoc.pdf.pages import text_of
 from markitdoc.themes.theme_constants import TEXT_SIZES
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import creation_date
@@ -65,7 +66,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     first = blocks[0]
     title = first.slots.get("title") or next((line.lstrip("# ").strip() for line in first.body.splitlines()
                                              if line.startswith("# ")), "Document")
-    pdf = FlowPages(theme, title, document.meta.get("style") == "plain")
+    pdf = FlowPages(theme, title, document.meta.get("style") == "plain", text_of(document, theme) + str(credits))
     pdf.use_styles(styles)
     pdf.table_style = str(document.meta.get("tables", "lined")).lower()
     pdf.flow_images = {key[1]: path for key, path in images.items() if isinstance(key, tuple)}

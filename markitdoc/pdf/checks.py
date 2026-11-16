@@ -4,7 +4,7 @@ from dataclasses import replace
 from markitdoc.markup.blocks import prepared, slot_pieces
 from markitdoc.models.catalogue import CONTENT_LIMIT, LAYOUTS
 from markitdoc.models.document import Document
-from markitdoc.pdf.pages import SHRINK_STEPS, PdfPages
+from markitdoc.pdf.pages import SHRINK_STEPS, PdfPages, text_of
 from markitdoc.pdf.photos import MEASURING_PHOTO
 from markitdoc.pdf.render import draw_block
 from markitdoc.themes.themes import Theme
@@ -24,7 +24,8 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
     from markitdoc.themes.themes import load_theme
     from markitdoc.visuals.diagrams import problems_in_diagram
     from markitdoc.visuals.infographics import problems_in_infographic
-    measurer = PdfPages(theme or load_theme(None))
+    theme = theme or load_theme(None)
+    measurer = PdfPages(theme, text_of(document, theme))
     measurer.add_page()
     found = []
     for index, block in enumerate(document.blocks):
