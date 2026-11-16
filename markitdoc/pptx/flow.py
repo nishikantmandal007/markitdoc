@@ -21,7 +21,7 @@ from markitdoc.visuals.infographics import render_infographic
 from markitdoc.models.document import Block
 from markitdoc.markup.elements import (chart_data, closing_index, column_alignments, element_settings, numeric_cell,
                                        only_display_maths, table_styles, without_display_maths)
-from markitdoc.pdf.flow import column_widths
+from markitdoc.pdf.flow_tables import column_widths
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 from markitdoc.markup.inline import anchor, inline_maths, parser
 from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram, flow_graph
