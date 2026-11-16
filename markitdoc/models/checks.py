@@ -2,12 +2,13 @@ import re
 from dataclasses import dataclass
 from difflib import get_close_matches
 
+from markitdoc.markup.latex import latex_findings
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, language_version
-from markitdoc.models.model_constants import DIV_CLOSE, DIV_OPEN, KNOWN_KEYS, PAGE_SWITCH, PLANNED_KEYS
+from markitdoc.models.model_constants import DIV_CLOSE, DIV_OPEN, KNOWN_KEYS, LEAF_BLOCKS, PAGE_SWITCH, PLANNED_KEYS
 from markitdoc.models.references import reference_findings
 from markitdoc.models.style_checks import SPAN_ATTRIBUTES, style_findings
-from markitdoc.themes.theme_constants import BOX_PROPERTIES, LAYOUT_ATTRIBUTES, STYLE_PROPERTIES
+from markitdoc.themes.theme_constants import BOX_PROPERTIES, LAYOUT_ATTRIBUTES, PARAGRAPH_PROPERTIES, STYLE_PROPERTIES
 
 VERSION_LINE = re.compile(r"^markitdoc\s*:", re.IGNORECASE)
 
@@ -22,7 +23,7 @@ class Finding:
 
 # warns about each attribute key no renderer reads: planned keys are named as such, others get the closest key
 def unknown_keys(text, line, v2=False):
-    findings, taken = [], STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + ("italic", "page", "numbers") if v2 else ()
+    findings, taken = [], STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + PARAGRAPH_PROPERTIES + ("italic", "page", "numbers") if v2 else ()
     planned, known = tuple(key for key in PLANNED_KEYS if key not in taken), KNOWN_KEYS + taken
     for key in parse_attributes(text).values:
         if key in planned:
@@ -39,7 +40,7 @@ def unknown_keys(text, line, v2=False):
 def check_document(markdown, folders=()) -> list[Finding]:
     markdown = str(markdown or "")
     lines = markdown.split("\n")
-    findings, open_blocks, in_fence = [], [], False
+    findings, open_blocks, in_fence, leaf = [], [], False, False
     meta = front_matter(markdown)[0]
     v2 = language_version(meta) == 2
     value = meta.get("markitdoc")
@@ -47,16 +48,20 @@ def check_document(markdown, folders=()) -> list[Finding]:
         line = next((number for number, text in enumerate(lines, 1) if VERSION_LINE.match(text)), 1)
         findings.append(Finding(line, "warning", f"markitdoc version '{value}' is not 1 or 2", "use 'markitdoc: 2' or remove the line"))
     for number, text in enumerate(lines, 1):
-        stripped = text.strip()
+        stripped, was_leaf, leaf = text.strip(), leaf, False
         if stripped.startswith(("```", "~~~")):
             in_fence = not in_fence
         elif in_fence:
+            continue
+        elif was_leaf and DIV_CLOSE.match(stripped):
             continue
         elif DIV_CLOSE.match(stripped):
             if open_blocks:
                 open_blocks.pop()
             else:
                 findings.append(Finding(number, "error", "closing ::: without an open block", "remove this line"))
+        elif (opening := DIV_OPEN.match(stripped)) and opening.group(1).lower() in LEAF_BLOCKS:
+            leaf = True
         elif opening := DIV_OPEN.match(stripped):
             open_blocks.append(number)
             findings += unknown_keys(opening.group(2), number, v2)
@@ -71,5 +76,5 @@ def check_document(markdown, folders=()) -> list[Finding]:
     if v2:
         findings += [Finding(*item) for item in style_findings(markdown, folders)]
         end = next((number for number, text in enumerate(lines[1:], 2) if text.strip() == "---"), 0) if lines[:1] == ["---"] else 0
-        findings += [Finding(*item) for item in reference_findings(lines, end, meta)]
+        findings += [Finding(*item) for item in reference_findings(lines, end, meta, folders)] + [Finding(*item) for item in latex_findings(lines, end)]
     return sorted(findings, key=lambda finding: finding.line)

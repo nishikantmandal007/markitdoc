@@ -11,7 +11,16 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-from markitdoc.docx.styles import PAGE_HEIGHT, PAGE_WIDTH, SIDE_MARGIN, TEXT_WIDTH, border_bottom, setup_page, setup_styles
+from markitdoc.docx.styles import (
+    LANGUAGE_TAGS,
+    PAGE_HEIGHT,
+    PAGE_WIDTH,
+    SIDE_MARGIN,
+    TEXT_WIDTH,
+    border_bottom,
+    setup_page,
+    setup_styles,
+)
 from markitdoc.markup.fields import field_values, replace_fields
 from markitdoc.markup.inline import Run
 from markitdoc.themes.brands import brand_hooks
@@ -45,7 +54,7 @@ class Writer:
         self.figure_count = self.table_count = 0
         self.notes, self.targets, self.lists = [], set(self.numbers), {}
         self.bookmark_id, self.master_name = 0, "default"
-        self.titled = self.started = self.break_next = False
+        self.titled = self.started = self.break_next = self.section_start = False
         self.pending_caption = self.skip_title = self.pending_target = ""
         self.restarts, self.section_no = [True], 0
         self.body, self.width = self.document, TEXT_WIDTH
@@ -118,6 +127,10 @@ def format_run(writer, run, piece, size, role, bold, italic, font, look=None):
         run.font.subscript, run.font.superscript = piece.script == "SUB", piece.script == "SUP"
     if look:
         style_run(writer, run, look, piece.role or role)
+    if writer.styles and (lang := dict(piece.style).get("lang")):
+        mark = OxmlElement("w:lang")
+        mark.set(qn("w:val"), LANGUAGE_TAGS.get(lang, lang))
+        run._r.get_or_add_rPr().insert_element_before(mark, "w:eastAsianLayout", "w:specVanish", "w:oMath")
     if piece.highlight:
         shading = OxmlElement("w:shd")
         for key, value in (("w:val", "clear"), ("w:color", "auto"), ("w:fill", writer.hex(writer.tint("mood", 0.78)))):

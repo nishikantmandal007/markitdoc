@@ -7,6 +7,7 @@ from docx.shared import Cm, Pt
 PAGE_WIDTH, PAGE_HEIGHT, SIDE_MARGIN, TOP_MARGIN = 21.0, 29.7, 2.2, 2.4
 TEXT_WIDTH = PAGE_WIDTH - 2 * SIDE_MARGIN
 BODY_SIZE, SMALL_SIZE = 10, 9
+LANGUAGE_TAGS = {"en": "en-GB", "de": "de-DE", "fr": "fr-FR", "es": "es-ES", "hi": "hi-IN"}
 HEADING_SIZES = {1: 24, 2: 14.5, 3: 12, 4: 10.5}
 HEADING_ABOVE, HEADING_BELOW = 20, 7
 
@@ -57,7 +58,7 @@ def setup_styles(writer):
     style_spacing(normal, 0, 8, 1.18)
     language = str(writer.meta.get("lang", "en")) or "en"
     lang = OxmlElement("w:lang")
-    lang.set(qn("w:val"), {"en": "en-GB", "de": "de-DE", "fr": "fr-FR", "es": "es-ES", "hi": "hi-IN"}.get(language, language))
+    lang.set(qn("w:val"), LANGUAGE_TAGS.get(language, language))
     normal.element.get_or_add_rPr().append(lang)
     style_font(styles["Title"], writer, 32, "ink", bold=True, heading=True)
     style_spacing(styles["Title"], 0, 10, 1.0)

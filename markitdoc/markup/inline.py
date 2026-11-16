@@ -10,6 +10,8 @@ from mdit_py_plugins.subscript import sub_plugin
 from mdit_py_plugins.superscript import superscript_plugin
 from mdit_py_plugins.tasklists import tasklists_plugin
 
+from markitdoc.models.attributes import parse_attributes
+
 parser = (MarkdownIt("commonmark").enable(["table", "strikethrough"]).disable(["html_block", "html_inline"])
           .use(footnote_plugin).use(tasklists_plugin).use(deflist_plugin).use(attrs_plugin, spans=True)
           .use(sub_plugin).use(superscript_plugin).use(dollarmath_plugin, allow_space=False, allow_digits=False, double_inline=True))
@@ -30,6 +32,7 @@ BOLD_OPEN, BOLD_CLOSE = "\u0001", "\u0002"
 SUBSCRIPTS = str.maketrans("0123456789+-=()aehijklmnoprstuvx", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ")
 SUPERSCRIPTS = str.maketrans("0123456789+-=()abcdefghijklmnoprstuvwxyz", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ")
 ANCHOR = re.compile(r"\s*\{#([\w-]+)\}\s*$")
+EMPHASIS_ATTRIBUTES = re.compile(r"\{([^{}]*)\}")
 SUPERSCRIPT_DIGITS = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
 
 
@@ -51,10 +54,33 @@ class Run:
 SPAN_ROLES = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
 
 
+# the span tuple of attributes as {"class": "a b", "lang": "de"}: underline, role, highlight and the raw pairs
+def span_of(attrs):
+    classes = str(attrs.get("class", "")).split()
+    return ("underline" in classes, next((SPAN_ROLES[name] for name in classes if name in SPAN_ROLES), ""),
+            "highlight" in classes, tuple((key, str(value)) for key, value in attrs.items()))
+
+
+# attributes written right after emphasis, as {open index: attrs, text index: characters to drop}
+def emphasis_attributes(children):
+    found, opened = {}, []
+    for index, child in enumerate(children):
+        if child.type in ("em_open", "strong_open"):
+            opened.append(index)
+        elif child.type in ("em_close", "strong_close") and opened:
+            start, follow = opened.pop(), children[index + 1] if index + 1 < len(children) else None
+            written = follow is not None and follow.type == "text" and EMPHASIS_ATTRIBUTES.match(follow.content)
+            if written:
+                parsed = parse_attributes(written.group(0))
+                found[start], found[index + 1] = {**({"class": " ".join(parsed.classes)} if parsed.classes else {}), **parsed.values}, written.end()
+    return found
+
+
 # converts inline markdown tokens into styled text runs
 def inline_runs(token, targets=frozenset()) -> list[Run]:
     runs, state, spans, link = [], {"bold": 0, "italic": 0, "strike": 0}, [], ""
     script = ""
+    attributed, marks = emphasis_attributes(token.children or []), []
 
     def add(text, **extra):
         if text:
@@ -64,15 +90,21 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
                             link=link, highlight=any(span[2] for span in spans), code=extra.get("code", False),
                             style=tuple(pair for span in spans for pair in span[3])))
 
-    for child in token.children or []:
+    for position, child in enumerate(token.children or []):
         kind = child.type
         if kind in ("text", "code_inline"):
-            add(child.content, code=kind == "code_inline")
+            add(child.content[attributed.get(position, 0):] if kind == "text" else child.content, code=kind == "code_inline")
         elif kind in ("strong_open", "em_open", "s_open"):
             state[{"strong_open": "bold", "em_open": "italic", "s_open": "strike"}[kind]] += 1
+            if kind != "s_open":
+                marks.append(position in attributed)
+                if marks[-1]:
+                    spans.append(span_of(attributed[position]))
         elif kind in ("strong_close", "em_close", "s_close"):
             name = {"strong_close": "bold", "em_close": "italic", "s_close": "strike"}[kind]
             state[name] = max(0, state[name] - 1)
+            if kind != "s_close" and marks and marks.pop() and spans:
+                spans.pop()
         elif kind in ("sub_open", "sup_open"):
             script = "SUB" if kind == "sub_open" else "SUP"
         elif kind in ("sub_close", "sup_close"):
@@ -94,9 +126,7 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
         elif kind == "html_inline" and "checkbox" in child.content:
             add("☑ " if "checked" in child.content else "☐ ")
         elif kind == "span_open":
-            classes = str(child.attrs.get("class", "")).split()
-            spans.append(("underline" in classes, next((SPAN_ROLES[name] for name in classes if name in SPAN_ROLES), ""),
-                          "highlight" in classes, tuple((key, str(value)) for key, value in child.attrs.items())))
+            spans.append(span_of(child.attrs))
         elif kind == "span_close" and spans:
             spans.pop()
     return runs

@@ -1,5 +1,6 @@
 import io
 import logging
+import re
 from dataclasses import replace
 
 from fpdf.enums import MethodReturnValue, XPos, YPos
@@ -17,7 +18,7 @@ from markitdoc.pdf.flow.pages import (
     hyphenated,
 )
 from markitdoc.pdf.pages import escaped
-from markitdoc.themes.theme_constants import SMALL_CAPS_SCALE
+from markitdoc.themes.theme_constants import POINT_MM, SMALL_CAPS_SCALE
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 from markitdoc.visuals.icons import strip_icon
 from markitdoc.visuals.photo_fit import fitted_image
@@ -30,6 +31,7 @@ TEXT_WIDTH = 160
 KEEP_WITH_NEXT = 28
 FIGURE_RATIO = 3 / 2
 CODE_SCALE = 0.9
+CAP_HEIGHT, DROPCAP_GAP, DROPCAP_BASELINE, LEADER_NUMBER, WRAP_SAFETY = 0.7, 1.5, 0.75, 14, 0.97
 
 
 # draws an equation in the PDF or falls back to readable TeX text
@@ -93,7 +95,7 @@ def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=PARAG
         with columns.paragraph() as paragraph:
             for run in runs:
                 mine = pdf.styles.span_look(run.style, look) if look and run.style else look
-                text = hyphenated(run.text, pdf.lang) if (align == "J" or pdf.narrow) and not run.code else run.text
+                text = hyphenated(run.text, dict(run.style).get("lang") or pdf.lang) if (align == "J" or pdf.narrow) and not run.code else run.text
                 run_size = size * CODE_SCALE if run.code else (mine.size * pdf.scale if mine and mine.size else size)
                 run_size *= SMALL_CAPS_SCALE if mine and mine.caps == "small" else 1
                 pdf.set_font("Mono" if run.code else pdf.family_of(mine, "Brand"),
@@ -274,3 +276,61 @@ def add_callout(pdf: FlowPages, text: str, look=None):
         pdf.set_fill_color(*pdf.theme.rgb(role))
         pdf.rect(pdf.l_margin, top, 1.4, pdf.get_y() - top, "F")
     pdf.ln(3)
+
+
+# the paragraph split for a drop cap of the given lines as (letter, cap size, line pitch, lines, offset, runs beside, runs below), None when too short or not starting with a letter
+def dropcap_plan(pdf: FlowPages, runs, lines, look, indent):
+    runs = [run for run in runs if run.text]
+    if not runs or runs[0].code or runs[0].link or not runs[0].text[:1].isalpha():
+        return None
+    size = apply_look(pdf, look, "Brand", BODY_SIZE * pdf.scale)
+    pitch = size * LINE_MM * pdf.spacing
+    cap_size = ((lines - 1) * pitch + size * POINT_MM * CAP_HEIGHT) / (POINT_MM * CAP_HEIGHT)
+    pdf.set_font("Head", "B", cap_size)
+    letter = runs[0].text[0]
+    offset = pdf.get_string_width(letter) + DROPCAP_GAP
+    beside = min(TEXT_WIDTH, pdf.area) - indent - offset
+    runs = [replace(runs[0], text=runs[0].text[1:]), *runs[1:]]
+    used, count = 0.0, 1
+    for number, run in enumerate(runs):
+        pdf.set_font("Mono" if run.code else pdf.family_of(look, "Brand"), ("B" if run.bold else "") + ("I" if run.italic else ""), size)
+        for word in re.finditer(r"\S+\s*|\s+", run.text):
+            if used and used + pdf.get_string_width(word.group(0)) > beside * WRAP_SAFETY:
+                count, used = count + 1, 0.0
+                if count > lines:
+                    return (letter, cap_size, pitch, lines, offset, [*runs[:number], replace(run, text=run.text[:word.start()].rstrip())],
+                            [replace(run, text=run.text[word.start():]), *runs[number + 1:]])
+            used += pdf.get_string_width(word.group(0))
+    return (letter, cap_size, pitch, lines, offset, runs, []) if count == lines else None
+
+
+# draws a paragraph that starts with a large initial in the heading font and accent colour, the first lines wrapped beside it
+def add_dropcap(pdf: FlowPages, plan, align, indent, look):
+    letter, cap_size, pitch, lines, offset, beside, below = plan
+    if pdf.will_page_break(lines * pitch):
+        pdf.add_page()
+    top = pdf.get_y()
+    pdf.set_font("Head", "B", cap_size)
+    pdf.set_text_color(*pdf.theme.rgb("mood"))
+    pdf.text(pdf.l_margin + indent, top + (lines - 1 + DROPCAP_BASELINE) * pitch, letter)
+    draw_runs(pdf, beside, align, indent + offset, min(TEXT_WIDTH, pdf.area) - indent - offset, after=0, look=look)
+    pdf.set_y(max(pdf.get_y(), top + lines * pitch))
+    if below:
+        draw_runs(pdf, below, align, indent, look=look)
+    else:
+        pdf.ln(PARAGRAPH_AFTER * pdf.spacing)
+
+
+# draws a list entry with its caption, dot leaders and right-aligned page number, both linked to the target
+def add_leader_row(pdf: FlowPages, runs, last=False):
+    name, _, number = "".join(run.text for run in runs).rpartition("\t")
+    link = next((run.link for run in runs if run.link), "")
+    pdf.set_font("Brand", "", BODY_SIZE * pdf.scale)
+    pdf.set_text_color(*pdf.theme.rgb("body"))
+    name = name[:90]
+    leader = " ." * max(0, int((pdf.area - LEADER_NUMBER - pdf.get_string_width(name)) / pdf.get_string_width(" .")))
+    if pdf.will_page_break(6):
+        pdf.add_page()
+    pdf.cell(pdf.area - LEADER_NUMBER, 6, name + leader, link=link)
+    pdf.cell(LEADER_NUMBER, 6, number, align="R", link=link, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(4 if last else 0.5)

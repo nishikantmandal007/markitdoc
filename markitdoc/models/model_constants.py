@@ -6,7 +6,8 @@ KNOWN_KEYS = ("body", "context", "image", "kicker", "lead", "left", "number", "q
               "takeaway", "title", "variant")
 PLANNED_KEYS = ("kind", "ratio", "border", "padding", "radius", "bg", "align", "header", "width", "side", "caption", "lang", "font",
                 "color", "weight", "caps", "tracking", "page", "numbers", "dropcap", "indent")
-FREE_TEXT_SETTINGS = ("header", "footer", "title", "subject", "author")
+FREE_TEXT_SETTINGS = ("header", "footer", "title", "subject", "author", "refs")
+LEAF_BLOCKS = ("references", "list-of-figures", "list-of-tables")
 ITEM_SEPARATOR = " — "
 STRONG_SEPARATORS = (" — ", " – ", " | ")
 BULLET_SEPARATORS = (" - ", ": ")

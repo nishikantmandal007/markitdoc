@@ -3,8 +3,10 @@ from difflib import get_close_matches
 
 from markitdoc.markup.elements import IMAGE_WRITTEN, chart_data, written_image
 from markitdoc.markup.inline import ANCHOR, literal, plain_text
+from markitdoc.markup.latex import latex_text
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.document import Document
+from markitdoc.models.editorial import citation_style, citation_text, cited_keys, load_refs, with_editorial
 from markitdoc.models.model_constants import (
     CAPTION_LABELS,
     EQUATION_ID,
@@ -17,6 +19,7 @@ from markitdoc.models.model_constants import (
     TABLE_CAPTION,
     TRAILING_BRACES,
 )
+from markitdoc.options import options_in_use
 
 
 @dataclass(frozen=True)
@@ -35,7 +38,9 @@ class Numbering:
     references: dict
     captions: dict
     section_numbers: bool = False
-    cites: bool = False
+    refs: dict = field(default_factory=dict)
+    style: str = "numeric"
+    cited: list = field(default_factory=list)
     wants_pages: bool = False
     targets: dict = field(default_factory=dict)
     duplicates: list = field(default_factory=list)
@@ -43,7 +48,7 @@ class Numbering:
     headings: list = field(default_factory=lambda: [0, 0, 0, 0])
 
 
-# the numbering state of a document: label formats from set rules, whether headings are numbered, whether refs: reserves unknown ids for citations
+# the numbering state of a document: label formats from set rules, whether headings are numbered, the refs entries and citation style
 def new_numbering(sheet, meta):
     references, captions = dict(REFERENCE_LABELS), dict(CAPTION_LABELS)
     sections = str(meta.get("numbering", "")).lower() == "decimal"
@@ -56,7 +61,7 @@ def new_numbering(sheet, meta):
                     references[kind] = value
         sections = sections or any(str(sheet.numbering(name)).lower() not in NUMBERING_OFF for name in ("h2", "h3", "h4")
                                    if sheet.numbering(name) is not None)
-    return Numbering(references, captions, sections, bool(meta.get("refs")))
+    return Numbering(references, captions, sections, style=citation_style(meta))
 
 
 # records a target; an id seen before is noted as a duplicate and the first one is kept
@@ -168,6 +173,11 @@ def number_document(document, sheet=None, inject=True):
         blocks.append(replace(block, body=body))
         texts = (body, *block.slots.values(), *(part for item in block.items for part in item))
         state.wants_pages = state.wants_pages or any(found.group(3) for text in texts for found in REFERENCE_TEXT.finditer(text))
+    state.refs = load_refs(document.meta, options_in_use().style_folders)[0]
+    state.cited = cited_keys([text for block in blocks for text in (block.body, *block.slots.values(), *(part for item in block.items for part in item))], state)
+    if inject:
+        blocks, listed = with_editorial(blocks, state, document.meta)
+        state.wants_pages = state.wants_pages or listed
     return Document(document.meta, tuple(blocks)), state
 
 
@@ -193,8 +203,8 @@ def page_piece(target, mode, pages):
 # the text a reference stands for: "Figure 3", "Figures 1 and 2", a section title, or page numbers
 def reference_markup(match, state, mode, pages):
     ids = [part.strip().lstrip("@") for part in match.group(2).split(";")]
-    if any(ident not in state.targets for ident in ids) and state.cites:
-        return match.group(0)
+    if not match.group(3) and all(ident in state.refs and ident not in state.targets for ident in ids):
+        return citation_text(ids, state)
     targets = [state.targets.get(ident) for ident in ids]
     links = mode != "pptx"
     if match.group(3):
@@ -207,7 +217,7 @@ def reference_markup(match, state, mode, pages):
 
 # text with each [@id] reference replaced, leaving code and maths alone
 def resolve_text(text, state, mode, pages):
-    return REFERENCE_TEXT.sub(lambda found: found.group(1) or reference_markup(found, state, mode, pages), text)
+    return REFERENCE_TEXT.sub(lambda found: found.group(1) or reference_markup(found, state, mode, pages), latex_text(text))
 
 
 # a document with every reference resolved in bodies, slots and items; mode is pdf, docx or pptx
@@ -225,21 +235,29 @@ def caption_of(target):
     return f"{target.mark}. {target.text}" if target.text else f"{target.mark}."
 
 
-# check findings for duplicate ids, unknown references and page references in slides, as (line, severity, message, fix)
-def reference_findings(lines, end, meta):
+# check findings for duplicate ids, unknown references and citations, unused or malformed refs and page references in slides, as (line, severity, message, fix)
+def reference_findings(lines, end, meta, folders=()):
     state = new_numbering(None, meta)
     number_lines(lines[end:], state, first_line=end + 1, inject=False)
+    state.refs, problem = load_refs(meta, folders)
+    refs_line = next((number for number, text in enumerate(lines[:end], 1) if text.lower().startswith("refs")), 1)
     found = [(line, "error", f"id '{ident}' is already used on line {state.targets[ident].line}", "give each target its own id")
              for ident, line in state.duplicates]
+    if problem:
+        found.append((refs_line, "error", f"the refs file is unusable: {problem}", "fix the file or remove refs:"))
+    found += [(refs_line, "error", f"id '{ident}' is both a target and a reference", "rename one of them") for ident in state.refs if ident in state.targets]
     text = "\n".join([""] * end + lines[end:])
+    used = set()
     for match in REFERENCE_TEXT.finditer(text):
         if match.group(1):
             continue
         line = text.count("\n", 0, match.start()) + 1
         for ident in (part.strip().lstrip("@") for part in match.group(2).split(";")):
-            if ident not in state.targets and not state.cites:
-                close = get_close_matches(ident, list(state.targets), n=1)
+            used.add(ident)
+            if ident not in state.targets and ident not in state.refs:
+                close = get_close_matches(ident, [*state.targets, *state.refs], n=1)
                 found.append((line, "error", f"unknown reference '{ident}'", f"did you mean '{close[0]}'?" if close else f"label the target with {{#{ident}}}"))
         if match.group(3):
             found.append((line, "info", "a page reference shows the target's number in a PowerPoint deck", "use it for PDF and Word"))
+    found += [(refs_line, "info", f"reference '{key}' is never cited", "cite it or remove it from the refs file") for key in state.refs if key not in used]
     return found
