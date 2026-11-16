@@ -18,7 +18,7 @@ from markitdoc.pptx.deck import (
     white,
     write_text,
 )
-from markitdoc.pptx.titles import draw_lead, fit_text, lead_room, max_per_slide, slide_titles
+from markitdoc.pptx.designed.titles import draw_lead, fit_text, lead_room, max_per_slide, slide_titles
 from markitdoc.visuals.gantt import gantt_plan, unit_name
 
 row_presets = ((24, 20), (22, 18), (20, 16), (18, 15), (16, 14))

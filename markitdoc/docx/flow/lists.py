@@ -2,7 +2,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
-from markitdoc.docx.document import bullet_marks, list_formats, write_runs
+from markitdoc.docx.writer import bullet_marks, list_formats, write_runs
 
 
 def abstract_list(writer, ordered, scheme):

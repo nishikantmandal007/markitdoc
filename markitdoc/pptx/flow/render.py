@@ -6,7 +6,6 @@ from pptx.util import Pt
 from markitdoc.markup.inline import literal, plain_text
 from markitdoc.models.document import Block
 from markitdoc.pptx.cards import card_pairs, card_preset, draw_cards, draw_panel, draw_takeaway, figure_cards, panel_fits
-from markitdoc.pptx.charts import place_chart
 from markitdoc.pptx.deck import (
     Item,
     add_rect,
@@ -31,10 +30,10 @@ from markitdoc.pptx.deck import (
     write_text,
 )
 from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram
-from markitdoc.pptx.flow_reader import Piece, break_piece, read_sections
-from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
-from markitdoc.pptx.tables import add_table, max_bullets, max_lead_above, table_pages
-from markitdoc.pptx.visuals import (
+from markitdoc.pptx.flow.charts import place_chart
+from markitdoc.pptx.flow.reader import Piece, break_piece, read_sections
+from markitdoc.pptx.flow.tables import add_table, max_bullets, max_lead_above, table_pages
+from markitdoc.pptx.flow.visuals import (
     code_chunks,
     code_layout,
     code_leading,
@@ -48,6 +47,7 @@ from markitdoc.pptx.visuals import (
     visual_box,
     visual_fallback,
 )
+from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
 from markitdoc.utils.helpers import mono_font
 
 opening_limit = 220

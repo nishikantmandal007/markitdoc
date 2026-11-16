@@ -26,8 +26,8 @@ from markitdoc.pptx.deck import (
     write_items,
     write_text,
 )
+from markitdoc.pptx.designed.titles import draw_group, fit_text, plan_group
 from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, send_to_back, side_title
-from markitdoc.pptx.titles import draw_group, fit_text, plan_group
 from markitdoc.utils.helpers import lifted, long_date
 
 cover_sizes, divider_sizes = (48, 44, 40, 36, 32, 28), (44, 40, 36, 32, 28)

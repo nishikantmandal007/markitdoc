@@ -5,8 +5,8 @@ from fpdf.fonts import FontFace
 
 from markitdoc.markup.elements import numeric_cell, table_styles, totals_row
 from markitdoc.markup.inline import inline_runs
-from markitdoc.pdf.flow_pages import FlowPages, table_size, top_height
-from markitdoc.pdf.flow_text import add_paragraph
+from markitdoc.pdf.flow.pages import FlowPages, table_size, top_height
+from markitdoc.pdf.flow.text import add_paragraph
 from markitdoc.pdf.pages import runs_markup
 from markitdoc.utils.helpers import lifted
 

@@ -8,12 +8,12 @@ from markitdoc.markup.inline import plain_text
 from markitdoc.models.document import Document
 from markitdoc.pptx.brand_cover import draw_brand_cover
 from markitdoc.pptx.deck import Deck, Item
-from markitdoc.pptx.flow import draw_flow, draw_text_slides, title_stream
-from markitdoc.pptx.grids import draw_feature, draw_figures, draw_summary
-from markitdoc.pptx.openers import draw_chapter, draw_closing, draw_cover, draw_divider, draw_quote
+from markitdoc.pptx.designed.grids import draw_feature, draw_figures, draw_summary
+from markitdoc.pptx.designed.openers import draw_chapter, draw_closing, draw_cover, draw_divider, draw_quote
+from markitdoc.pptx.designed.sequences import draw_comparison, draw_keypoints, draw_matrix, draw_process, draw_timeline
+from markitdoc.pptx.flow.render import draw_flow, draw_text_slides, title_stream
 from markitdoc.pptx.package import save_presentation
 from markitdoc.pptx.photos import add_fade
-from markitdoc.pptx.sequences import draw_comparison, draw_keypoints, draw_matrix, draw_process, draw_timeline
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.utils.helpers import creation_date

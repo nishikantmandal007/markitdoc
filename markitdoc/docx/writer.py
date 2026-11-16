@@ -17,7 +17,7 @@ from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.utils.helpers import lifted, long_date, office_font
-from markitdoc.visuals.photos import fitted_image
+from markitdoc.visuals.photo_fit import fitted_image
 
 white = (255, 255, 255)
 bullet_marks = ("•", "–", "◦")

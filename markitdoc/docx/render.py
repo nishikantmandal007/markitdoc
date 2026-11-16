@@ -8,7 +8,10 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
-from markitdoc.docx.document import (
+from markitdoc.docx.flow.render import add_callout, add_notes, render_markdown
+from markitdoc.docx.flow.tables import step_table
+from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
+from markitdoc.docx.writer import (
     Writer,
     add_field,
     add_picture,
@@ -24,9 +27,6 @@ from markitdoc.docx.document import (
     white,
     write_runs,
 )
-from markitdoc.docx.flow import add_callout, add_notes, render_markdown
-from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
-from markitdoc.docx.tables import step_table
 from markitdoc.markup.blocks import paragraphs, prepared
 from markitdoc.markup.inline import inline_runs, parser, plain_text
 from markitdoc.models.document import Document

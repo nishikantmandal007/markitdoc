@@ -8,7 +8,7 @@ from pptx.util import Inches, Pt
 
 from markitdoc.markup.elements import numeric_cell, rating_level, signed_number, table_marks
 from markitdoc.markup.inline import plain_text
-from markitdoc.pdf.flow_tables import column_widths
+from markitdoc.pdf.flow.tables import column_widths
 from markitdoc.pptx.deck import (
     add_rect,
     add_runs,

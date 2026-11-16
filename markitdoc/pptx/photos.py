@@ -8,7 +8,7 @@ from pptx.util import Inches
 
 from markitdoc.markup.inline import literal
 from markitdoc.pptx.deck import add_rect, place_title, side_margin, slide_height, slide_width, soft_white, title_sizes, write_text
-from markitdoc.visuals.photos import fitted_image
+from markitdoc.visuals.photo_fit import fitted_image
 
 photo_width_limit = 2400
 
