@@ -23,6 +23,7 @@ from markitdoc.themes.theme_constants import (
     MAX_BASED_ON,
     PADDING_MM,
     PAPER_MM,
+    PARAGRAPH_PROPERTIES,
     PERCENT,
     POINT_MM,
     RADIUS_MM,
@@ -92,7 +93,7 @@ def tagged(rule, source):
     found = {}
     for key, value in (rule if isinstance(rule, dict) else {}).items():
         key = KEY_ALIASES.get(str(key).lower(), str(key).lower())
-        if key in STYLE_PROPERTIES + BOX_PROPERTIES:
+        if key in STYLE_PROPERTIES + BOX_PROPERTIES + PARAGRAPH_PROPERTIES:
             found[key] = (VALUE_ALIASES.get(value.lower(), value) if isinstance(value, str) else value, source)
     return found
 

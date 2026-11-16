@@ -11,6 +11,7 @@ from markitdoc.models.model_constants import (
     DIV_OPEN,
     FLOW_CONTAINERS,
     FLOW_LAYOUT,
+    LEAF_BLOCKS,
     SLOT_LINE,
     STRONG_SEPARATORS,
 )
@@ -76,7 +77,9 @@ def split_blocks(body, v2=False):
         if stripped.startswith(("```", "~~~")):
             in_fence = not in_fence
         container = DIV_OPEN.match(stripped) if not in_fence else None
-        if container and not DIV_CLOSE.match(stripped) and (nested or container.group(1).lower() in FLOW_CONTAINERS
+        if container and v2 and container.group(1).lower() in LEAF_BLOCKS:
+            (current if current is not None else loose).append(line)
+        elif container and not DIV_CLOSE.match(stripped) and (nested or container.group(1).lower() in FLOW_CONTAINERS
                                                      or (v2 and container.group(1).lower() not in LAYOUTS)):
             target = current if current is not None else loose
             target.append(line)

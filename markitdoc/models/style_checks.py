@@ -3,12 +3,13 @@ from collections import defaultdict
 from difflib import get_close_matches
 from pathlib import Path
 
+from markitdoc.markup.editorial import dropcap_lines
 from markitdoc.markup.elements import IMAGE_WRITTEN, written_image
 from markitdoc.markup.fields import FIELD_TEXT
 from markitdoc.models.attributes import KEY_ALIASES, parse_attributes
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.front_matter import front_matter, front_matter_yaml
-from markitdoc.models.model_constants import DIV_OPEN, FLOW_CONTAINERS, PAGE_SWITCH, PLANNED_KEYS
+from markitdoc.models.model_constants import DIV_OPEN, FLOW_CONTAINERS, HEADING_LINE, PAGE_SWITCH, PLANNED_KEYS, TRAILING_BRACES
 from markitdoc.themes.stylesheet import load_stylesheet, section
 from markitdoc.themes.theme_constants import (
     BORDER_WORDS,
@@ -22,6 +23,7 @@ from markitdoc.themes.theme_constants import (
     NAME_STYLE_AFTER,
     PADDING_MM,
     PAGE_FIELDS,
+    PARAGRAPH_PROPERTIES,
     PLANNED_SECTIONS,
     PLANNED_STYLE_PROPERTIES,
     RADIUS_MM,
@@ -31,8 +33,11 @@ from markitdoc.themes.theme_constants import (
 )
 from markitdoc.themes.themes import contrast, theme_for
 
+NON_PARAGRAPH = re.compile(r"^(#{1,6}\s|\||:::|[-*+]\s|\d+[.)]\s|>|!\[|\$\$|\{|Table:|\+\+\+|---)")
+CHARS_PER_LINE = 80
+ATTRIBUTE_LINE = re.compile(r"\{[^{}]*\}")
 SPAN_ATTRIBUTES = re.compile(r"[\]*`)]\{([^{}]*)\}")
-SUPPORTED = STYLE_PROPERTIES + BOX_PROPERTIES + STYLE_ONLY_PROPERTIES
+SUPPORTED = STYLE_PROPERTIES + BOX_PROPERTIES + STYLE_ONLY_PROPERTIES + PARAGRAPH_PROPERTIES
 
 
 # a finding as (line, severity, message, fix)
@@ -209,6 +214,38 @@ def page_findings(sheet, lines, end):
     return found
 
 
+# warnings for drop caps on paragraphs too short to fill their lines, from the paragraph.first rule or a {dropcap=N} on the paragraph
+def dropcap_findings(sheet, lines, end):
+    rule, found, fence, opening, block = dropcap_lines(sheet.look("paragraph.first")), [], False, False, []
+
+    def close(block, opening):
+        text = " ".join(part.strip() for _, part in block)
+        braces = TRAILING_BRACES.search(text)
+        asked = dropcap_lines(sheet.look("paragraph", (), parse_attributes(braces.group(1)).values)) if braces else 0
+        count = asked or (rule if opening else 0)
+        if count and len(TRAILING_BRACES.sub("", text)) < count * CHARS_PER_LINE:
+            found.append(warning(block[0][0], f"a drop cap of {count} lines on a paragraph shorter than {count} lines", "write more text or remove the drop cap"))
+
+    for number, text in enumerate(lines, 1):
+        stripped = text.strip()
+        if number <= end:
+            continue
+        if stripped.startswith(("```", "~~~")):
+            fence = not fence
+        if block and not fence and ATTRIBUTE_LINE.fullmatch(stripped):
+            block.append((number, text))
+        elif fence or not stripped or NON_PARAGRAPH.match(stripped):
+            if block:
+                close(block, opening)
+            opening = (opening and not block and not stripped) or (not fence and bool(HEADING_LINE.match(stripped)) and len(HEADING_LINE.match(stripped).group(1)) <= 2)
+            block = []
+        else:
+            block.append((number, text))
+    if block:
+        close(block, opening)
+    return found
+
+
 # language v2 problems in a document: style files, fonts, style names, raw combinations, contrast
 def style_findings(markdown, folders=()):
     lines = markdown.split("\n")
@@ -219,4 +256,4 @@ def style_findings(markdown, folders=()):
     found = layer_findings(sheet, paper, line_of(lines, r"^use\s*:"))
     if front is None:
         found.append(warning(1, "front matter is not valid YAML, so style sections are ignored", "check the indentation and quotes"))
-    return found + attribute_findings(sheet, paper, lines, end) + page_findings(sheet, lines, end) + image_findings(lines, end, folders)
+    return found + dropcap_findings(sheet, lines, end) + attribute_findings(sheet, paper, lines, end) + page_findings(sheet, lines, end) + image_findings(lines, end, folders)
