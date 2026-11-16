@@ -2,7 +2,7 @@ import math
 import re
 import tempfile
 import time
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from pathlib import Path
 
 from pptx.enum.shapes import MSO_SHAPE
@@ -18,14 +18,16 @@ from markitdoc.pptx.brand_cover import draw_brand_cover
 from markitdoc.markup.inline import literal, plain_text
 from markitdoc.pptx.deck import (Deck, Item, add_badge, write_column, add_rect, body_height, body_sizes, body_top,
                                  comfortable_size, content_width, fitted_items, key_sentences, place_title, side_margin,
-                                 slide_height, slide_width, soft_white, split_to_fit, stack_height, standard_size,
-                                 text_width, tint, title_fit, white, write_items, write_text)
+                                 slide_height, slide_width, soft_white, split_to_fit, stack_height, text_width, tint,
+                                 title_fit, white, write_items, write_text)
 from markitdoc.pptx.package import save_presentation
 from markitdoc.pptx.photos import (add_fade, full_bleed, half_bleed, overlay, side_title, add_image, photo_for,
                                    send_to_back)
 from markitdoc.pptx.flow import draw_flow, draw_text_slides, title_stream
 from markitdoc.themes.themes import Theme
 from markitdoc.visuals.gantt import gantt_plan, unit_name
+from markitdoc.pptx.titles import (column_gap, draw_group, draw_lead, fit_text, lead_room, max_per_slide, plan_group,
+                                   row_gap, slide_titles)
 
 logger = logging.getLogger(__name__)
 cover_sizes, divider_sizes = (48, 44, 40, 36, 32, 28), (44, 40, 36, 32, 28)
@@ -34,76 +36,12 @@ figure_presets = ((60, 20, 18), (52, 20, 16), (44, 18, 16), (40, 18, 14), (32, 1
 row_presets = ((24, 20), (22, 18), (20, 16), (18, 15), (16, 14))
 column_presets = ((22, 18), (20, 16), (18, 16), (16, 14))
 comparison_presets = ((22, 0), (20, 0), (18, 0), (16, 0), (14, 0))
-column_gap, row_gap, subtitle_width = 0.4, 0.45, 9.6
 photo_fades = ((0, 0.25, 0.35, 0.0), (0.4, 0.8, 0.0, 0.85), (0.8, 1.0, 0.85, 0.92))
 required_slots = {"cover": "title", "summary": "title", "divider": "title", "chapter": "title", "figures": "title", "keypoints": "title",
                   "matrix": "title", "quote": "quote", "comparison": "title", "process": "title", "timeline": "title", "feature": "title",
                   "closing": "title"}
 needs_items = {"figures": 1, "keypoints": 1, "matrix": 4, "comparison": 1, "process": 1, "timeline": 1}
 slide_photo_ratios = {"cover": 16 / 9, "divider": 16 / 9, "quote": 16 / 9, "closing": 16 / 9, "chapter": 8 / 9, "feature": 8 / 9}
-max_per_slide = {"keypoints": 4, "process": 5, "timeline": 6, "figures": 6, "comparison": 7}
-
-
-@dataclass(frozen=True)
-class TitleGroup:
-    kicker: str
-    title: str
-    title_size: int
-    title_height: float
-    subtitle: str
-    subtitle_size: int
-    subtitle_height: float
-
-    @property
-    def total(self):
-        return (0.5 if self.kicker else 0) + self.title_height + (0.35 + self.subtitle_height if self.subtitle else 0)
-
-
-def slide_titles(source):
-    yield source
-    while True:
-        yield f"{source} (cont.)"
-
-
-def fit_text(deck, source, width, height, label, cap=standard_size, style=""):
-    size = next((size for size in body_sizes if size <= cap and deck.text_height(source, width, size, style) <= height), None)
-    if size:
-        return source, size
-    deck.note(f"{label}: {source}")
-    return key_sentences(deck, source, width, height, comfortable_size - 2), comfortable_size - 2
-
-
-def lead_text(deck, source):
-    return fit_text(deck, source, text_width, 1.3, "Lead") if source else ("", 0)
-
-
-def lead_room(deck, source):
-    shown, size = lead_text(deck, source)
-    return deck.text_height(shown, text_width, size) + 0.35 if source else 0.0
-
-
-def draw_lead(deck, slide, source, top):
-    shown, size = lead_text(deck, source)
-    return top + write_text(deck, slide, shown, side_margin, top, text_width, size, "body", name="Lead") + 0.35 if source else top
-
-
-def plan_group(deck, kicker, title, subtitle, sizes, width):
-    size, shown = title_fit(deck, title, width, sizes, 3, "B")
-    height = deck.text_height(shown, width, size, "B", 1.12)
-    text, text_size = fit_text(deck, subtitle, min(width, subtitle_width), 1.4, "Subtitle", cap=22) if subtitle else ("", 0)
-    sub_height = deck.text_height(text, min(width, subtitle_width), text_size) if subtitle else 0
-    return TitleGroup(kicker, shown, size, height, text, text_size, sub_height)
-
-
-def draw_group(deck, slide, group, left, top, width, roles):
-    title_role, kicker_role, subtitle_role = roles
-    if group.kicker:
-        write_text(deck, slide, literal(group.kicker.upper()), left, top, width, 14, kicker_role, bold=True, name="Kicker")
-        top += 0.5
-    place_title(deck, slide, group.title, title_role, left, top, width, group.title_height, (group.title_size,), 3, MSO_ANCHOR.TOP)
-    if group.subtitle:
-        write_text(deck, slide, group.subtitle, left, top + group.title_height + 0.35, min(width, subtitle_width), group.subtitle_size,
-                   subtitle_role, name="Subtitle")
 
 
 def draw_cover(deck, block, image):
