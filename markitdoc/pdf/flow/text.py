@@ -18,6 +18,7 @@ HEADING_SIZES = {1: 24, 2: 17, 3: 13, 4: 11}
 TEXT_WIDTH = 160
 KEEP_WITH_NEXT = 28
 FIGURE_RATIO = 3 / 2
+CODE_SCALE = 0.9
 
 
 # draws an equation in the PDF or falls back to readable TeX text
@@ -41,7 +42,7 @@ def add_equation(pdf: FlowPages, tex: str):
 
 # checks whether text runs need styled rendering
 def needs_runs(runs):
-    return any(run.role or run.highlight or run.script for run in runs)
+    return any(run.role or run.highlight or run.script or run.code for run in runs)
 
 
 # draws styled text runs with alignment and paragraph spacing
@@ -56,8 +57,9 @@ def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=2.5):
                           line_height=0.52 / 0.3528 * pdf.spacing) as columns:
         with columns.paragraph() as paragraph:
             for run in runs:
-                text = hyphenated(run.text, pdf.lang) if align == "J" or pdf.narrow else run.text
-                pdf.set_font("Brand", ("B" if run.bold else "") + ("I" if run.italic else ""), size)
+                text = hyphenated(run.text, pdf.lang) if (align == "J" or pdf.narrow) and not run.code else run.text
+                pdf.set_font("Mono" if run.code else "Brand", ("B" if run.bold else "") + ("I" if run.italic else ""),
+                             size * CODE_SCALE if run.code else size)
                 pdf.set_text_color(*pdf.theme.rgb(run.role or "body"))
                 pdf.char_vpos = run.script or "LINE"
                 paragraph.write(text, link=HIGHLIGHT_LINK if run.highlight else run.link or None)

@@ -6,7 +6,7 @@ from fpdf.fonts import FontFace
 from markitdoc.markup.elements import NUMERIC_CELL, TABLE_STYLES, TOTALS_ROW
 from markitdoc.markup.inline import inline_runs
 from markitdoc.pdf.flow.pages import TABLE_SIZE, FlowPages, top_height
-from markitdoc.pdf.flow.text import add_paragraph
+from markitdoc.pdf.flow.text import CODE_SCALE, add_paragraph
 from markitdoc.pdf.pages import runs_markup
 from markitdoc.utils.helpers import lifted
 
@@ -16,18 +16,21 @@ MINIMUM_COLUMN, READABLE_COLUMN, COLUMN_PADDING = 16, 26, 7
 
 
 # converts markdown table tokens into styled cell rows
-def table_rows(tokens, targets=frozenset(), roles=None):
+def table_rows(tokens, targets=frozenset(), roles=None, monos=None):
     rows, row = [], None
     for token in tokens:
         if token.type == "tr_open":
             row = []
             roles.append([]) if roles is not None else None
+            monos.append([]) if monos is not None else None
         elif token.type == "inline" and row is not None:
             runs = inline_runs(token, targets)
             row.append(runs_markup(runs))
             if roles is not None:
                 visible = {run.role for run in runs if run.text.strip()}
                 roles[-1].append(visible.pop() if len(visible) == 1 else "")
+            if monos is not None:
+                monos[-1].append(all(run.code for run in runs if run.text.strip()) and any(run.code for run in runs))
         elif token.type == "tr_close":
             rows.append(row)
             row = None
@@ -53,7 +56,7 @@ def column_widths(pdf: FlowPages, rows, available, size=TABLE_SIZE):
 
 
 # draws a styled PowerPoint table with a repeated header
-def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
+def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=()):
     if not rows or not rows[0]:
         return
     width = pdf.area
@@ -69,7 +72,7 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
     if pdf.will_page_break(size * 0.55 * 1.6 * min(len(rows), 3) + 6 + caption_room):
         pdf.add_page()
     elif not pdf.measuring and pdf.w < pdf.h and len(rows) > 1:
-        if pdf.will_page_break(top_height(pdf, lambda probe: add_table(probe, rows[:3], style, alignments, roles)) + caption_room):
+        if pdf.will_page_break(top_height(pdf, lambda probe: add_table(probe, rows[:3], style, alignments, roles, monos)) + caption_room):
             pdf.add_page()
     if pdf.pending_caption:
         caption, pdf.pending_caption = pdf.pending_caption, ""
@@ -102,7 +105,10 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
                 total = row_index == len(rows) - 1 and row_index > 1 and TOTALS_ROW.match(row[0] if row else "")
                 for column in range(len(rows[0])):
                     role = roles[row_index][column] if row_index < len(roles) and column < len(roles[row_index]) else ""
-                    face = FontFace(color=pdf.theme.rgb(role) if role else None, emphasis="BOLD" if total else None) if role or total else None
+                    mono = row_index < len(monos) and column < len(monos[row_index]) and monos[row_index][column]
+                    face = (FontFace(color=pdf.theme.rgb(role) if role else None, emphasis="BOLD" if total else None,
+                                     family="Mono" if mono else None, size_pt=size * CODE_SCALE if mono else None)
+                            if role or total or mono else None)
                     cells.cell(row[column] if column < len(row) else "", style=face if row_index else None)
         if not boxed:
             pdf.set_line_width(0.6)

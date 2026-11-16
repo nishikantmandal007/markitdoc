@@ -156,15 +156,15 @@ def render_tokens(pdf: FlowPages, tokens):
             continue
         elif token.type == "table_open":
             end = closing_index(tokens, index, "table_open", "table_close")
-            cell_roles = []
-            rows, settings = table_rows(tokens[index:end], pdf.targets, cell_roles), element_settings(tokens, end + 1)
+            cell_roles, cell_monos = [], []
+            rows, settings = table_rows(tokens[index:end], pdf.targets, cell_roles, cell_monos), element_settings(tokens, end + 1)
             if settings.get("class") not in TABLE_STYLES:
                 settings = {}
             skip = 3 if settings else 0
             last = rows[-1] if len(rows) > 1 else []
             if last and last[0].startswith("{") and last[0].endswith("}") and not any(last[1:]):
                 settings, rows = settings_from(last[0][1:-1]), rows[:-1]
-            add_table(pdf, rows, settings.get("class"), column_alignments(tokens[index:end]), cell_roles)
+            add_table(pdf, rows, settings.get("class"), column_alignments(tokens[index:end]), cell_roles, cell_monos)
             index = end + 1 + skip
             continue
         elif token.type == "fence":
