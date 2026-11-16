@@ -1,6 +1,7 @@
 from markitdoc.guide.contract import example_document, pdf_contract
 from markitdoc.models.document import parse_document
-from markitdoc.pdf.layouts import page_problems, layouts
+from markitdoc.models.catalogue import layouts
+from markitdoc.pdf.layouts import page_problems
 from markitdoc.themes.themes import theme_for
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS
 

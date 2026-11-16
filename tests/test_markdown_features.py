@@ -188,7 +188,7 @@ class TestMarkdownFeatures:
         assert b"/Lang" in data and b"(de)" in data and b"/DisplayDocTitle true" in data
 
     def test_should_turn_common_latex_into_readable_inline_text(self):
-        from markitdoc.pdf.layouts import inline_maths
+        from markitdoc.markup.inline import inline_maths
 
         assert inline_maths(r"R_{\oplus} = 6{,}378.14 \text{ km}") == "R⊕ = 6,378.14 km"
         assert inline_maths(r"\varepsilon = \frac{v^2}{2} - \frac{\mu}{r}") == "ε = v²/2 - μ/r"

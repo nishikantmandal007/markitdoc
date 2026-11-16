@@ -20,7 +20,8 @@ from markitdoc.visuals.diagrams import canvas_width, diagram_as_text, diagram_ti
 from markitdoc.visuals.icons import strip_icon
 from markitdoc.visuals.infographics import render_infographic
 from markitdoc.markup.inline import anchor, inline_maths, inline_runs, parser, superscript_digits
-from markitdoc.pdf.layouts import PdfPages, escaped, fitted_image, inline_markup, page_height, page_width, runs_markup
+from markitdoc.models.catalogue import page_height, page_width
+from markitdoc.pdf.layouts import PdfPages, escaped, fitted_image, inline_markup, runs_markup
 from markitdoc.utils.helpers import lifted
 
 logger = logging.getLogger(__name__)
