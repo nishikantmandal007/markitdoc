@@ -5,7 +5,6 @@ from markitdoc.utils.constants import ASSETS_FOLDER
 THEMES_FOLDER = ASSETS_FOLDER / "themes"
 DEFAULT_THEME = "professional"
 LEGACY_THEME_NAMES = {"default": DEFAULT_THEME}
-COMPANY_THEME = "company"
 COLOR_ROLES = ("primary", "accent", "ink", "body", "muted", "paper", "surface", "night", "rule", "success", "danger")
 FONT_ROLES = ("heading", "body", "italic")
 COVER_STYLES = ("dark", "light", "photo")
