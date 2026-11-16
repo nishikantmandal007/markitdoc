@@ -4,12 +4,11 @@ import textwrap
 from typing import Optional
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
-from matplotlib import patheffects
 import matplotlib.ticker as mticker
-
+from matplotlib import font_manager, patheffects
 
 _PALETTE = [
     "#4F7DF9", "#22C997", "#FDAD33", "#F25D5D",

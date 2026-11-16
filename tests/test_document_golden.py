@@ -6,9 +6,8 @@ from pathlib import Path
 import fitz
 import pytest
 from docx import Document as WordDocument
-from pptx import Presentation
-
 from helpers import generate_document
+from pptx import Presentation
 
 GOLDEN = Path(__file__).parent / "document_golden.json"
 

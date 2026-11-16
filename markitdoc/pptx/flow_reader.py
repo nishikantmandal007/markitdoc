@@ -2,8 +2,15 @@ import logging
 import re
 from dataclasses import dataclass
 
-from markitdoc.markup.elements import (chart_data, closing_index, column_alignments, element_settings,
-                                       only_display_maths, table_styles, without_display_maths)
+from markitdoc.markup.elements import (
+    chart_data,
+    closing_index,
+    column_alignments,
+    element_settings,
+    only_display_maths,
+    table_styles,
+    without_display_maths,
+)
 from markitdoc.markup.inline import anchor, parser, plain_text
 from markitdoc.pptx.deck import Item
 from markitdoc.visuals.diagrams import chain_steps, diagram_title

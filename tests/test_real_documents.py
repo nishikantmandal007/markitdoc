@@ -3,9 +3,9 @@ from pathlib import Path
 
 import fitz
 import pytest
+from helpers import generate_document
 
 import markitdoc.render as service
-from helpers import generate_document
 
 fixtures = sorted((Path(__file__).parent / "fixtures").glob("*.md"))
 

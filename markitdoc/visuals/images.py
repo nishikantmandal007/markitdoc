@@ -1,9 +1,10 @@
 import html
 import io
 import json
+import logging
 import re
-import unicodedata
 import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -11,7 +12,6 @@ from urllib.parse import quote, urlparse
 import requests
 from PIL import Image
 
-import logging
 from markitdoc.utils.constants import CACHE_FOLDER
 
 logger = logging.getLogger(__name__)

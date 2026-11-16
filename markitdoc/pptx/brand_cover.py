@@ -1,9 +1,9 @@
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches
 
-from markitdoc.utils.helpers import long_date
 from markitdoc.markup.inline import literal
 from markitdoc.pptx.deck import body_sizes, draw_footer, key_sentences, side_margin, slide_width, title_fit, write_text
+from markitdoc.utils.helpers import long_date
 
 cover_title_sizes = (40, 36, 32, 28)
 cover_width = slide_width - 2 * side_margin

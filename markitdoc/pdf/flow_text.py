@@ -1,6 +1,7 @@
-import logging
 import io
+import logging
 from dataclasses import replace
+
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
 from markitdoc.markup.elements import bullet_markers, callout_kinds, list_schemes, numbering_schemes

@@ -2,8 +2,8 @@ import copy
 import math
 import re
 
-from markitdoc.visuals.charts import parse_chart_fence
 from markitdoc.markup.inline import plain_text
+from markitdoc.visuals.charts import parse_chart_fence
 
 numeric_cell = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
 callout_kinds = ("Note", "Action", "Risk", "Key figure")

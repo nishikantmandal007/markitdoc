@@ -1,4 +1,5 @@
 import math
+
 from lxml import etree
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
@@ -8,8 +9,17 @@ from pptx.util import Inches, Pt
 from markitdoc.markup.elements import numeric_cell, rating_level, signed_number, table_marks
 from markitdoc.markup.inline import plain_text
 from markitdoc.pdf.flow_tables import column_widths
-from markitdoc.pptx.deck import (add_rect, add_runs, content_width, key_sentences, no_grid_table_style, set_spacing,
-                                 side_margin, tint, white)
+from markitdoc.pptx.deck import (
+    add_rect,
+    add_runs,
+    content_width,
+    key_sentences,
+    no_grid_table_style,
+    set_spacing,
+    side_margin,
+    tint,
+    white,
+)
 
 max_bullets, max_table_rows, max_lead_above = 6, 8, 1.15
 table_sizes = (18, 16, 14)

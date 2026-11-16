@@ -7,9 +7,9 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-from markitdoc.visuals.diagrams import arrow, first_line, labelled_link, readable, setting_words
 from markitdoc.markup.inline import plain_text
 from markitdoc.pptx.deck import add_rect, configure_frame, tint, white, write_text
+from markitdoc.visuals.diagrams import arrow, first_line, labelled_link, readable, setting_words
 
 shape_marks = (("{{", "}}", MSO_SHAPE.HEXAGON), ("{", "}", MSO_SHAPE.DIAMOND), ("((", "))", MSO_SHAPE.OVAL), ("([", "])", MSO_SHAPE.ROUNDED_RECTANGLE),
                ("[(", ")]", MSO_SHAPE.CAN), ("[[", "]]", MSO_SHAPE.RECTANGLE), ("[", "]", MSO_SHAPE.ROUNDED_RECTANGLE),

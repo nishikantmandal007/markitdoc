@@ -10,11 +10,11 @@ from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
+from markitdoc.markup.inline import literal, runs_of
 from markitdoc.models.catalogue import Box
 from markitdoc.pdf.pages import PdfPages
-from markitdoc.utils.helpers import lifted, office_font
 from markitdoc.themes.themes import Theme
-from markitdoc.markup.inline import literal, runs_of
+from markitdoc.utils.helpers import lifted, office_font
 
 slide_width, slide_height = 13.333, 7.5
 side_margin = 0.6

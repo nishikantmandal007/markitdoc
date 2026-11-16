@@ -1,20 +1,36 @@
+import logging
 import re
-
 
 from fpdf.enums import XPos, YPos
 
-import logging
+from markitdoc.markup.elements import (
+    closing_index,
+    column_alignments,
+    element_settings,
+    list_schemes,
+    only_display_maths,
+    paragraph_alignments,
+    settings_from,
+    table_styles,
+    without_display_maths,
+)
 from markitdoc.markup.inline import anchor, inline_runs, parser
+from markitdoc.pdf.flow_pages import FlowPages, body_size, measured, place_notes, probe_of, top_height
+from markitdoc.pdf.flow_tables import add_table, table_rows
+from markitdoc.pdf.flow_text import (
+    add_callout,
+    add_equation,
+    add_figure,
+    add_heading,
+    add_list_item,
+    add_notes,
+    add_paragraph,
+    draw_runs,
+    needs_runs,
+)
+from markitdoc.pdf.flow_visuals import add_fence
 from markitdoc.pdf.pages import escaped, inline_markup
 from markitdoc.utils.helpers import lifted
-from markitdoc.markup.elements import (closing_index, column_alignments, element_settings, list_schemes,
-                                       only_display_maths, paragraph_alignments, settings_from, table_styles,
-                                       without_display_maths)
-from markitdoc.pdf.flow_pages import FlowPages, body_size, measured, place_notes, probe_of, top_height
-from markitdoc.pdf.flow_text import (add_callout, add_equation, add_figure, add_heading, add_list_item, add_notes,
-                                     add_paragraph, draw_runs, needs_runs)
-from markitdoc.pdf.flow_tables import add_table, table_rows
-from markitdoc.pdf.flow_visuals import add_fence
 
 logger = logging.getLogger(__name__)
 page_break_marker = "+++"

@@ -4,13 +4,13 @@ import os
 import fitz
 import pytest
 import requests
+from helpers import generate_document
 from PIL import Image
 
+from markitdoc.themes.themes import load_theme
 from markitdoc.visuals import diagrams as document_diagrams
-from helpers import generate_document
 from markitdoc.visuals.diagrams import diagram_as_text, problems_in_diagram, render_diagram
 from markitdoc.visuals.icons import icon_names, icon_svg, strip_icon
-from markitdoc.themes.themes import load_theme
 
 
 def text_of(path):

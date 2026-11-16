@@ -1,9 +1,9 @@
 from markitdoc.guide.contract import example_document, pdf_contract
-from markitdoc.models.document import parse_document
 from markitdoc.models.catalogue import layouts
+from markitdoc.models.document import parse_document
 from markitdoc.pdf.checks import page_problems
-from markitdoc.themes.themes import theme_for
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS
+from markitdoc.themes.themes import theme_for
 
 
 def test_should_describe_every_layout_palette_and_paper_without_character_counts():
@@ -34,8 +34,8 @@ def test_should_teach_every_markdown_setting_the_renderer_understands():
 
 
 def test_should_teach_spans_list_styles_containers_and_fields():
-    from markitdoc.models.model_constants import FLOW_CONTAINERS
     from markitdoc.markup.elements import list_schemes, span_colors
+    from markitdoc.models.model_constants import FLOW_CONTAINERS
 
     contract = pdf_contract()
 

@@ -46,3 +46,10 @@ markitdoc = ["assets/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
+
+[tool.ruff.lint]
+select = ["F", "I"]
+per-file-ignores = {"__init__.py" = ["F401"]}

@@ -1,7 +1,6 @@
 import time
 
 import fitz
-
 from helpers import generate_document
 
 paragraph = ("AI-Safe detects personal data, replaces it with realistic fakes and restores the real values in the answer. "

@@ -1,8 +1,7 @@
-from pathlib import Path
 
 import fitz
-
 from helpers import generate_document
+
 from markitdoc.models.document import parse_document
 from markitdoc.pdf.checks import problems_in
 

@@ -1,11 +1,12 @@
-import fitz
-from fpdf import FPDF
-import logging
 import io
+import logging
 import re
+from functools import lru_cache
+
+import fitz
 import matplotlib.pyplot as plt
 import ziamath
-from functools import lru_cache
+from fpdf import FPDF
 
 logger = logging.getLogger(__name__)
 

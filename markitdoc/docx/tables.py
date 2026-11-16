@@ -1,14 +1,14 @@
 import io
 import re
 from functools import lru_cache
+
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
 from PIL import Image, ImageDraw
 
 from markitdoc.docx.document import first_paragraph, landscape_section, plain, white, write_runs
 from markitdoc.docx.styles import cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
-from markitdoc.markup.elements import (column_alignments, rating_level, settings_from, signed_number, table_marks,
-                                       totals_row)
+from markitdoc.markup.elements import column_alignments, rating_level, settings_from, signed_number, table_marks, totals_row
 from markitdoc.markup.inline import inline_runs, parser
 
 numeric_cell = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")

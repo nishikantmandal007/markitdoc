@@ -1,5 +1,4 @@
 import fitz
-
 from helpers import generate_document
 
 

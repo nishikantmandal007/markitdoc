@@ -1,8 +1,8 @@
 import fitz
-
 from helpers import generate_document
-from markitdoc.visuals.infographics import problems_in_infographic
+
 from markitdoc.models.document import parse_document
+from markitdoc.visuals.infographics import problems_in_infographic
 
 
 def page_texts(path):

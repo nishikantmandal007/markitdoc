@@ -1,6 +1,7 @@
-from pathlib import Path
 import os
 from datetime import date, datetime, time, timezone
+from pathlib import Path
+
 fonts_by_file = {"PTSerif": "Georgia"}
 sans_font, mono_font = "Calibri", "Consolas"
 

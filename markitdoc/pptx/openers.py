@@ -2,10 +2,30 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 
 from markitdoc.markup.blocks import paragraphs
 from markitdoc.markup.inline import literal
-from markitdoc.pptx.deck import (Item, add_rect, body_height, body_sizes, body_top, comfortable_size, content_width,
-                                 fitted_items, key_sentences, place_title, side_margin, slide_height, slide_width,
-                                 soft_white, stack_height, text_width, tint, title_fit, white, write_column,
-                                 write_items, write_text)
+from markitdoc.pptx.deck import (
+    Item,
+    add_rect,
+    body_height,
+    body_sizes,
+    body_top,
+    comfortable_size,
+    content_width,
+    fitted_items,
+    key_sentences,
+    place_title,
+    side_margin,
+    slide_height,
+    slide_width,
+    soft_white,
+    stack_height,
+    text_width,
+    tint,
+    title_fit,
+    white,
+    write_column,
+    write_items,
+    write_text,
+)
 from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, send_to_back, side_title
 from markitdoc.pptx.titles import draw_group, fit_text, plan_group
 from markitdoc.utils.helpers import lifted, long_date

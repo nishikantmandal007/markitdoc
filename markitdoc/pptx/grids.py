@@ -1,12 +1,28 @@
 import math
 import re
+
 from pptx.util import Inches, Pt
 
 from markitdoc.markup.blocks import paragraphs
 from markitdoc.markup.inline import plain_text
-from markitdoc.pptx.deck import (Item, add_rect, body_height, body_top, content_width, fitted_items, side_margin,
-                                 slide_width, soft_white, split_to_fit, text_width, tint, white, write_column,
-                                 write_items, write_text)
+from markitdoc.pptx.deck import (
+    Item,
+    add_rect,
+    body_height,
+    body_top,
+    content_width,
+    fitted_items,
+    side_margin,
+    slide_width,
+    soft_white,
+    split_to_fit,
+    text_width,
+    tint,
+    white,
+    write_column,
+    write_items,
+    write_text,
+)
 from markitdoc.pptx.photos import half_bleed, side_title
 from markitdoc.pptx.titles import column_gap, draw_lead, fit_text, lead_room, max_per_slide, row_gap, slide_titles
 

@@ -1,23 +1,22 @@
+import logging
 import tempfile
 import time
 from pathlib import Path
 
-
-import logging
-from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
-from markitdoc.models.document import Document
 from markitdoc.markup.blocks import as_flow, balanced, prepared
-from markitdoc.utils.helpers import creation_date
-from markitdoc.pptx.brand_cover import draw_brand_cover
 from markitdoc.markup.inline import plain_text
+from markitdoc.models.document import Document
+from markitdoc.pptx.brand_cover import draw_brand_cover
 from markitdoc.pptx.deck import Deck, Item
+from markitdoc.pptx.flow import draw_flow, draw_text_slides, title_stream
+from markitdoc.pptx.grids import draw_feature, draw_figures, draw_summary
+from markitdoc.pptx.openers import draw_chapter, draw_closing, draw_cover, draw_divider, draw_quote
 from markitdoc.pptx.package import save_presentation
 from markitdoc.pptx.photos import add_fade
-from markitdoc.pptx.flow import draw_flow, draw_text_slides, title_stream
-from markitdoc.themes.themes import Theme
-from markitdoc.pptx.grids import draw_feature, draw_figures, draw_summary
 from markitdoc.pptx.sequences import draw_comparison, draw_keypoints, draw_matrix, draw_process, draw_timeline
-from markitdoc.pptx.openers import draw_chapter, draw_closing, draw_cover, draw_divider, draw_quote
+from markitdoc.themes.themes import Theme
+from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
+from markitdoc.utils.helpers import creation_date
 
 logger = logging.getLogger(__name__)
 required_slots = {"cover": "title", "summary": "title", "divider": "title", "chapter": "title", "figures": "title", "keypoints": "title",

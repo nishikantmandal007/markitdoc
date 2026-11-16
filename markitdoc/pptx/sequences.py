@@ -1,12 +1,23 @@
 import math
 from dataclasses import replace
+
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Pt
 
 from markitdoc.markup.inline import plain_text
-from markitdoc.pptx.deck import (add_badge, add_rect, body_height, body_top, content_width, side_margin, split_to_fit,
-                                 tint, white, write_text)
+from markitdoc.pptx.deck import (
+    add_badge,
+    add_rect,
+    body_height,
+    body_top,
+    content_width,
+    side_margin,
+    split_to_fit,
+    tint,
+    white,
+    write_text,
+)
 from markitdoc.pptx.titles import draw_lead, fit_text, lead_room, max_per_slide, slide_titles
 from markitdoc.visuals.gantt import gantt_plan, unit_name
 

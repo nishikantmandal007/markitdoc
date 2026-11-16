@@ -7,9 +7,9 @@ from pathlib import Path
 
 from markitdoc.docx.layouts import document_photo_ratios, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
-from markitdoc.models.document import Document, parse_document
-from markitdoc.models.catalogue import layouts
 from markitdoc.markup.blocks import as_flow
+from markitdoc.models.catalogue import layouts
+from markitdoc.models.document import Document, parse_document
 from markitdoc.pdf.checks import page_problems
 from markitdoc.pdf.layouts import render_pdf
 from markitdoc.pptx.layouts import render_pptx, slide_photo_ratios

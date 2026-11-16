@@ -1,12 +1,12 @@
 import logging
 import math
 import re
+
 from PIL import Image
 from pptx.enum.text import PP_ALIGN
 
 from markitdoc.markup.inline import inline_maths, literal
-from markitdoc.pptx.deck import (Item, body_height, body_top, content_width, slide_width, visual_left, visual_width,
-                                 write_text)
+from markitdoc.pptx.deck import Item, body_height, body_top, content_width, slide_width, visual_left, visual_width, write_text
 from markitdoc.pptx.diagrams import flow_graph
 from markitdoc.pptx.flow_reader import Piece
 from markitdoc.pptx.photos import add_image, contained, image_ratio, photo_for

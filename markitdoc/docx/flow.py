@@ -1,23 +1,39 @@
 import io
+import logging
 import re
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
 from PIL import Image
 
-import logging
+from markitdoc.docx.document import (
+    add_picture,
+    bookmark,
+    caption,
+    first_paragraph,
+    list_formats,
+    photo,
+    plain,
+    start_on_new_page,
+    write_runs,
+)
+from markitdoc.docx.lists import add_list_item, new_list
+from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, new_table
+from markitdoc.docx.tables import add_table, step_table
+from markitdoc.markup.elements import (
+    callout_kinds,
+    chart_data,
+    closing_index,
+    element_settings,
+    settings_from,
+    table_styles,
+    without_display_maths,
+)
+from markitdoc.markup.inline import Run, anchor, inline_runs, parser
 from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import chain_steps, diagram_as_text, diagram_title, render_diagram, zoom
+from markitdoc.visuals.equations import equation_png_bytes, mathtext_ready
 from markitdoc.visuals.infographics import render_infographic
-from markitdoc.docx.document import (add_picture, bookmark, caption, first_paragraph, list_formats, photo, plain,
-                                     start_on_new_page, write_runs)
-from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, new_table
-from markitdoc.markup.elements import (callout_kinds, chart_data, closing_index, element_settings, settings_from,
-                                       table_styles, without_display_maths)
-from markitdoc.visuals.equations import mathtext_ready, equation_png_bytes
-from markitdoc.markup.inline import Run, anchor, inline_runs, parser
-from markitdoc.docx.tables import add_table, step_table
-from markitdoc.docx.lists import add_list_item, new_list
 
 logger = logging.getLogger(__name__)
 alignments = {"center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}

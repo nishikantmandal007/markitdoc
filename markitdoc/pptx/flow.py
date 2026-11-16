@@ -3,23 +3,52 @@ from dataclasses import replace
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Pt
 
-from markitdoc.models.document import Block
 from markitdoc.markup.inline import literal, plain_text
-from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram
-from markitdoc.pptx.cards import (card_pairs, card_preset, draw_panel, panel_fits, draw_cards, draw_takeaway,
-                                  figure_cards)
-from markitdoc.pptx.deck import (Item, add_rect, add_textbox, body_height, body_top, comfortable_size, content_width,
-                                 fitted_items, place_title, set_spacing, side_margin, side_text_width, slide_width,
-                                 soft_white, split_to_fit, stack_height, text_width, white, write_column, write_items,
-                                 write_text)
-from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
-from markitdoc.utils.helpers import mono_font
-from markitdoc.pptx.flow_reader import Piece, break_piece, read_sections
-from markitdoc.pptx.tables import add_table, max_bullets, max_lead_above, table_pages
+from markitdoc.models.document import Block
+from markitdoc.pptx.cards import card_pairs, card_preset, draw_cards, draw_panel, draw_takeaway, figure_cards, panel_fits
 from markitdoc.pptx.charts import place_chart
-from markitdoc.pptx.visuals import (code_chunks, code_layout, code_leading, code_padding, code_sizes, landscape_diagram,
-                                    place_equation, place_figure, place_picture, prepared_visual, visual_box,
-                                    visual_fallback)
+from markitdoc.pptx.deck import (
+    Item,
+    add_rect,
+    add_textbox,
+    body_height,
+    body_top,
+    comfortable_size,
+    content_width,
+    fitted_items,
+    place_title,
+    set_spacing,
+    side_margin,
+    side_text_width,
+    slide_width,
+    soft_white,
+    split_to_fit,
+    stack_height,
+    text_width,
+    white,
+    write_column,
+    write_items,
+    write_text,
+)
+from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram
+from markitdoc.pptx.flow_reader import Piece, break_piece, read_sections
+from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
+from markitdoc.pptx.tables import add_table, max_bullets, max_lead_above, table_pages
+from markitdoc.pptx.visuals import (
+    code_chunks,
+    code_layout,
+    code_leading,
+    code_padding,
+    code_sizes,
+    landscape_diagram,
+    place_equation,
+    place_figure,
+    place_picture,
+    prepared_visual,
+    visual_box,
+    visual_fallback,
+)
+from markitdoc.utils.helpers import mono_font
 
 opening_limit = 220
 

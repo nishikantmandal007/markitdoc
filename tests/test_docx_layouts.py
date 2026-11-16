@@ -1,8 +1,8 @@
 import pytest
 from docx import Document as WordDocument
+from helpers import generate_document
 
 import markitdoc.render as doc_generator_service
-from helpers import generate_document
 
 report = """---
 palette: ocean

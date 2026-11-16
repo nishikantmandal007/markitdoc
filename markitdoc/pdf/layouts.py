@@ -1,21 +1,19 @@
+import logging
 import re
 from pathlib import Path
 
 from fpdf import ViewerPreferences
 from mdit_py_plugins.container import container_plugin
 
-import logging
+from markitdoc.markup.blocks import as_flow, balanced, prepared
+from markitdoc.markup.inline import anchor, parser
+from markitdoc.models.catalogue import sectioned_layouts, trailing_headings
 from markitdoc.models.document import Document
+from markitdoc.pdf.openers import draw_chapter, draw_closing, draw_cover, draw_divider, draw_feature, draw_quote, draw_summary
+from markitdoc.pdf.sections import draw_comparison, draw_figures, draw_keypoints, draw_matrix, draw_process, draw_timeline
 from markitdoc.themes.theme_constants import TEXT_SIZES
 from markitdoc.themes.themes import Theme
-from markitdoc.markup.inline import anchor, parser
 from markitdoc.utils.helpers import creation_date
-from markitdoc.models.catalogue import sectioned_layouts, trailing_headings
-from markitdoc.markup.blocks import as_flow, balanced, prepared
-from markitdoc.pdf.sections import (draw_comparison, draw_figures, draw_keypoints, draw_matrix, draw_process,
-                                    draw_timeline)
-from markitdoc.pdf.openers import (draw_chapter, draw_closing, draw_cover, draw_divider, draw_feature, draw_quote,
-                                   draw_summary)
 
 logger = logging.getLogger(__name__)
 for container_name in ("box", "sidebar", "columns"):

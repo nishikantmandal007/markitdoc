@@ -1,5 +1,6 @@
 from dataclasses import replace
 from pathlib import Path
+
 from fpdf import FPDF
 from fpdf.enums import MethodReturnValue
 from PIL import Image

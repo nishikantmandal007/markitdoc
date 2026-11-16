@@ -18,10 +18,10 @@ def problems_in(document: Document, theme: Theme | None = None) -> list[str]:
 
 def page_problems(document: Document, theme: Theme | None = None, with_images: bool = False, fitted: dict | None = None,
                   credits=(), sparse: set | None = None) -> list[tuple[int, str]]:
-    from markitdoc.visuals.diagrams import problems_in_diagram
-    from markitdoc.visuals.infographics import problems_in_infographic
     from markitdoc.markup.elements import chart_data
     from markitdoc.themes.themes import load_theme
+    from markitdoc.visuals.diagrams import problems_in_diagram
+    from markitdoc.visuals.infographics import problems_in_infographic
     measurer = PdfPages(theme or load_theme(None))
     measurer.add_page()
     found = []

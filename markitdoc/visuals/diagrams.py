@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -8,7 +9,6 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageChops
 
-import logging
 from markitdoc.themes.themes import mixed
 from markitdoc.utils.constants import ASSETS_FOLDER, CACHE_FOLDER
 

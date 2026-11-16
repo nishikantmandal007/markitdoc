@@ -11,14 +11,13 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
+from markitdoc.docx.styles import border_bottom, page_height, page_width, setup_page, setup_styles, side_margin, text_width
 from markitdoc.markup.inline import Run
-from markitdoc.visuals.photos import fitted_image
-from markitdoc.utils.helpers import lifted, long_date, office_font
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
-from markitdoc.docx.styles import (border_bottom, page_height, page_width, setup_page, setup_styles, side_margin,
-                                   text_width)
+from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
+from markitdoc.utils.helpers import lifted, long_date, office_font
+from markitdoc.visuals.photos import fitted_image
 
 white = (255, 255, 255)
 bullet_marks = ("•", "–", "◦")

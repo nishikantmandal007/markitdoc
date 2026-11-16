@@ -1,6 +1,7 @@
 import json
 import re
 from functools import lru_cache
+
 from markitdoc.utils.constants import ASSETS_FOLDER
 
 icons_folder = ASSETS_FOLDER / "icons"

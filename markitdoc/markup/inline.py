@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+
 from markdown_it import MarkdownIt
 from mdit_py_plugins.attrs import attrs_plugin
 from mdit_py_plugins.deflist import deflist_plugin
@@ -8,7 +9,6 @@ from mdit_py_plugins.footnote import footnote_plugin
 from mdit_py_plugins.subscript import sub_plugin
 from mdit_py_plugins.superscript import superscript_plugin
 from mdit_py_plugins.tasklists import tasklists_plugin
-
 
 parser = (MarkdownIt("commonmark").enable(["table", "strikethrough"]).disable(["html_block", "html_inline"])
           .use(footnote_plugin).use(tasklists_plugin).use(deflist_plugin).use(attrs_plugin, spans=True)

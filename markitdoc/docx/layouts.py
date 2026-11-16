@@ -1,3 +1,4 @@
+import logging
 import tempfile
 import time
 from pathlib import Path
@@ -7,21 +8,32 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
-import logging
-from markitdoc.models.document import Document
-from markitdoc.docx.document import (Writer, add_field, add_picture, caption, first_paragraph, page_break, photo, plain,
-                                     save_document, setup_chrome, stamp_properties, start_on_new_page, white,
-                                     write_runs)
-from markitdoc.docx.styles import (border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table,
-                                   repeat_header)
+from markitdoc.docx.document import (
+    Writer,
+    add_field,
+    add_picture,
+    caption,
+    first_paragraph,
+    page_break,
+    photo,
+    plain,
+    save_document,
+    setup_chrome,
+    stamp_properties,
+    start_on_new_page,
+    white,
+    write_runs,
+)
 from markitdoc.docx.flow import add_callout, add_notes, render_markdown
+from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
 from markitdoc.docx.tables import step_table
-from markitdoc.markup.inline import inline_runs, parser, plain_text
 from markitdoc.markup.blocks import paragraphs, prepared
-from markitdoc.utils.helpers import creation_date, long_date
+from markitdoc.markup.inline import inline_runs, parser, plain_text
+from markitdoc.models.document import Document
 from markitdoc.themes.brands import brand_hooks
-from markitdoc.visuals.gantt import gantt_plan, unit_name
 from markitdoc.themes.themes import Theme
+from markitdoc.utils.helpers import creation_date, long_date
+from markitdoc.visuals.gantt import gantt_plan, unit_name
 
 logger = logging.getLogger(__name__)
 section_level = {"divider": 1, "chapter": 1, "summary": 1, "closing": 1}

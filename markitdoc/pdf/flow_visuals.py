@@ -1,6 +1,7 @@
-import logging
 import io
+import logging
 import re
+
 from fpdf.enums import XPos, YPos
 from PIL import Image
 

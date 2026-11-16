@@ -1,6 +1,7 @@
 import zlib
-import numpy
 from pathlib import Path
+
+import numpy
 from PIL import Image, ImageFilter, ImageOps
 
 from markitdoc.utils.helpers import lifted

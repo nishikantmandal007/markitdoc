@@ -1,14 +1,14 @@
 import hashlib
 import io
 import json
-import re
+import logging
 import os
+import re
 from pathlib import Path
 
 import requests
 from PIL import Image, ImageChops
 
-import logging
 from markitdoc.utils.constants import ASSETS_FOLDER, CACHE_FOLDER
 
 logger = logging.getLogger(__name__)

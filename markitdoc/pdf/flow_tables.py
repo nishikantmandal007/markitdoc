@@ -1,4 +1,5 @@
 import logging
+
 from fpdf.enums import TableCellFillMode
 from fpdf.fonts import FontFace
 

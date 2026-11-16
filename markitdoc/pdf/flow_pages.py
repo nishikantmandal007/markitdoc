@@ -1,6 +1,7 @@
 import re
-import pyphen
 from functools import lru_cache
+
+import pyphen
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
 from markitdoc.markup.inline import superscript_digits

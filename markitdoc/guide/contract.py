@@ -1,12 +1,11 @@
-from markitdoc.visuals.diagrams import diagram_types
-from markitdoc.visuals.infographics import infographic_templates
+from markitdoc.markup.elements import callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors, table_styles
 from markitdoc.models.catalogue import layouts
 from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pptx.layouts import drawers
 from markitdoc.pptx.titles import max_per_slide
-from markitdoc.markup.elements import (callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors,
-                                       table_styles)
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
+from markitdoc.visuals.diagrams import diagram_types
+from markitdoc.visuals.infographics import infographic_templates
 
 layout_purposes = {
     "cover": "first page of a report, proposal or guide: kicker (small label), title, subtitle",

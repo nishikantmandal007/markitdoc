@@ -1,9 +1,19 @@
 from dataclasses import dataclass
+
 from pptx.enum.text import MSO_ANCHOR
 
 from markitdoc.markup.inline import literal
-from markitdoc.pptx.deck import (body_sizes, comfortable_size, key_sentences, place_title, side_margin, standard_size,
-                                 text_width, title_fit, write_text)
+from markitdoc.pptx.deck import (
+    body_sizes,
+    comfortable_size,
+    key_sentences,
+    place_title,
+    side_margin,
+    standard_size,
+    text_width,
+    title_fit,
+    write_text,
+)
 
 column_gap, row_gap, subtitle_width = 0.4, 0.45, 9.6
 max_per_slide = {"keypoints": 4, "process": 5, "timeline": 6, "figures": 6, "comparison": 7}

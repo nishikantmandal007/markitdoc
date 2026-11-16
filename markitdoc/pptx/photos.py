@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from lxml import etree
 from PIL import Image
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
@@ -6,8 +7,7 @@ from pptx.oxml.ns import qn
 from pptx.util import Inches
 
 from markitdoc.markup.inline import literal
-from markitdoc.pptx.deck import (add_rect, place_title, side_margin, slide_height, slide_width, soft_white, title_sizes,
-                                 write_text)
+from markitdoc.pptx.deck import add_rect, place_title, side_margin, slide_height, slide_width, soft_white, title_sizes, write_text
 from markitdoc.visuals.photos import fitted_image
 
 photo_width_limit = 2400
