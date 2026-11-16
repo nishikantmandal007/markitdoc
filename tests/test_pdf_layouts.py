@@ -4,7 +4,7 @@ import fitz
 
 from helpers import generate_document
 from markitdoc.models.document import parse_document
-from markitdoc.pdf.layouts import problems_in
+from markitdoc.pdf.checks import problems_in
 
 story = ("The programme grew from a single speech into the work of four hundred thousand people across the country. "
          "Engineers tested every part again and again, and each flight taught the next one something new. ") * 4
@@ -126,7 +126,7 @@ class TestLaidOutPdf:
         assert problems_in_infographic(syntax) == []
 
     def test_should_read_an_infographic_template_written_on_the_fence_line(self):
-        from markitdoc.pdf.layouts import fences
+        from markitdoc.pdf.checks import fences
 
         body = "Intro\n\n```infographic compare-swot\ndata\n  compares\n    - label Strengths\n```\n"
 

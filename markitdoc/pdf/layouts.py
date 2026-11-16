@@ -1,5 +1,4 @@
 import re
-from dataclasses import replace
 from pathlib import Path
 
 from fpdf import ViewerPreferences
@@ -11,10 +10,8 @@ from markitdoc.themes.theme_constants import TEXT_SIZES
 from markitdoc.themes.themes import Theme
 from markitdoc.markup.inline import anchor, parser
 from markitdoc.utils.helpers import creation_date
-from markitdoc.models.catalogue import content_limit, layouts, sectioned_layouts, trailing_headings
-from markitdoc.markup.blocks import as_flow, balanced, prepared, slot_pieces
-from markitdoc.pdf.pages import PdfPages, shrink_steps
-from markitdoc.pdf.photos import measuring_photo
+from markitdoc.models.catalogue import sectioned_layouts, trailing_headings
+from markitdoc.markup.blocks import as_flow, balanced, prepared
 from markitdoc.pdf.sections import (draw_comparison, draw_figures, draw_keypoints, draw_matrix, draw_process,
                                     draw_timeline)
 from markitdoc.pdf.openers import (draw_chapter, draw_closing, draw_cover, draw_divider, draw_feature, draw_quote,
@@ -23,86 +20,6 @@ from markitdoc.pdf.openers import (draw_chapter, draw_closing, draw_cover, draw_
 logger = logging.getLogger(__name__)
 for container_name in ("box", "sidebar", "columns"):
     container_plugin(parser, container_name, validate=lambda params, *_, name=container_name: name in re.findall(r"[\w-]+", params)[:1])
-tightness_steps = (1.0, 0.92, 0.85)
-
-
-def problems_in(document: Document, theme: Theme | None = None) -> list[str]:
-    return [message for _, message in page_problems(document, theme)]
-
-
-def page_problems(document: Document, theme: Theme | None = None, with_images: bool = False, fitted: dict | None = None,
-                  credits=(), sparse: set | None = None) -> list[tuple[int, str]]:
-    from markitdoc.visuals.diagrams import problems_in_diagram
-    from markitdoc.visuals.infographics import problems_in_infographic
-    from markitdoc.pdf.flow import chart_data
-    from markitdoc.themes.themes import load_theme
-    measurer = PdfPages(theme or load_theme(None))
-    measurer.add_page()
-    found = []
-    for index, block in enumerate(document.blocks):
-        block = prepared(block)
-        layout = layouts.get(block.layout)
-        where = f"page {index + 1} ({block.layout})"
-        if layout is None:
-            found.append((index, f"page {index + 1}: unknown layout '{block.layout}', use one of {sorted(layouts)}"))
-            continue
-        if block.layout == "flow":
-            if not block.body.strip():
-                found.append((index, f"{where}: body is empty"))
-            found += [(index, f"{where}: chart {number} has no labels or values")
-                      for number, fence in enumerate(fences(block.body, "chart"), 1) if chart_data(fence) is None]
-            found += [(index, f"{where}: infographic {number}: {problem}")
-                      for number, fence in enumerate(fences(block.body, "infographic"), 1) for problem in problems_in_infographic(fence)]
-            found += [(index, f"{where}: diagram {number}: {problem}")
-                      for number, fence in enumerate(fences(block.body, "mermaid"), 1) for problem in problems_in_diagram(fence)]
-            continue
-        before = len(found)
-        for slot, box in layout.boxes.items():
-            text = block.slots.get(slot, "")
-            if not text:
-                if box.required:
-                    found.append((index, f"{where}: {slot} is missing"))
-                continue
-            smallest = replace(box, size=round(box.size * shrink_steps[-1], 1))
-            for piece in slot_pieces(block, slot):
-                lines = measurer.line_count(piece, smallest)
-                if lines > box.lines:
-                    found.append((index, f"{where}: {slot} needs {lines} lines even at the smallest size, fits {box.lines} (shorten it)"))
-                if measurer.line_count(piece, box) < box.min_lines:
-                    found.append((index, f"{where}: {slot} is too short to fill its page (at least {box.min_lines} lines)"))
-        low, high, limits = layout.items
-        if limits and not low <= len(block.items) <= high:
-            found.append((index, f"{where}: needs {low} to {high} items, has {len(block.items)}"))
-        if len(found) == before:
-            photo = measuring_photo if with_images and block.slots.get("image") and layout.image_ratio else None
-            try:
-                for tightness in tightness_steps:
-                    measurer.add_page()
-                    measurer.tightness = tightness
-                    end, limit = draw_block(measurer, block, photo, None, credits)
-                    if end <= limit + 1:
-                        break
-            except Exception as error:
-                measurer.tightness = 1.0
-                found.append((index, f"{where}: could not be drawn ({type(error).__name__})"))
-                continue
-            measurer.tightness = 1.0
-            if end > limit + 1:
-                found.append((index, f"{where}: content runs {end - limit:.0f} mm past the page (shorten it)"))
-            elif sparse is not None and photo is None and not (theme and theme.address) and (
-                    block.layout in ("quote", "closing") or (block.layout != "cover" and end < content_limit * 0.7)):
-                sparse.add(index)
-            elif tightness < 1 and fitted is not None:
-                fitted[index] = tightness
-    return found
-
-
-def fences(body, language):
-    found = []
-    for suffix, content in re.findall(rf"```{language}([^\n]*)\n(.*?)```", body, re.S):
-        suffix = suffix.split("{")[0].strip()
-        found.append((f"{language} {suffix}\n" if suffix else "") + content)
-    return found
 
 
 drawers = {"cover": draw_cover, "summary": draw_summary, "divider": draw_divider, "chapter": draw_chapter,
