@@ -26,6 +26,7 @@ list_formats = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "up
 
 
 class Writer:
+    # sets up the rendering context and its document settings
     def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict, title: str):
         self.document = docx.Document()
         self.theme, self.meta, self.work_folder, self.title = theme, meta, work_folder, title
@@ -45,6 +46,7 @@ class Writer:
         setup_page(self)
         setup_styles(self)
 
+    # temporarily switches the writer to a cell and its available width
     @contextmanager
     def inside(self, container, width):
         previous = self.body, self.width
@@ -54,17 +56,21 @@ class Writer:
         finally:
             self.body, self.width = previous
 
+    # returns a theme color as a Word RGB value
     def rgb(self, role):
         return RGBColor(*(role if isinstance(role, tuple) else self.theme.rgb(role)))
 
+    # returns a theme color as a six-digit hexadecimal value
     def hex(self, role):
         values = role if isinstance(role, tuple) else self.theme.rgb(role)
         return "%02X%02X%02X" % tuple(values)
 
+    # lightens a theme color by the requested share
     def tint(self, role, share):
         return lifted(self.theme.rgb(role), share)
 
 
+# writes styled inline text runs into a Word paragraph
 def write_runs(writer, paragraph, runs, size=None, role=None, bold=None, italic=None, font=None):
     for piece in runs:
         if not piece.text:
@@ -76,6 +82,7 @@ def write_runs(writer, paragraph, runs, size=None, role=None, bold=None, italic=
         format_run(writer, run, piece, size, role, bold, italic, font)
 
 
+# sets font, emphasis, color, and script on a Word text run
 def format_run(writer, run, piece, size, role, bold, italic, font):
     run.bold = True if bold else piece.bold or None
     run.italic = True if italic else piece.italic or None
@@ -96,6 +103,7 @@ def format_run(writer, run, piece, size, role, bold, italic, font):
         run._r.get_or_add_rPr().append(shading)
 
 
+# adds a hyperlink run to a Word paragraph
 def add_link(writer, paragraph, piece, size, role):
     link = OxmlElement("w:hyperlink")
     if piece.link.startswith("#"):
@@ -111,6 +119,7 @@ def add_link(writer, paragraph, piece, size, role):
     paragraph._p.append(link)
 
 
+# adds plain text to a Word paragraph with the requested style
 def plain(writer, paragraph, text, size=None, role=None, bold=False, italic=False, font=None):
     run = paragraph.add_run(text)
     run.bold, run.italic = bold or None, italic or None
@@ -123,6 +132,7 @@ def plain(writer, paragraph, text, size=None, role=None, bold=False, italic=Fals
     return run
 
 
+# adds a named Word bookmark around a paragraph
 def bookmark(writer, paragraph, name):
     writer.bookmark_id += 1
     start, end = OxmlElement("w:bookmarkStart"), OxmlElement("w:bookmarkEnd")
@@ -133,6 +143,7 @@ def bookmark(writer, paragraph, name):
     paragraph._p.append(end)
 
 
+# adds a Word field with its result text
 def add_field(paragraph, instruction, shown=""):
     for kind, text in (("begin", None), (None, instruction), ("separate", None), ("text", shown), ("end", None)):
         run = paragraph.add_run()
@@ -149,12 +160,14 @@ def add_field(paragraph, instruction, shown=""):
             run._r.append(code)
 
 
+# returns the first table cell paragraph with no trailing space
 def first_paragraph(cell):
     paragraph = cell.paragraphs[0]
     paragraph.paragraph_format.space_after = Pt(0)
     return paragraph
 
 
+# adds a centered picture with alternative text to Word
 def add_picture(writer, source, width_cm, alt="", height_cm=None):
     paragraph = writer.body.add_paragraph()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -168,11 +181,13 @@ def add_picture(writer, source, width_cm, alt="", height_cm=None):
     return paragraph
 
 
+# crops and adds a fitted photo to the Word document
 def photo(writer, path, width_cm, height_cm, alt):
     fitted = fitted_image(Path(path), width_cm * 40, height_cm * 40, writer.work_folder, (), writer.photos, writer.theme)
     return add_picture(writer, str(fitted), width_cm, alt, height_cm)
 
 
+# adds a numbered figure caption with its optional credit and source
 def caption(writer, text, credit="", source=""):
     writer.figure_count += 1
     paragraph = writer.body.add_paragraph(style="Caption")
@@ -187,6 +202,7 @@ def caption(writer, text, credit="", source=""):
     return paragraph
 
 
+# removes empty trailing Word paragraphs before the section settings
 def trim_blank_tail(writer):
     body = writer.document.element.body
     while len(body) > 1:
@@ -197,6 +213,7 @@ def trim_blank_tail(writer):
         body.remove(last)
 
 
+# applies a pending page break before a Word paragraph
 def start_on_new_page(writer, paragraph):
     if writer.break_next:
         if writer.body is writer.document:
@@ -209,12 +226,14 @@ def start_on_new_page(writer, paragraph):
         writer.break_next = False
 
 
+# adds a page break to the current Word body
 def page_break(writer):
     paragraph = writer.body.add_paragraph()
     paragraph.paragraph_format.space_after = Pt(0)
     paragraph.add_run().add_break(WD_BREAK.PAGE)
 
 
+# starts a page section and returns its usable text width
 def landscape_section(writer, wide):
     section = writer.document.add_section(WD_SECTION.NEW_PAGE)
     section.orientation = WD_ORIENT.LANDSCAPE if wide else WD_ORIENT.PORTRAIT
@@ -224,6 +243,7 @@ def landscape_section(writer, wide):
     return (width - 2 * side_margin) if wide else text_width
 
 
+# sets up the themed header and footer for Word pages
 def setup_chrome(writer, cover):
     chrome = brand_hooks(writer.theme.name).docx_chrome
     if chrome:
@@ -243,6 +263,7 @@ def setup_chrome(writer, cover):
     page_fields(writer, footer, note if "{page}" in note else (note + "    " if note else "") + "Page {page} of {pages}")
 
 
+# fills page, title, date, and section placeholders in footer text
 def page_fields(writer, paragraph, template):
     fields = {"{page}": ("PAGE", "1"), "{pages}": ("NUMPAGES", "1"), "{section}": ('STYLEREF "Heading 2"', "")}
     text = template.replace("{title}", writer.title).replace("{date}", long_date(writer.meta.get("date", "")))
@@ -255,10 +276,12 @@ def page_fields(writer, paragraph, template):
             plain(writer, paragraph, piece, 8.5, "muted")
 
 
+# returns the usable Word page width in centimetres
 def inches_to_cm(section):
     return (section.page_width - section.left_margin - section.right_margin) / 360000
 
 
+# sets document metadata, creator, and creation timestamps
 def stamp_properties(writer, created, user_email):
     properties = writer.document.core_properties
     properties.title, properties.subject = writer.title, str(writer.meta.get("subject", "")) or writer.title
@@ -274,6 +297,7 @@ def stamp_properties(writer, created, user_email):
     settings.append(update)
 
 
+# saves a Word document with stable ZIP metadata
 def save_document(writer, output_path: Path):
     buffer = io.BytesIO()
     writer.document.save(buffer)

@@ -35,6 +35,7 @@ quote_sizes = (36, 32, 28, 26, 24, 22, 20)
 photo_fades = ((0, 0.25, 0.35, 0.0), (0.4, 0.8, 0.0, 0.85), (0.8, 1.0, 0.85, 0.92))
 
 
+# draws a designed cover slide from the block content
 def draw_cover(deck, block, image):
     slots = block.slots
     photo = image is not None and slots.get("variant") != "light"
@@ -59,6 +60,7 @@ def draw_cover(deck, block, image):
                align=PP_ALIGN.RIGHT, name="Brand")
 
 
+# draws a section divider slide with its title and optional photo
 def draw_divider(deck, block, image):
     slots = block.slots
     dark = image is not None or slots.get("variant") != "light"
@@ -75,6 +77,7 @@ def draw_divider(deck, block, image):
         write_items(deck, slide, shown, slide_width - side_margin - 4.0, 2.2, 4.0, size, soft_white if dark else "body", "Sections")
 
 
+# draws a quote slide with its optional attribution and background image
 def draw_quote(deck, block, image):
     slots = block.slots
     dark = image is not None or slots.get("variant") == "dark"
@@ -105,6 +108,7 @@ def draw_quote(deck, block, image):
         write_text(deck, slide, context, 1.5, top, 9.0, context_size, soft_white if dark else "body", name="Context")
 
 
+# adds the closing content and any available contact details
 def draw_closing(deck, block, image):
     slots = block.slots
     slide = deck.new_slide(slots["title"], "night", False, standard=False)
@@ -133,6 +137,7 @@ def draw_closing(deck, block, image):
         write_items(deck, slide, shown_items, side_margin, top + height + 0.6, 9.6, body_size, soft_white)
 
 
+# adds a chapter heading, image, body, and optional quote
 def draw_chapter(deck, block, image):
     slots = block.slots
     title = f"{slots['number']} — {slots['title']}" if slots.get("number") else slots["title"]
@@ -151,6 +156,7 @@ def draw_chapter(deck, block, image):
         draw_pull_quote(deck, slide, slots["quote"], end)
 
 
+# fits slide text into two columns with an optional lead and quote
 def draw_two_columns(deck, slide, slots, texts):
     top = body_top
     if slots.get("lead"):
@@ -174,6 +180,7 @@ def draw_two_columns(deck, slide, slots, texts):
     return end
 
 
+# draws a pull quote below the main slide content
 def draw_pull_quote(deck, slide, quote, after):
     top = max(after + 0.2, body_top + body_height - 1.0)
     shown, size = fit_text(deck, quote, text_width - 0.4, body_top + body_height - top, "Quote", cap=18)

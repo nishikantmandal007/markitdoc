@@ -51,10 +51,12 @@ document.fonts.load("16px Brand").then(() => document.fonts.load("bold 16px Bran
 </script></body></html>""" % (canvas_width, canvas_height - 32)
 
 
+# returns the first meaningful line of diagram source
 def first_line(source: str) -> str:
     return next((line.strip() for line in source.splitlines() if line.strip() and not line.strip().startswith("%%")), "")
 
 
+# returns validation problems found in diagram source
 def problems_in_diagram(source: str) -> list[str]:
     words = first_line(source).split()
     if not words:
@@ -69,6 +71,7 @@ def problems_in_diagram(source: str) -> list[str]:
     return [f"first line must name the diagram type, one of: {', '.join(diagram_types)} (found '{first_line(source)[:40]}')"]
 
 
+# builds Mermaid theme settings from the document palette
 def settings(theme) -> dict:
     color = {role: "#" + theme.colors[role].lstrip("#") for role in ("mood", "second", "ink", "muted", "paper", "surface", "rule")}
     variables = {"primaryColor": "#" + mixed(theme.colors["mood"].lstrip("#"), theme.colors["paper"].lstrip("#"), 0.86),
@@ -83,6 +86,7 @@ def settings(theme) -> dict:
             "flowchart": {"htmlLabels": True}, "gantt": {"todayMarker": "off"}}
 
 
+# renders a validated Mermaid diagram and reuses cached images
 def render_diagram(source: str, theme) -> Path | None:
     endpoint = os.getenv("GOTENBERG_ENDPOINT")
     if not endpoint or problems_in_diagram(source):
@@ -125,16 +129,19 @@ def render_diagram(source: str, theme) -> Path | None:
     return path
 
 
+# extracts readable labels from diagram nodes
 def node_labels(source: str) -> dict:
     return {name: readable(label) for name, label in node.findall(source) if readable(label)}
 
 
+# cleans diagram markup from a node label
 def readable(text: str) -> str:
     text = re.sub(r"<br\s*/?>", " ", text)
     text = re.sub(r":::\w+", "", text)
     return " ".join(text.strip().strip('"').strip("'").split())
 
 
+# returns a readable node label, including start and end markers
 def named(part: str, labels: dict, start: bool) -> str:
     part = part.strip()
     if part == "[*]":
@@ -145,6 +152,7 @@ def named(part: str, labels: dict, start: bool) -> str:
     return labels.get(readable(part), readable(part).strip("[](){}"))
 
 
+# converts diagram connections into readable labeled lines
 def edge_lines(line: str, labels: dict, kind: str) -> list[str]:
     line = labelled_link.sub(lambda match: f"{match.group(3)}|{match.group(2)}|", line)
     note = ""
@@ -160,6 +168,7 @@ def edge_lines(line: str, labels: dict, kind: str) -> list[str]:
     return result
 
 
+# converts diagram connections into readable text lines
 def diagram_as_text(source: str) -> list[str]:
     kind = first_line(source).split()[0] if first_line(source) else ""
     labels = node_labels(source) if kind in directed_types else {}
@@ -183,6 +192,7 @@ def diagram_as_text(source: str) -> list[str]:
     return unique
 
 
+# returns sequential steps when a diagram forms a simple chain
 def chain_steps(source: str) -> list[tuple[str, str]]:
     if first_line(source).split()[:1] not in (["flowchart"], ["graph"]):
         return []
@@ -203,6 +213,7 @@ def chain_steps(source: str) -> list[tuple[str, str]]:
     return steps if len(steps) == len(following) + 1 and len({name for name, _ in steps}) == len(steps) else []
 
 
+# chooses a title from the diagram or its first readable label
 def diagram_title(source: str) -> str:
     title = next((line.strip()[6:].strip() for line in source.splitlines() if line.strip().startswith("title ")), "")
     words = first_line(source).split()

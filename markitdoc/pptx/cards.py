@@ -8,6 +8,7 @@ leading_figure = re.compile(r"^\s*([~≈<>+\-−]?[$€£¥]?\d[\d.,]*\s?(?:%|[k
 card_pattern = re.compile(r"^\*\*(.+?)\*\*\s*(?:—|–|:|-)\s*(.+)$")
 
 
+# parses a short list of bold-label card pairs when its shape matches
 def card_pairs(items):
     pairs = [card_pattern.match(item.source.strip()) for item in items]
     if not 2 <= len(items) <= 6 or not all(item.listed and item.level == 0 for item in items) or not all(pairs):
@@ -15,10 +16,12 @@ def card_pairs(items):
     return [(match.group(1), match.group(2)) for match in pairs]
 
 
+# chooses the number of columns for a card grid
 def card_columns(pairs):
     return 3 if len(pairs) in (5, 6) else len(pairs)
 
 
+# chooses card text sizes that fit the available grid height
 def card_preset(deck, pairs, height, columns=None):
     columns = columns or card_columns(pairs)
     rows = (len(pairs) + columns - 1) // columns
@@ -30,6 +33,7 @@ def card_preset(deck, pairs, height, columns=None):
     return None
 
 
+# parses figure values from card headings
 def figure_cards(pairs):
     found = [leading_figure.match(plain_text(head)) for head, _ in pairs]
     if not all(found):
@@ -37,6 +41,7 @@ def figure_cards(pairs):
     return tuple((match.group(1), match.group(2).strip(" -—:") or match.group(1), detail) for match, (_, detail) in zip(found, pairs))
 
 
+# returns card arrangements that fit the given space
 def card_layouts(deck, pairs, height, preset):
     layouts = {"columns": preset} if preset else {}
     if stacked_fits(deck, pairs, height):
@@ -47,6 +52,7 @@ def card_layouts(deck, pairs, height, preset):
     return layouts
 
 
+# chooses and draws a card arrangement for the slide
 def draw_cards(deck, slide, pairs, top, height, preset):
     layouts = card_layouts(deck, pairs, height, preset)
     names = list(layouts)
@@ -73,6 +79,7 @@ def draw_cards(deck, slide, pairs, top, height, preset):
     return top + card_height * rows + card_gap * (rows - 1)
 
 
+# draws a highlighted takeaway band at the bottom of a slide
 def draw_takeaway(deck, slide, items, bottom):
     source = " ".join(item.source for item in items)
     height = deck.text_height(source, content_width - 0.6, 16, "B") + 0.4
@@ -82,20 +89,24 @@ def draw_takeaway(deck, slide, items, bottom):
     return height
 
 
+# checks whether a stack of cards fits the available height
 def stacked_fits(deck, pairs, height, width=content_width):
     return sum(row_height_of(deck, head_text, detail, width) for head_text, detail in pairs) + card_gap * (len(pairs) - 1) <= height
 
 
+# splits a card row into heading and detail widths
 def row_widths(width):
     head = min(3.4, width * 0.36)
     return head, width - head - 1.2
 
 
+# measures the height needed for a two-column card row
 def row_height_of(deck, head_text, detail, width=content_width):
     head, text = row_widths(width)
     return max(deck.text_height(head_text, head, 18, "B"), deck.text_height(detail, text, 16)) + 0.44
 
 
+# draws cards as stacked heading and detail rows
 def draw_card_rows(deck, slide, pairs, top, height, left=side_margin, width=content_width):
     head, text = row_widths(width)
     total = sum(row_height_of(deck, head_text, detail, width) for head_text, detail in pairs) + card_gap * (len(pairs) - 1)
@@ -110,10 +121,12 @@ def draw_card_rows(deck, slide, pairs, top, height, left=side_margin, width=cont
     return top
 
 
+# checks whether a statement panel and cards fit together
 def panel_fits(deck, lead_text, pairs, height):
     return deck.text_height(lead_text, panel_width - 0.8, 22) + 0.9 <= height and stacked_fits(deck, pairs, height, content_width - panel_width - card_gap)
 
 
+# draws a statement panel beside its supporting cards
 def draw_panel(deck, slide, lead_text, pairs, top, height):
     deck.last_cards = "panel"
     add_rect(deck, slide, side_margin, top, panel_width, height, "night", "Statement panel")

@@ -5,6 +5,7 @@ from docx.shared import Cm, Pt
 from markitdoc.docx.writer import bullet_marks, list_formats, write_runs
 
 
+# creates or reuses the numbering definition for a list style
 def abstract_list(writer, ordered, scheme):
     key = (ordered, scheme)
     if key in writer.lists:
@@ -28,6 +29,7 @@ def abstract_list(writer, ordered, scheme):
     return abstract_id
 
 
+# builds the numbering settings for one list level
 def list_level(writer, level, ordered, scheme):
     item = OxmlElement("w:lvl")
     item.set(qn("w:ilvl"), str(level))
@@ -57,6 +59,7 @@ def list_level(writer, level, ordered, scheme):
     return item
 
 
+# starts a numbered or bulleted list with its requested starting number
 def new_list(writer, ordered, scheme, start):
     numbering = writer.document.part.numbering_part.element
     number = numbering.add_num(abstract_list(writer, ordered, scheme))
@@ -66,6 +69,7 @@ def new_list(writer, ordered, scheme, start):
     return {"id": number.numId, "depth": None, "fresh": False}
 
 
+# draws a numbered or bulleted list item at its nesting level
 def add_list_item(writer, stack, runs):
     current = stack[-1]
     paragraph = writer.body.add_paragraph()

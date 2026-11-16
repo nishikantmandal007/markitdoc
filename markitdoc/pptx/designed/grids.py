@@ -29,6 +29,7 @@ from markitdoc.pptx.photos import half_bleed, side_title
 figure_presets = ((60, 20, 18), (52, 20, 16), (44, 18, 16), (40, 18, 14), (32, 16, 14))
 
 
+# shrinks figure values until each fits on one line
 def resolved_preset(deck, items, width, preset):
     value_size, label_size, note_size = preset
     while value_size > 18 and any(deck.lines(item[0], width, value_size, "B") > 1 for item in items):
@@ -36,6 +37,7 @@ def resolved_preset(deck, items, width, preset):
     return value_size, label_size, note_size
 
 
+# measures the height needed for one figure card
 def column_height(deck, item, width, preset):
     value_size, label_size, note_size = preset
     note = item[2] if len(item) > 2 else ""
@@ -43,6 +45,7 @@ def column_height(deck, item, width, preset):
             + (0.1 + deck.text_height(note, width, note_size) if note else 0))
 
 
+# draws a circular progress indicator for a percentage
 def draw_progress_ring(deck, slide, left, top, size, share, dark):
     thickness = size * 0.13
     ring_band(deck, slide, left, top, size, thickness, 1.0, tint(deck, "mood", 0.45 if dark else 0.85), "Progress track")
@@ -50,6 +53,7 @@ def draw_progress_ring(deck, slide, left, top, size, share, dark):
         ring_band(deck, slide, left, top, size, thickness, min(share, 0.9999), white if dark else "mood", "Progress")
 
 
+# draws a colored segment around a circular progress ring
 def ring_band(deck, slide, left, top, size, thickness, share, role, name):
     steps = max(8, int(120 * share))
     outer, inner = size / 2, size / 2 - thickness
@@ -66,11 +70,13 @@ def ring_band(deck, slide, left, top, size, thickness, share, role, name):
     shape.line.fill.background()
 
 
+# parses a percentage between zero and one hundred
 def percent_share(value):
     found = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*%\s*", plain_text(value))
     return float(found.group(1)) / 100 if found and float(found.group(1)) <= 100 else None
 
 
+# draws a figure value, label, and optional note
 def draw_column(deck, slide, item, preset, left, top, width, dark=False, value_width=None):
     value_size, label_size, note_size = preset
     used = write_text(deck, slide, item[0], left, top, value_width or width, value_size, white if dark else "mood", heading=True, leading=1.15,
@@ -81,10 +87,12 @@ def draw_column(deck, slide, item, preset, left, top, width, dark=False, value_w
         write_text(deck, slide, item[2], left, top + 0.1, width, note_size, soft_white if dark else "body", name="Figure note")
 
 
+# groups figure items into rows of the requested column count
 def figure_rows(items, columns):
     return [items[start:start + columns] for start in range(0, len(items), columns)]
 
 
+# chooses a fitting preset and dimensions for a figure grid
 def grid_plan(deck, items, height, width=content_width, columns=None):
     columns = columns or (len(items) if len(items) <= 5 else 3)
     rows = figure_rows(list(items), columns)
@@ -102,6 +110,7 @@ def grid_plan(deck, items, height, width=content_width, columns=None):
     return rows, column_width, inner, preset, row_height, total(preset)
 
 
+# draws figure items as a grid of cards
 def draw_figure_grid(deck, slide, items, top, height, left=side_margin, width=content_width, columns=None):
     rows, column_width, inner, preset, row_height, total = grid_plan(deck, items, height, width, columns)
     top += max(0.0, height - total) * 0.4
@@ -123,6 +132,7 @@ def draw_figure_grid(deck, slide, items, top, height, left=side_margin, width=co
     return top
 
 
+# draws an executive summary slide with key figures and body text
 def draw_summary(deck, block, image):
     slots = block.slots
     slide = deck.new_slide(slots["title"])
@@ -137,6 +147,7 @@ def draw_summary(deck, block, image):
         write_items(deck, slide, shown, side_margin, top, text_width, size)
 
 
+# draws key figures in a grid across slides as needed
 def draw_figures(deck, block, image):
     slots = block.slots
     items = [item for item in block.items if item and item[0]]
@@ -153,6 +164,7 @@ def draw_figures(deck, block, image):
             write_items(deck, slide, shown, side_margin, top, text_width, size)
 
 
+# fits and draws lead, body text, and quote in a slide column
 def draw_text_column(deck, slide, slots, paragraph_items, left, width, height):
     top = body_top
     if slots.get("lead"):
@@ -165,6 +177,7 @@ def draw_text_column(deck, slide, slots, paragraph_items, left, width, height):
     return top
 
 
+# draws a feature slide with its image, text, and figures
 def draw_feature(deck, block, image):
     slots = block.slots
     items = [item for item in block.items if item and item[0]][:3]

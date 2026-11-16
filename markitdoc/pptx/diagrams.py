@@ -27,6 +27,7 @@ class Flow:
     columns: list
 
 
+# parses a Mermaid flowchart into nodes, shapes, and connections
 def flow_graph(source):
     words = first_line(source).split()
     if words[:1] not in (["flowchart"], ["graph"]):
@@ -51,6 +52,7 @@ def flow_graph(source):
     return Flow(labels, shapes, edges, columns)
 
 
+# reads a node name, label, and shape from a flowchart fragment
 def named_node(part, labels, shapes):
     found = node_part.match(part)
     if not found:
@@ -68,6 +70,7 @@ def named_node(part, labels, shapes):
     return name
 
 
+# groups flowchart nodes into columns while avoiding cycles
 def ranked(names, edges):
     order, seen, forward = [], set(), []
     following = {name: [end for start, end, _ in edges if start == name] for name in names}
@@ -106,6 +109,7 @@ def ranked(names, edges):
     return columns
 
 
+# positions flowchart nodes vertically within each column
 def row_centres(flow, top, height, spacing):
     forward = [(start, end) for start, end, _ in flow.edges]
     rank = {name: index for index, column in enumerate(flow.columns) for name in column}
@@ -124,6 +128,7 @@ def row_centres(flow, top, height, spacing):
     return centre
 
 
+# draws a flowchart with positioned nodes and connectors
 def draw_flow(deck, slide, flow, box):
     left, top, width, height = box
     count = len(flow.columns)
@@ -171,10 +176,12 @@ def draw_flow(deck, slide, flow, box):
     return True
 
 
+# checks whether a flowchart node represents a decision
 def decided(flow, name):
     return flow.shapes[name] in (MSO_SHAPE.DIAMOND, MSO_SHAPE.HEXAGON)
 
 
+# draws and labels one flowchart node
 def draw_node(deck, slide, flow, name, x, y, width, height, size, end_point):
     kind = flow.shapes[name]
     decision = kind in (MSO_SHAPE.DIAMOND, MSO_SHAPE.HEXAGON)
@@ -196,6 +203,7 @@ def draw_node(deck, slide, flow, name, x, y, width, height, size, end_point):
     return shape
 
 
+# draws a connector between two flowchart nodes
 def connect(deck, slide, start, end, backward):
     line = slide.shapes.add_connector(MSO_CONNECTOR.ELBOW, 0, 0, 0, 0)
     line.name = "Flow connector"
@@ -209,10 +217,12 @@ def connect(deck, slide, start, end, backward):
     etree.SubElement(outline, qn("a:tailEnd"), type="triangle", w="lg", len="lg")
 
 
+# converts PowerPoint coordinate units to inches
 def inches(value):
     return value / 914400
 
 
+# places a label beside a flowchart connection
 def edge_label(deck, slide, start, end, label, gap, backward):
     width = max(0.9, gap - 0.1) if not backward else 1.8
     if backward:

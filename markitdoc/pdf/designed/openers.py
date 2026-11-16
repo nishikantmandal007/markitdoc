@@ -8,6 +8,7 @@ from markitdoc.pdf.photos import placed
 from markitdoc.utils.helpers import lifted, long_date
 
 
+# draws the cover title and subtitle in the chosen colors
 def cover_text(pdf, block, on_dark, top):
     pdf.bar(margin, top - 8, rgb=lifted(pdf.theme.rgb("mood"), 0.55) if on_dark else pdf.theme.rgb("mood"))
     end = pdf.write_at(margin, top, content_width, block.slots["title"], pdf.slot_size(block, "title"), "B",
@@ -16,6 +17,7 @@ def cover_text(pdf, block, on_dark, top):
                         line_height=1.4)
 
 
+# draws a designed cover page from the block content
 def draw_cover(pdf: PdfPages, block: Block, image, work_folder):
     variant = block.slots.get("variant") or ("photo" if image else pdf.theme.cover if pdf.theme.cover in ("dark", "light") else "dark")
     if variant in ("photo", "split", "dark") and not image:
@@ -76,6 +78,7 @@ def draw_cover(pdf: PdfPages, block: Block, image, work_folder):
     return 0, page_height
 
 
+# draws an executive summary page with key figures
 def draw_summary(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     pdf.kicker(margin, 22, "Executive summary")
@@ -99,6 +102,7 @@ def draw_summary(pdf: PdfPages, block: Block, image, work_folder):
     return y, content_limit
 
 
+# draws a section divider page with its number, title, and lead
 def draw_divider(pdf: PdfPages, block: Block, image, work_folder):
     dark = block.slots.get("variant") == "dark"
     pdf.fill_page("night" if dark else "surface")
@@ -126,6 +130,7 @@ def draw_divider(pdf: PdfPages, block: Block, image, work_folder):
     return end, content_limit
 
 
+# estimates how much vertical space chapter text needs
 def chapter_text_height(pdf, block):
     column = content_width / 2 - 4
     tallest = max((pdf.text_height(part, column, 9.6, 1.55) for part in paragraphs(block.slots["body"])), default=0)
@@ -135,6 +140,7 @@ def chapter_text_height(pdf, block):
     return title + lead + tallest + quote + 30
 
 
+# adds a chapter heading, image, body, and optional quote
 def draw_chapter(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     plain = not image and block.slots.get("variant") != "band"
@@ -170,6 +176,7 @@ def draw_chapter(pdf: PdfPages, block: Block, image, work_folder):
     return end, content_limit
 
 
+# draws a quote page with its optional context and attribution
 def draw_quote(pdf: PdfPages, block: Block, image, work_folder):
     dark = block.slots.get("variant") == "dark"
     pdf.fill_page("night" if dark else "surface")
@@ -191,6 +198,7 @@ def draw_quote(pdf: PdfPages, block: Block, image, work_folder):
     return end, content_limit
 
 
+# draws a feature page with an image, body text, and related figures
 def draw_feature(pdf: PdfPages, block: Block, image, work_folder):
     if not image and not block.items:
         story = replace(block, layout="chapter", slots={**block.slots, "variant": "plain"})
@@ -239,6 +247,7 @@ def draw_feature(pdf: PdfPages, block: Block, image, work_folder):
     return end, content_limit
 
 
+# adds the closing content and any available contact details
 def draw_closing(pdf: PdfPages, block: Block, image, work_folder, credits=()):
     pdf.fill_page("paper")
     company = block.slots.get("variant") == "company" and pdf.theme.address

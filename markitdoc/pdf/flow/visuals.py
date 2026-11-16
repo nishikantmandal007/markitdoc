@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 box_drawing = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
 
+# shrinks an image proportionally when only part of it fits on the page
 def room_for(pdf: FlowPages, width, height, reserve):
     room = pdf.page_break_trigger - pdf.get_y() - reserve
     if height > room >= height * 0.6:
@@ -25,6 +26,7 @@ def room_for(pdf: FlowPages, width, height, reserve):
     return width, height
 
 
+# places a centered picture on the PDF page with alternative text
 def add_picture(pdf: FlowPages, picture, width, height, description=""):
     width, height = room_for(pdf, width, height, 6)
     if pdf.will_page_break(height + 6):
@@ -33,6 +35,7 @@ def add_picture(pdf: FlowPages, picture, width, height, description=""):
     pdf.ln(4)
 
 
+# renders a code fence as text, chart, diagram, or code
 def add_fence(pdf: FlowPages, language: str, content: str):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
     language = language.split("{")[0].strip()
@@ -76,6 +79,7 @@ def add_fence(pdf: FlowPages, language: str, content: str):
     pdf.ln(3)
 
 
+# draws box-drawing text while keeping its characters aligned
 def add_text_art(pdf: FlowPages, content: str):
     lines = content.strip("\n").splitlines()
     pdf.set_font("Mono", "", 10)
@@ -94,6 +98,7 @@ def add_text_art(pdf: FlowPages, content: str):
     pdf.set_xy(pdf.l_margin, top + height + 4)
 
 
+# renders a diagram or falls back to a readable list of steps
 def add_diagram(pdf: FlowPages, source: str):
     lines = source.strip().splitlines()
     titled = any(line.strip().startswith(("title ", "pie title ")) for line in lines)
@@ -132,6 +137,7 @@ def add_diagram(pdf: FlowPages, source: str):
     pdf.ln(3)
 
 
+# turns infographic labels and descriptions into a readable list
 def add_infographic_as_list(pdf: FlowPages, syntax: str):
     items, current = [], None
     for line in syntax.splitlines():

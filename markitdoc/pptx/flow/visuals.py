@@ -21,12 +21,14 @@ caption_height, credit_height = 0.5, 0.3
 code_sizes, code_leading, code_padding = (16, 14), 1.25, 0.25
 
 
+# estimates wrapped line counts for a code sample at a font size
 def code_layout(deck, lines, size, width):
     deck.measurer.set_font("Mono", "", size)
     capacity = max(10, int(width * 25.4 * 0.93 / deck.measurer.get_string_width("M")))
     return [max(1, math.ceil(len(line) / capacity)) for line in lines]
 
 
+# splits code lines into slide-sized groups
 def code_chunks(deck, lines, size, room):
     counts = code_layout(deck, lines, size, content_width - 2 * code_padding)
     limit = max(1, int(room / (size * code_leading / 72)))
@@ -41,6 +43,7 @@ def code_chunks(deck, lines, size, room):
     return chunks, counts, limit
 
 
+# chooses the more readable orientation for a flowchart image
 def landscape_diagram(deck, source):
     path = render_diagram(source, deck.theme)
     direction = re.match(r"\s*(flowchart|graph)\s+(TB|TD|BT|LR|RL)\b", source)
@@ -51,11 +54,13 @@ def landscape_diagram(deck, source):
     return max((path, turned) if turned else (path,), key=lambda option: diagram_scale(option))
 
 
+# measures how well a diagram image fits slide content
 def diagram_scale(path):
     with Image.open(path) as picture:
         return min(content_width / picture.width, (body_height - 0.4) / picture.height)
 
 
+# converts infographic labels and descriptions into slide bullet items
 def infographic_items(syntax):
     items, current = [], None
     for line in syntax.splitlines():
@@ -68,6 +73,7 @@ def infographic_items(syntax):
     return [Item(f"**{label}**" + (f" — {description}" if description else ""), "bullet") for label, description in items]
 
 
+# chooses the position and size for a slide visual
 def visual_box(side, width_limit=None):
     if side:
         return visual_left, body_top, visual_width, body_height
@@ -75,6 +81,7 @@ def visual_box(side, width_limit=None):
     return (slide_width - width) / 2, body_top, width, body_height
 
 
+# adds a fitted picture and optional caption to the slide
 def place_picture(deck, slide, path, box, alt, caption=""):
     left, top, width, height = box
     room = height - (caption_height if caption else 0)
@@ -83,6 +90,7 @@ def place_picture(deck, slide, path, box, alt, caption=""):
         write_text(deck, slide, literal(caption), left, top + room + 0.1, width, 14, "muted", italic=True, align=PP_ALIGN.CENTER, name="Caption")
 
 
+# centers a rendered equation image inside its slide box
 def place_equation(deck, slide, piece, box):
     left, top, width, height = box
     stream, (natural_width, natural_height) = equation_png(deck, piece.data)
@@ -92,6 +100,7 @@ def place_equation(deck, slide, piece, box):
               f"Equation: {piece.data}")
 
 
+# adds a photo to the slide with its caption and credit
 def place_figure(deck, slide, piece, box):
     path, caption, credit, _ = deck.figures[piece.data]
     left, top, width, height = box
@@ -101,6 +110,7 @@ def place_figure(deck, slide, piece, box):
     write_text(deck, slide, literal(credit), left, top + photo_height + caption_height, width, 10, "muted", name="Credit")
 
 
+# prepares a visual piece for slide rendering
 def prepared_visual(deck, piece):
     if piece.kind == "figure":
         return piece if piece.data in deck.figures else None
@@ -122,6 +132,7 @@ def prepared_visual(deck, piece):
     return piece
 
 
+# turns an unsupported visual into readable slide content
 def visual_fallback(deck, piece):
     if piece.kind == "diagram":
         lines = diagram_as_text(piece.data)

@@ -49,27 +49,33 @@ break_piece = Piece("break")
 
 
 class FlowReader:
+    # sets up the rendering context and its document settings
     def __init__(self, deck):
         self.deck, self.sections, self.lists, self.caption, self.labels = deck, [], [], "", {}
 
+    # returns the current section parts, creating a default section when needed
     @property
     def parts(self):
         if not self.sections:
             self.sections.append(Section("", 2, []))
         return self.sections[-1].parts
 
+    # replaces a footnote label with its numbered marker
     def number_of(self, match):
         return "^" + str(self.labels.setdefault(match.group(1), len(self.labels) + 1)) + "^"
 
+    # converts footnote and checkbox syntax to visible text
     def source_of(self, inline):
         source = footnote_mark.sub(self.number_of, inline.content)
         return checkbox.sub(lambda match: "☐ " if match.group(1) == " " else "☑ ", source)
 
+    # reads markdown tokens into slide content parts
     def read(self, tokens):
         index = 0
         while index < len(tokens):
             index = self.step(tokens, index)
 
+    # dispatches the current token and returns the next unread position
     def step(self, tokens, index):
         token = tokens[index]
         kind = token.type
@@ -105,6 +111,7 @@ class FlowReader:
             return self.container(tokens, index)
         return index + 1
 
+    # starts a slide section or adds a subheading from a markdown heading
     def heading(self, tokens, index):
         level, source = int(tokens[index].tag[1]), anchor.sub("", tokens[index + 1].content)
         if level <= 2:
@@ -113,6 +120,7 @@ class FlowReader:
             self.parts.append(Item(source, "subheading"))
         return index + 3
 
+    # reads a markdown container and adds its contents to the current section
     def container(self, tokens, index):
         token = tokens[index]
         end = closing_index(tokens, index, token.type, token.type[:-5] + "_close")
@@ -122,11 +130,13 @@ class FlowReader:
         self.read(tokens[index + 1:end])
         return end + 1
 
+    # adds blockquote text to the current slide section
     def quote(self, tokens, index):
         end = closing_index(tokens, index, "blockquote_open", "blockquote_close")
         self.parts.extend(Item(self.source_of(token), "quote") for token in tokens[index:end] if token.type == "inline")
         return end + 1
 
+    # turns a markdown paragraph into slide content
     def paragraph(self, tokens, index):
         inline, equations = without_display_maths(tokens[index + 1])
         picture = next((child for child in inline.children or [] if child.type == "image"), None)
@@ -142,6 +152,7 @@ class FlowReader:
         self.parts.extend(Piece("equation", equation.strip()) for equation in equations)
         return index + 3
 
+    # assigns a list item its bullet or numbering details
     def listed_item(self, source):
         if not self.lists:
             return Item(source)
@@ -153,6 +164,7 @@ class FlowReader:
         current["number"] += 1
         return item
 
+    # reads a markdown table into slide table data
     def table(self, tokens, index):
         end = closing_index(tokens, index, "table_open", "table_close")
         rows, row = [], None
@@ -174,6 +186,7 @@ class FlowReader:
         self.caption = ""
         return end + 1 + (3 if styled else 0)
 
+    # turns a code fence into a chart, diagram, image, or code block
     def fence(self, token):
         language = token.info.split("{")[0].strip()
         content = token.content
@@ -199,6 +212,7 @@ class FlowReader:
             self.parts.append(Piece("code", content.rstrip("\n"), language))
 
 
+# reads markdown into titled slide sections
 def read_sections(deck, markdown):
     reader = FlowReader(deck)
     reader.read(parser.parse(markdown))

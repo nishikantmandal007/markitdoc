@@ -13,10 +13,12 @@ from markitdoc.visuals.photo_fit import fitted_image
 photo_width_limit = 2400
 
 
+# moves a picture behind other slide content
 def send_to_back(slide, picture):
     slide.shapes._spTree.insert(2, picture._element)
 
 
+# adds a picture to a slide and sets its description
 def add_image(slide, source, left, top, width, height, alt, name="Picture"):
     picture = slide.shapes.add_picture(source, Inches(left), Inches(top), Inches(width), Inches(height))
     picture.name = name
@@ -24,20 +26,24 @@ def add_image(slide, source, left, top, width, height, alt, name="Picture"):
     return picture
 
 
+# returns an image width-to-height ratio
 def image_ratio(source):
     with Image.open(source) as picture:
         return picture.width / picture.height
 
 
+# fits an image inside a box without changing its proportions
 def contained(ratio, left, top, width, height):
     drawn_width, drawn_height = (width, width / ratio) if width / height < ratio else (height * ratio, height)
     return left + (width - drawn_width) / 2, top + (height - drawn_height) / 2, drawn_width, drawn_height
 
 
+# adds a translucent color overlay to a slide image
 def overlay(deck, top, bottom, start=0.0):
     return ((start, 1.0, top, bottom, deck.theme.rgb("night")),)
 
 
+# places an image across the full slide with an optional overlay
 def full_bleed(deck, slide, image, fades, alt):
     picture = add_image(slide, photo_for(deck, image[0], slide_width, slide_height, fades), 0, 0, slide_width, slide_height, alt,
                         "Background photo")
@@ -45,6 +51,7 @@ def full_bleed(deck, slide, image, fades, alt):
     write_text(deck, slide, literal(image[2]), slide_width - side_margin - 6, 7.05, 6, 10, soft_white, align=PP_ALIGN.RIGHT, name="Credit")
 
 
+# places an image beside a text area on the slide
 def half_bleed(deck, slide, image, alt):
     side = deck.photo_side
     deck.photo_side = "left" if side == "right" else "right"
@@ -56,12 +63,14 @@ def half_bleed(deck, slide, image, alt):
     return (side_margin if side == "right" else half + 0.6), half - 1.2
 
 
+# places a slide title within the available text column
 def side_title(deck, slide, title, left, width, role="ink"):
     size, height = place_title(deck, slide, title, role, left, 0.65, width, 2.2, title_sizes + (22, 20), 4, MSO_ANCHOR.TOP)
     add_rect(deck, slide, left, 0.65 + height + 0.18, 1.2, 0.04, "mood", "Title rule")
     return 0.65 + height + 0.55
 
 
+# returns the photo assigned to a designed block
 def photo_for(deck, path, width, height, fades=()):
     fitted = Path(fitted_image(Path(path), width * 100, height * 100, deck.work_folder, fades, deck.photos, deck.theme))
     with Image.open(fitted) as picture:
@@ -71,6 +80,7 @@ def photo_for(deck, path, width, height, fades=()):
     return str(fitted)
 
 
+# adds a vertical color fade to a slide image
 def add_fade(slide):
     element = slide._element
     transition = etree.Element(qn("p:transition"), spd="fast")

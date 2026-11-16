@@ -6,10 +6,12 @@ fonts_by_file = {"PTSerif": "Georgia"}
 sans_font, mono_font = "Calibri", "Consolas"
 
 
+# lightens a color toward white by the requested share
 def lifted(rgb, amount=0.4):
     return tuple(int(channel + (255 - channel) * amount) for channel in rgb)
 
 
+# formats an ISO date as a long readable date
 def long_date(text):
     try:
         moment = datetime.strptime(str(text).strip(), "%Y-%m-%d")
@@ -18,6 +20,7 @@ def long_date(text):
     return f"{moment.day} {moment:%B %Y}"
 
 
+# parses a creation date or returns the current time
 def creation_date(written):
     try:
         if written:
@@ -30,5 +33,6 @@ def creation_date(written):
     return datetime.combine(date.today(), time.min, tzinfo=timezone.utc)
 
 
+# maps a font file path to a font name supported by Office
 def office_font(path):
     return next((font for stem, font in fonts_by_file.items() if stem in Path(path).name), sans_font)

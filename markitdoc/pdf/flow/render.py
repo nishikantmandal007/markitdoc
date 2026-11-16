@@ -41,10 +41,12 @@ indent_step = 8
 soft_break_share = 0.35
 
 
+# parses and renders markdown into flowing PDF pages
 def render_flow(pdf: FlowPages, markdown: str):
     render_tokens(pdf, parser.parse(markdown))
 
 
+# renders markdown tokens into the current output format
 def render_tokens(pdf: FlowPages, tokens):
     index, list_stack, notes, indent, pending = 0, [], [], 0, ""
     note_texts, placed = {}, set()
@@ -179,6 +181,7 @@ def render_tokens(pdf: FlowPages, tokens):
         add_notes(pdf, remaining)
 
 
+# measures the page count and final-page fill for flowing content
 def flow_tail(pdf: FlowPages, markdown: str, spacing: float):
     probe = probe_of(pdf, pdf.t_margin)
     probe.spacing = spacing
@@ -186,6 +189,7 @@ def flow_tail(pdf: FlowPages, markdown: str, spacing: float):
     return probe.page_no(), (probe.get_y() - probe.t_margin) / (probe.page_break_trigger - probe.t_margin)
 
 
+# tightens text spacing when it avoids a nearly empty final page
 def fitted_spacing(pdf: FlowPages, markdown: str):
     pages, tail = flow_tail(pdf, markdown, 1.0)
     if pages < 2 or tail > 0.2:
@@ -197,6 +201,7 @@ def fitted_spacing(pdf: FlowPages, markdown: str):
     return 1.0
 
 
+# renders a columns or box container in flowing PDF content
 def add_container(pdf: FlowPages, kind: str, info: str, inner):
     if kind == "columns":
         add_columns(pdf, inner)
@@ -236,6 +241,7 @@ def add_container(pdf: FlowPages, kind: str, info: str, inner):
     pdf.set_xy(margins[0], max(pdf.get_y(), top + height if pdf.get_y() >= top else pdf.get_y()) + 4)
 
 
+# divides container content into two groups using headings or top-level blocks
 def column_groups(inner):
     starts = [position for position, token in enumerate(inner) if token.type == "heading_open"]
     if len(starts) < 2:
@@ -246,6 +252,7 @@ def column_groups(inner):
     return [inner[:half], inner[half:]]
 
 
+# adds columns to the PDF
 def add_columns(pdf: FlowPages, inner, gutter=8):
     margins, full = (pdf.l_margin, pdf.r_margin), pdf.area
     width = (full - gutter) / 2
@@ -278,6 +285,7 @@ def add_columns(pdf: FlowPages, inner, gutter=8):
     pdf.set_xy(margins[0], bottom + 2)
 
 
+# measures the height needed for opening
 def opening_height(pdf: FlowPages, tokens, position):
     if pdf.measuring or position >= len(tokens):
         return 0
@@ -295,6 +303,7 @@ def opening_height(pdf: FlowPages, tokens, position):
     return 0
 
 
+# draws the table of contents from the PDF outline
 def render_toc(pdf: FlowPages, outline):
     pdf.set_xy(pdf.l_margin, 24)
     pdf.set_font("Head", "B", 18)

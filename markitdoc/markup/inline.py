@@ -49,6 +49,7 @@ class Run:
 span_roles = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
 
 
+# converts inline markdown tokens into styled text runs
 def inline_runs(token, targets=frozenset()) -> list[Run]:
     runs, state, spans, link = [], {"bold": 0, "italic": 0, "strike": 0}, [], ""
     script = ""
@@ -98,6 +99,7 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
     return runs
 
 
+# converts TeX commands into markdown that the renderer can display
 def inline_maths(tex):
     text = re.sub(r"\\(left|right|big|Big|bigg|Bigg)\b", "", tex)
     text = re.sub(r"\\[,;:! ]|\\q?quad\b", " ", text)
@@ -118,14 +120,17 @@ def inline_maths(tex):
     return re.sub(r" {2,}", " ", text).strip()
 
 
+# escapes markdown punctuation so the text displays literally
 def literal(text):
     return re.sub(r"([\\`*_{}\[\]<>#~^$|])", r"\\\1", text)
 
 
+# converts inline source text into styled runs
 def runs_of(source):
     tokens = parser.parseInline(source or "")
     return inline_runs(tokens[0]) if tokens else []
 
 
+# returns the visible text from inline markdown
 def plain_text(source):
     return "".join(run.text for run in runs_of(source)).strip()

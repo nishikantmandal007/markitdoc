@@ -4,6 +4,7 @@ from markitdoc.visuals.photo_fit import fitted_image
 measuring_photo = "measuring photo"
 
 
+# places a cropped photo on the PDF page and adds its credit when available
 def placed(pdf, image, x, y, width, height, work_folder, fades=(), description="Photograph"):
     if image == measuring_photo:
         return
@@ -13,6 +14,7 @@ def placed(pdf, image, x, y, width, height, work_folder, fades=(), description="
         credit_on_photo(pdf, x, y, width, height, *pdf.photo_credit)
 
 
+# draws a compact photo credit over the bottom corner of the image
 def credit_on_photo(pdf, x, y, width, height, credit, source):
     pdf.set_font("Brand", "", 5.5)
     text = credit if pdf.get_string_width(credit) < width - 8 else credit.split(",")[0]

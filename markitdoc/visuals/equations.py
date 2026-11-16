@@ -11,6 +11,7 @@ from fpdf import FPDF
 logger = logging.getLogger(__name__)
 
 
+# renders TeX as an SVG using the math text engine
 @lru_cache(maxsize=64)
 def equation_svg(tex, color):
     previous = {key: plt.rcParams[key] for key in ("svg.fonttype", "svg.hashsalt", "mathtext.fontset")}
@@ -31,6 +32,7 @@ mathtext_equivalents = {r"\implies": r"\Rightarrow", r"\impliedby": r"\Leftarrow
                         r"\rvert": "|", r"\lVert": r"\Vert", r"\rVert": r"\Vert", r"\le ": r"\leq ", r"\ge ": r"\geq "}
 
 
+# rewrites common TeX commands for the math text renderer
 def mathtext_ready(tex):
     tex = " ".join(tex.split())
     for command, equivalent in mathtext_equivalents.items():
@@ -38,11 +40,13 @@ def mathtext_ready(tex):
     return tex
 
 
+# renders TeX as an SVG using the typesetting engine
 @lru_cache(maxsize=64)
 def typeset_svg(tex, color):
     return ziamath.Latex(tex, size=15, color=color).svg().encode()
 
 
+# renders TeX with the typesetting engine and falls back to math text
 def equation_drawing(tex, color):
     try:
         return typeset_svg(tex, color)
@@ -51,6 +55,7 @@ def equation_drawing(tex, color):
     return equation_svg(tex, color)
 
 
+# reads SVG dimensions and converts them to millimetres
 def svg_size(svg):
     width = re.search(rb'width="([\d.]+)(pt|px)?"', svg)
     height = re.search(rb'height="([\d.]+)(pt|px)?"', svg)
@@ -58,10 +63,12 @@ def svg_size(svg):
     return (float(width.group(1)) * unit, float(height.group(1)) * unit) if width and height else (60.0, 12.0)
 
 
+# renders a themed equation as a PNG image
 def equation_png(deck, tex):
     return equation_png_bytes(mathtext_ready(tex), "#" + deck.theme.colors["ink"].lstrip("#"))
 
 
+# converts rendered equation SVG into PNG bytes and dimensions
 def equation_png_bytes(tex, color):
     svg = equation_drawing(tex, color)
     width, height = svg_size(svg)

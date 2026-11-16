@@ -10,6 +10,7 @@ body_size, small_size = 11, 9
 heading_sizes = {1: 22, 2: 16, 3: 13, 4: 11.5}
 
 
+# sets the Word page size, margins, and orientation
 def setup_page(writer):
     section = writer.document.sections[0]
     section.page_width, section.page_height = Cm(page_width), Cm(page_height)
@@ -18,6 +19,7 @@ def setup_page(writer):
     section.header_distance = section.footer_distance = Cm(1.1)
 
 
+# sets a Word style font from the document theme
 def style_font(style, writer, size, role="body", bold=False, italic=False, heading=False):
     font = style.font
     font.name, font.size, font.bold, font.italic = writer.heading_font if heading else writer.body_font, Pt(size), bold, italic
@@ -27,6 +29,7 @@ def style_font(style, writer, size, role="body", bold=False, italic=False, headi
         fonts.set(qn(key), font.name)
 
 
+# sets paragraph spacing and line height for a Word style
 def style_spacing(style, before, after, line=1.15, keep=False):
     form = style.paragraph_format
     form.space_before, form.space_after, form.line_spacing = Pt(before), Pt(after), line
@@ -34,6 +37,7 @@ def style_spacing(style, before, after, line=1.15, keep=False):
     form.widow_control = True
 
 
+# creates or updates a named Word paragraph style
 def paragraph_style(writer, name, base="Normal"):
     styles = writer.document.styles
     if name in [style.name for style in styles]:
@@ -44,6 +48,7 @@ def paragraph_style(writer, name, base="Normal"):
     return style
 
 
+# configures the document paragraph, heading, and table styles
 def setup_styles(writer):
     styles = writer.document.styles
     normal = styles["Normal"]
@@ -88,6 +93,7 @@ def setup_styles(writer):
     style_spacing(note, 0, 3, 1.1)
 
 
+# removes all visible borders from a Word table
 def remove_borders(style):
     properties = style.element.find(qn("w:pPr"))
     if properties is not None:
@@ -95,6 +101,7 @@ def remove_borders(style):
             properties.remove(border)
 
 
+# adds a colored left border to a Word paragraph
 def border_left(element, color, size, space):
     properties = element.get_or_add_pPr()
     borders = properties.find(qn("w:pBdr"))
@@ -107,6 +114,7 @@ def border_left(element, color, size, space):
     borders.append(edge)
 
 
+# adds a colored bottom border to a Word paragraph
 def border_bottom(paragraph, color, size=6, space=4):
     properties = paragraph._p.get_or_add_pPr()
     borders = OxmlElement("w:pBdr")
@@ -117,6 +125,7 @@ def border_bottom(paragraph, color, size=6, space=4):
     properties.append(borders)
 
 
+# sets the background shading for a Word table style
 def shade_style(element, color):
     shading = OxmlElement("w:shd")
     for key, value in (("w:val", "clear"), ("w:color", "auto"), ("w:fill", color)):
@@ -124,6 +133,7 @@ def shade_style(element, color):
     element.get_or_add_pPr().append(shading)
 
 
+# sets the background color of a Word table cell
 def cell_fill(cell, color):
     properties = cell._tc.get_or_add_tcPr()
     for old in properties.findall(qn("w:shd")):
@@ -134,6 +144,7 @@ def cell_fill(cell, color):
     properties.append(shading)
 
 
+# sets the requested border edges on a Word table cell
 def cell_borders(cell, **edges):
     properties = cell._tc.get_or_add_tcPr()
     borders = properties.find(qn("w:tcBorders"))
@@ -152,6 +163,7 @@ def cell_borders(cell, **edges):
         borders.append(edge)
 
 
+# sets the inside margins of a Word table cell
 def cell_margins(cell, top=0.12, side=0.2, bottom=0.12):
     properties = cell._tc.get_or_add_tcPr()
     margins = OxmlElement("w:tcMar")
@@ -163,6 +175,7 @@ def cell_margins(cell, top=0.12, side=0.2, bottom=0.12):
     properties.append(margins)
 
 
+# creates and formats a Word table with the requested column widths
 def new_table(writer, rows, columns, widths=None):
     table = writer.body.add_table(rows=rows, cols=columns)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -190,6 +203,7 @@ def new_table(writer, rows, columns, widths=None):
     return table
 
 
+# keeps a paragraph with the following paragraph
 def keep_together(table):
     for row in table.rows[:-1]:
         for cell in row.cells:
@@ -197,12 +211,14 @@ def keep_together(table):
                 paragraph.paragraph_format.keep_with_next = True
 
 
+# prevents a Word table row from splitting across pages
 def never_split(row):
     properties = row._tr.get_or_add_trPr()
     keep = OxmlElement("w:cantSplit")
     properties.append(keep)
 
 
+# marks a Word table row as a repeating page header
 def repeat_header(row):
     properties = row._tr.get_or_add_trPr()
     header = OxmlElement("w:tblHeader")

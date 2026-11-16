@@ -20,6 +20,7 @@ keep_with_next = 28
 figure_ratio = 3 / 2
 
 
+# draws an equation in the PDF or falls back to readable TeX text
 def add_equation(pdf: FlowPages, tex: str):
     tex = mathtext_ready(tex)
     try:
@@ -38,10 +39,12 @@ def add_equation(pdf: FlowPages, tex: str):
     pdf.ln(3)
 
 
+# checks whether text runs need styled rendering
 def needs_runs(runs):
     return any(run.role or run.highlight or run.script for run in runs)
 
 
+# draws styled text runs with alignment and paragraph spacing
 def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=2.5):
     if align == "J" and not can_hyphenate(pdf.lang):
         align = "L"
@@ -65,6 +68,7 @@ def draw_runs(pdf: FlowPages, runs, align="L", indent=0, width=None, after=2.5):
     pdf.ln(after * pdf.spacing)
 
 
+# draws a numbered notes section in the PDF
 def add_notes(pdf: FlowPages, notes):
     pdf.ln(3)
     pdf.set_draw_color(*pdf.theme.rgb("rule"))
@@ -76,6 +80,7 @@ def add_notes(pdf: FlowPages, notes):
         pdf.ln(0.8)
 
 
+# places a matched image in the PDF with its caption and credit
 def add_figure(pdf: FlowPages, query: str):
     path, caption, credit, source = pdf.flow_images.get(query) or (None, "", "", "")
     if not path:
@@ -97,6 +102,7 @@ def add_figure(pdf: FlowPages, query: str):
     pdf.ln(3)
 
 
+# draws a section heading and tracks its outline level
 def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0):
     plain_text = text.replace("**", "").replace("__", "")
     if pdf.numbering and 2 <= level <= 4:
@@ -124,6 +130,7 @@ def add_heading(pdf: FlowPages, text: str, level: int, target=None, following=0)
         pdf.ln(2)
 
 
+# draws a paragraph with the requested alignment and leading
 def add_paragraph(pdf: FlowPages, text: str, align="L", indent=0, lead=False, after=2.5):
     if align == "J" and not can_hyphenate(pdf.lang):
         align = "L"
@@ -143,6 +150,7 @@ def add_paragraph(pdf: FlowPages, text: str, align="L", indent=0, lead=False, af
     pdf.ln(after * pdf.spacing)
 
 
+# draws a numbered or bulleted list item at its nesting level
 def add_list_item(pdf: FlowPages, text: str, list_stack, runs=()):
     current, depth = list_stack[-1], len(list_stack) - 1
     icon, text = strip_icon(text)
@@ -180,6 +188,7 @@ def add_list_item(pdf: FlowPages, text: str, list_stack, runs=()):
     pdf.ln(1 * pdf.spacing)
 
 
+# draws a colored callout around the paragraph text
 def add_callout(pdf: FlowPages, text: str):
     kind = next((name for name in callout_kinds if text.startswith(f"**{name}:**")), None)
     body = text.replace(f"**{kind}:**", "", 1).strip() if kind else text

@@ -40,6 +40,7 @@ document.fonts.load("16px Brand").then(() => document.fonts.load("bold 16px Bran
 </script></body></html>""" % (zoom, canvas_width, canvas_height, canvas_width, canvas_height)
 
 
+# adds a missing data-list key required by an infographic template
 def with_data_key(syntax: str) -> str:
     lines = syntax.strip().splitlines()
     first = lines[0].split() if lines else []
@@ -53,6 +54,7 @@ def with_data_key(syntax: str) -> str:
     return "\n".join(lines[:start] + [f"  {key}"] + ["  " + line for line in lines[start:]])
 
 
+# returns validation problems found in infographic syntax
 def problems_in_infographic(syntax: str) -> list[str]:
     lines = [line for line in with_data_key(syntax).splitlines() if line.strip()]
     first = lines[0].split() if lines else []
@@ -69,6 +71,7 @@ def problems_in_infographic(syntax: str) -> list[str]:
     return []
 
 
+# adds document theme colors to infographic syntax
 def themed(syntax: str, theme) -> str:
     first, rest = with_data_key(syntax).split("\n", 1)
     palette = " ".join("#" + theme.colors[role].lstrip("#") for role in ("mood", "accent", "primary", "muted"))
@@ -76,6 +79,7 @@ def themed(syntax: str, theme) -> str:
             f"\n  palette {palette}\n{rest}")
 
 
+# renders a validated infographic and reuses cached images
 def render_infographic(syntax: str, theme) -> Path | None:
     endpoint = os.getenv("GOTENBERG_ENDPOINT")
     if not endpoint or problems_in_infographic(syntax):

@@ -7,6 +7,7 @@ from markitdoc.utils.helpers import lifted
 from markitdoc.visuals.icons import icon_svg, strip_icon
 
 
+# draws a section label, title, and optional lead in the PDF
 def page_heading(pdf, block, label, top=22):
     pdf.kicker(margin, top, label)
     end = pdf.write_at(margin, top + 8, content_width, block.slots["title"], pdf.slot_size(block, "title"), "B", line_height=1.15)
@@ -15,6 +16,7 @@ def page_heading(pdf, block, label, top=22):
     return end
 
 
+# draws key figures in a grid on the PDF page
 def draw_figures(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     end = page_heading(pdf, block, "Key figures")
@@ -46,6 +48,7 @@ def draw_figures(pdf: PdfPages, block: Block, image, work_folder):
     return end, content_limit
 
 
+# draws key findings with headings and supporting text
 def draw_keypoints(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     end = page_heading(pdf, block, "Key findings")
@@ -68,6 +71,7 @@ def draw_keypoints(pdf: PdfPages, block: Block, image, work_folder):
     return y - gap, content_limit
 
 
+# draws up to four items in a two-by-two PDF matrix
 def draw_matrix(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     end = page_heading(pdf, block, "At a glance")
@@ -90,6 +94,7 @@ def draw_matrix(pdf: PdfPages, block: Block, image, work_folder):
     return bottom + max(overflow, 0), content_limit
 
 
+# draws two comparison columns with their item details
 def draw_comparison(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     end = page_heading(pdf, block, "Comparison")
@@ -122,6 +127,7 @@ def draw_comparison(pdf: PdfPages, block: Block, image, work_folder):
     return y, content_limit
 
 
+# draws process steps in a row or column layout
 def draw_process(pdf: PdfPages, block: Block, image, work_folder):
     pdf.fill_page("paper")
     end = page_heading(pdf, block, "How it works")
@@ -170,6 +176,7 @@ def draw_process(pdf: PdfPages, block: Block, image, work_folder):
     return bottom, content_limit
 
 
+# draws timeline entries as Gantt bars or dated rows
 def draw_timeline(pdf: PdfPages, block: Block, image, work_folder):
     variant = block.slots.get("variant", "vertical")
     dark = variant == "dark"

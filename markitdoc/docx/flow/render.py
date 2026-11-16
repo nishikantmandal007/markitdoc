@@ -40,6 +40,7 @@ alignments = {"center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.R
 box_drawing = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
 
+# parses markdown and renders its tokens into the Word document
 def render_markdown(writer, markdown):
     tokens = parser.parse(markdown)
     for position, token in enumerate(tokens):
@@ -50,6 +51,7 @@ def render_markdown(writer, markdown):
     render_tokens(writer, tokens)
 
 
+# renders markdown tokens into the current output format
 def render_tokens(writer, tokens):
     index, stack, pending = 0, [], ""
     while index < len(tokens):
@@ -113,6 +115,7 @@ def render_tokens(writer, tokens):
         index += 1
 
 
+# draws a section heading and tracks its outline level
 def add_heading(writer, level, inline):
     found = anchor.search(inline.content)
     runs = inline_runs(inline, writer.targets)
@@ -138,6 +141,7 @@ def add_heading(writer, level, inline):
     return paragraph
 
 
+# renders a paragraph token with its settings and inline content
 def add_paragraph_token(writer, tokens, index, stack, pending):
     inline, equations = without_display_maths(tokens[index + 1])
     content = inline.content.strip()
@@ -173,6 +177,7 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
     return ""
 
 
+# renders a blockquote as a callout or quote paragraphs
 def add_quote(writer, tokens):
     inlines = [token for token in tokens if token.type == "inline"]
     if not inlines:
@@ -188,6 +193,7 @@ def add_quote(writer, tokens):
         write_runs(writer, paragraph, inline_runs(token, writer.targets))
 
 
+# draws a colored callout table in the Word document
 def add_callout(writer, label, runs_list, role="mood"):
     table = callout_table(writer, writer.hex(writer.tint(role, 0.9)), writer.hex(role))
     cell = table.cell(0, 0)
@@ -198,6 +204,7 @@ def add_callout(writer, label, runs_list, role="mood"):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# creates a shaded one-cell callout table with an accent border
 def callout_table(writer, fill, accent):
     table = new_table(writer, 1, 1, [writer.width])
     cell = table.cell(0, 0)
@@ -207,6 +214,7 @@ def callout_table(writer, fill, accent):
     return table
 
 
+# renders a columns or box container in the Word document
 def add_container(writer, name, tokens):
     if name == "columns":
         children = top_level_blocks(tokens)
@@ -227,12 +235,14 @@ def add_container(writer, name, tokens):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# removes an unused leading paragraph from a table cell
 def drop_empty_first(cell):
     first = cell.paragraphs[0]
     if not first.text and len(cell.paragraphs) > 1 and not first._p.xpath(".//w:drawing"):
         first._p.getparent().remove(first._p)
 
 
+# groups tokens into top-level markdown blocks
 def top_level_blocks(tokens):
     blocks, current = [], []
     for token in tokens:
@@ -243,6 +253,7 @@ def top_level_blocks(tokens):
     return blocks + ([current] if current else [])
 
 
+# renders a code fence as text, chart, diagram, or code
 def add_fence(writer, language, content):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
     language = language.split("{")[0].strip()
@@ -267,6 +278,7 @@ def add_fence(writer, language, content):
         add_code(writer, content)
 
 
+# renders chart data as an image in the Word document
 def add_chart(writer, content, settings):
     data = chart_data(content)
     if not data:
@@ -288,6 +300,7 @@ def add_chart(writer, content, settings):
         caption(writer, title)
 
 
+# renders a diagram or falls back to a Word step table
 def add_diagram(writer, content):
     lines = content.strip().splitlines()
     titled = any(line.strip().startswith(("title ", "pie title ")) for line in lines)
@@ -312,6 +325,7 @@ def add_diagram(writer, content):
         caption(writer, title)
 
 
+# adds monospaced code lines to the Word document
 def add_code(writer, content, size=9.5):
     for line in content.rstrip("\n").splitlines() or [""]:
         paragraph = writer.body.add_paragraph(style="Code")
@@ -319,6 +333,7 @@ def add_code(writer, content, size=9.5):
         run.font.size = Pt(size)
 
 
+# adds a rendered equation or readable TeX fallback to Word
 def add_equation(writer, tex):
     try:
         image, (width_mm, _) = equation_png_bytes(mathtext_ready(tex), "#" + writer.theme.colors["ink"].lstrip("#"))
@@ -331,6 +346,7 @@ def add_equation(writer, tex):
     add_picture(writer, image, min(writer.width * 0.8, width_mm / 10), "Equation")
 
 
+# adds a matched image, caption, and credit to Word
 def add_figure(writer, query):
     found = writer.figures.get(query)
     if not found:
@@ -341,6 +357,7 @@ def add_figure(writer, query):
     caption(writer, title or query, credit, source)
 
 
+# adds footnotes collected from the markdown to Word
 def add_notes(writer):
     if not writer.notes:
         return

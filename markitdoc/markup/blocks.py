@@ -13,15 +13,18 @@ paragraph_break = "||"
 leading_number = re.compile(r"^\s*(step\s+)?\d+\s*[.):-]\s*", re.IGNORECASE)
 
 
+# splits a block slot into the text pieces used for fitting
 def slot_pieces(block, slot):
     text = block.slots.get(slot, "")
     return paragraphs(text) if block.layout == "chapter" and slot == "body" else [text.replace(paragraph_break, "\n")]
 
 
+# splits text into non-empty paragraphs
 def paragraphs(text):
     return [part.strip() for part in text.split(paragraph_break) if part.strip()]
 
 
+# fills layout aliases and defaults into a document block
 def prepared(block: Block) -> Block:
     layout = layouts.get(block.layout)
     if not layout:
@@ -51,15 +54,18 @@ def prepared(block: Block) -> Block:
     return replace(block, slots=slots, items=items)
 
 
+# applies a text change while preserving a leading icon shortcode
 def icon_kept(text, change):
     icon, rest = strip_icon(text)
     return (f":{icon}: " if icon else "") + change(rest)
 
 
+# makes text safe for a markdown table cell
 def cell(text):
     return text.replace("|", "/").replace("\n", " ")
 
 
+# checks whether a block uses a dark layout variant
 def is_dark(block: Block, theme: Theme) -> bool:
     layout = layouts.get(block.layout)
     if not layout or not layout.dark_variants:
@@ -68,6 +74,7 @@ def is_dark(block: Block, theme: Theme) -> bool:
     return variant in layout.dark_variants
 
 
+# switches adjacent dark blocks to a light variant for page contrast
 def balanced(blocks, theme: Theme):
     result, previous_dark = [], False
     for block in blocks:
@@ -79,6 +86,7 @@ def balanced(blocks, theme: Theme):
     return tuple(result)
 
 
+# converts designed blocks into ordinary flowing markdown content
 def as_flow(block: Block) -> Block:
     slots = block.slots
     if block.layout in ("process", "keypoints") and block.items:

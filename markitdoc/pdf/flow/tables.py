@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 minimum_column, readable_column, column_padding = 16, 26, 7
 
 
+# converts markdown table tokens into styled cell rows
 def table_rows(tokens, targets=frozenset(), roles=None):
     rows, row = [], None
     for token in tokens:
@@ -33,6 +34,7 @@ def table_rows(tokens, targets=frozenset(), roles=None):
     return rows
 
 
+# chooses readable table column widths within the available space
 def column_widths(pdf: FlowPages, rows, available, size=table_size):
     pdf.set_font("Brand", "B", size)
     natural, longest_word = [], []
@@ -50,6 +52,7 @@ def column_widths(pdf: FlowPages, rows, available, size=table_size):
     return [low + spare * extra / total for low, extra in zip(minimums, flexible)], readable
 
 
+# draws a styled PowerPoint table with a repeated header
 def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
     if not rows or not rows[0]:
         return

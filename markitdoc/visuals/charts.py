@@ -17,6 +17,7 @@ _PALETTE = [
 
 
 
+# selects a chart series color from the configured palette
 def series_color(data, index):
     palette = data.get("colors") or _PALETTE
     return palette[index % len(palette)]
@@ -29,6 +30,7 @@ _GRID = "#F0F1F3"
 _INK = "#111827"
 
 
+# sets chart backgrounds, tick labels, and grid styling
 def _apply_theme(ax, fig, chart_type="bar"):
     fig.patch.set_facecolor(_BG)
     ax.set_facecolor(_BG)
@@ -43,12 +45,14 @@ def _apply_theme(ax, fig, chart_type="bar"):
     ax.set_axisbelow(True)
 
 
+# formats chart values with thousands separators and one decimal when needed
 def _fmt_val(val):
     if isinstance(val, float) and val != int(val):
         return f"{val:,.1f}"
     return f"{int(val):,}"
 
 
+# draws a vertical bar chart with labels and value annotations
 def _bar(ax, data):
     labels = data["labels"]
     datasets = data.get("datasets", [])
@@ -80,6 +84,7 @@ def _bar(ax, data):
                   borderaxespad=0.3)
 
 
+# draws a horizontal bar chart with labels and value annotations
 def _horizontal_bar(ax, data):
     labels = data["labels"]
     datasets = data.get("datasets", [])
@@ -112,6 +117,7 @@ def _horizontal_bar(ax, data):
                   borderaxespad=0.3)
 
 
+# draws stacked bars for each chart category
 def _stacked_bar(ax, data):
     labels = data["labels"]
     datasets = data.get("datasets", [])
@@ -134,6 +140,7 @@ def _stacked_bar(ax, data):
                   handlelength=1.0, handletextpad=0.4, borderaxespad=0.3)
 
 
+# draws one or more lines across the chart categories
 def _line(ax, data):
     labels = data["labels"]
     datasets = data.get("datasets", [])
@@ -169,6 +176,7 @@ def _line(ax, data):
     ax.set_ylim(ymin - margin, ymax + margin)
 
 
+# draws a pie or donut chart with category labels
 def _pie(ax, data, donut=False):
     labels = data["labels"]
     values = data.get("datasets", [{}])[0].get("values", [])
@@ -191,6 +199,7 @@ def _pie(ax, data, donut=False):
               handlelength=1.0, handletextpad=0.5)
 
 
+# draws cumulative increases and decreases as a waterfall chart
 def _waterfall(ax, data):
     labels = list(data["labels"])
     values = [float(value) for value in data["datasets"][0]["values"]]
@@ -230,6 +239,7 @@ _RENDERERS = {
 }
 
 
+# parses chart data from JSON or simple chart fence syntax
 def parse_chart_fence(lines: list[str]) -> Optional[dict]:
     raw = "\n".join(lines).strip()
     if not raw:
@@ -247,6 +257,7 @@ def parse_chart_fence(lines: list[str]) -> Optional[dict]:
     return data
 
 
+# renders validated chart data as a PNG image
 def render_chart(data: dict, width_inches: float = 6.0,
                  height_inches: float = 3.5, dpi: int = 150) -> bytes:
     chart_type = data["type"]
@@ -294,6 +305,7 @@ def render_chart(data: dict, width_inches: float = 6.0,
     return buf.read()
 
 
+# returns the language label from an opening code fence
 def get_fence_language(line: str) -> str:
     stripped = line.strip()
     if stripped.startswith("```"):
