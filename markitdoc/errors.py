@@ -9,3 +9,6 @@ class EmptyDocumentError(MarkitDocError, ValueError):
 
 class RenderError(MarkitDocError):
     pass
+
+class ThemeError(MarkitDocError, ValueError):
+    pass
