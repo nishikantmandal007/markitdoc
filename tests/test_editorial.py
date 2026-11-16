@@ -197,3 +197,36 @@ def test_should_list_figures_in_word_with_a_dotted_tab_and_a_page_field(tmp_path
 
     assert "Figure 1. One" in " ".join(paragraph.text for paragraph in WordDocument(str(path)).paragraphs)
     assert 'w:leader="dot"' in xml and "PAGEREF one" in xml
+
+
+def refs_findings(tmp_path, refs, body="Seen in [@dewit2021].\n"):
+    (tmp_path / "refs.yml").write_text(refs, encoding="utf-8")
+    return check_document(source(body), (tmp_path,))
+
+
+ENTRY = "dewit2021:\n  author: [\"de Wit, M.\", \"Jansen, P.\"]\n  title: Wetlands\n  year: 2021\n"
+
+
+@pytest.mark.parametrize("style, shown", [("author-year", "(de Wit and Jansen, 2021)"), ("numeric", "[1]")])
+def test_should_take_the_citation_style_from_the_refs_file(tmp_path, style, shown):
+    (tmp_path / "refs.yml").write_text(f"style: {style}\n{ENTRY}", encoding="utf-8")
+    path = render(source("Seen in [@dewit2021].\n"), "pdf", tmp_path / "out.pdf", options=Options(style_folders=(tmp_path,)))
+
+    assert shown in flat("\n".join(page.get_text() for page in pymupdf.open(path)))
+    assert not [item for item in refs_findings(tmp_path, f"style: {style}\n{ENTRY}") if item.severity == "error"]
+
+
+def test_should_skip_a_malformed_refs_entry_with_a_warning_and_keep_the_others(tmp_path):
+    findings = refs_findings(tmp_path, f"{ENTRY}broken: just text\n", "Seen in [@dewit2021] and [@broken].\n")
+    messages = [(item.severity, item.message, item.fix) for item in findings]
+
+    assert not any("unusable" in message for _, message, _ in messages)
+    assert any(severity == "warning" and "'broken'" in message for severity, message, _ in messages)
+    assert not any("'dewit2021'" in message and severity == "error" for severity, message, _ in messages)
+    assert ("error", "unknown reference 'broken'", "add 'broken' to the refs file") in messages
+
+
+def test_should_point_an_unknown_citation_at_the_refs_file_when_the_file_has_a_problem(tmp_path):
+    findings = refs_findings(tmp_path, "just a string")
+
+    assert any(item.message == "unknown reference 'dewit2021'" and "refs file" in item.fix for item in findings)
