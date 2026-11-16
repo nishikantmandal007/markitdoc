@@ -83,7 +83,7 @@ class Deck:
         self.presentation.slide_width = Inches(SLIDE_WIDTH)
         self.presentation.slide_height = Inches(SLIDE_HEIGHT)
         self.theme, self.meta, self.work_folder = theme, meta, work_folder
-        self.styles, self.numbers = styles, numbering.targets if numbering else {}
+        self.styles, self.numbers = styles, numbering.targets
         self.title_look = self.look("h2")
         self.measurer = PdfPages(theme)
         self.measurer.add_page()
@@ -100,10 +100,8 @@ class Deck:
         if self.branded:
             self.drop_slides_after(1)
 
-    # the look of an element under the stylesheet limited to what a slide obeys, None for version 1 decks
+    # the look of an element under the stylesheet limited to what a slide obeys
     def look(self, selector=None, classes=(), inline=None, context=None):
-        if not self.styles:
-            return None
         found = self.styles.resolve(selector, classes, inline, None, "", context)
         return self.scaled(self.styles.style_of({key: item for key, item in found.items()
                                                  if item[1] != ENGINE_SOURCE and not (key == "size" and item[1].endswith(":text"))}))

@@ -76,10 +76,8 @@ class FlowReader:
         source = FOOTNOTE_MARK.sub(self.number_of, inline.content)
         return CHECKBOX.sub(lambda match: "☐ " if match.group(1) == " " else "☑ ", source)
 
-    # an item with the look the stylesheet gives its element, unchanged for version 1 decks
+    # an item with the look the stylesheet gives its element
     def styled(self, item, selector, attributes=None):
-        if not self.deck.styles:
-            return item
         found = attributes or parse_attributes("")
         return replace(item, look=self.deck.look(selector, found.classes, found.values, self.context))
 
@@ -149,15 +147,15 @@ class FlowReader:
         if title:
             self.parts.append(Item(title.group(1), "subheading"))
         inner, name, found = tokens[index + 1:end], token.type[len("container_"):-len("_open")], parse_attributes(token.info)
-        if self.deck.styles and name == "columns":
-            blocks = top_level_blocks(inner, True)
+        if name == "columns":
+            blocks = top_level_blocks(inner)
             half = (len(blocks) + 1) // 2
             columns = [self.parts_of([item for block in part for item in block]) for part in (blocks[:half], blocks[half:])]
             weights, gap = self.deck.styles.columns(found.values)
             self.parts.append(Piece("columns", (weights, gap, *[[part for part in column if isinstance(part, Item)] for column in columns])))
             self.parts.extend(part for column in columns for part in column if not isinstance(part, Item))
             return end + 1
-        look = self.deck.look("box", found.classes, found.values, self.context) if self.deck.styles and name == "box" else None
+        look = self.deck.look("box", found.classes, found.values, self.context) if name == "box" else None
         if look and look.boxed():
             before, self.context = self.context, {key: item for key, item in look.props.items() if key in STYLE_PROPERTIES}
             parts, self.context = self.parts_of(inner), before
@@ -179,8 +177,8 @@ class FlowReader:
         picture = next((child for child in inline.children or [] if child.type == "image"), None)
         raw = self.source_of(tokens[index + 1] if not equations else inline)
         source, tail = SETTINGS_TAIL.sub("", raw).strip(), SETTINGS_TAIL.search(raw)
-        attributes = parse_attributes(tail.group().strip()) if tail and self.deck.styles else None
-        written = written_image(tokens[index + 1].content.strip()) if picture is not None and self.deck.styles else None
+        attributes = parse_attributes(tail.group().strip()) if tail else None
+        written = written_image(tokens[index + 1].content.strip()) if picture is not None else None
         if written:
             self.parts.append(self.file_image(written))
         elif picture is not None:

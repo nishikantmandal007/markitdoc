@@ -19,7 +19,7 @@ from markitdoc.themes.theme_constants import (
 SLIDE_IGNORED_KEYS = ("page", "pages")
 
 
-# the language v2 core card for a format: front matter, named styles, attributes, boxes, columns, references and check
+# the language core card for a format: front matter, named styles, attributes, boxes, columns, references and check
 def core_card(output_format="pdf"):
     keys = [key for key in STYLE_FILE_KEYS if not (output_format == "pptx" and key in SLIDE_IGNORED_KEYS)]
     limits = limits_of(output_format)
@@ -28,7 +28,7 @@ def core_card(output_format="pdf"):
     dropcap = "" if output_format == "pptx" else ", dropcap lang"
     pages = "" if output_format == "pptx" else ", [@id page] a page number"
     lists = "" if output_format == "pptx" else "; lists: [figures, tables] adds lists; a ::: references block places the bibliography"
-    return f"""MARKITDOC LANGUAGE v2 (core). Put 'markitdoc: 2' in the front matter to switch it on; without it nothing below applies.
+    return f"""MARKITDOC LANGUAGE (core).
 Front matter and *.style.yml share one schema, top-level keys: {', '.join(keys)}.
 - use: [house]  style files, applied in order, later wins. text: {{font: serif, size: 10.5pt, align: justify}} body defaults.
 - set: rules by element, e.g. h2: {{font: display, color: accent}}. Elements: {' '.join(STYLE_SELECTORS)}; sub-part: table.header, paragraph.first.

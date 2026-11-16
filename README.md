@@ -56,14 +56,13 @@ markitdoc guide pptx                         # the markdown guide for slides
 `markitdoc.guide("pdf" | "pptx" | "docx")` returns the full markdown guide for a format: layouts, slots and their word
 limits, charts, diagrams and front-matter settings. Give it to the model as instructions, then render what it writes.
 
-### Language v2
+### The language
 
-`markitdoc: 2` in the front matter turns on a typesetting language shared by PDF, Word and PowerPoint: named styles, rules by
-element, boxes, columns, images, page masters, cross-references and citations. Documents without it render exactly as before.
+MarkitDoc is a typesetting language shared by PDF, Word and PowerPoint: named styles, rules by element, boxes, columns, images,
+page masters, cross-references and citations. All of it is always on; write only what the design needs.
 
 ```markdown
 ---
-markitdoc: 2
 set:
   h2: {color: accent}
 styles:

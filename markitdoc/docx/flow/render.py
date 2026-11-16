@@ -186,7 +186,7 @@ def add_dropcap(writer, runs, lines, look):
 def add_paragraph_token(writer, tokens, index, stack, pending):
     inline, equations = without_display_maths(tokens[index + 1])
     content = inline.content.strip()
-    if writer.styles and (switch := PAGE_SWITCH.match(content)):
+    if switch := PAGE_SWITCH.match(content):
         values = parse_attributes(switch.group(1)).values
         master_section(writer, str(values.get("page") or writer.master_name), values.get("numbers") == "restart")
         return ""
@@ -198,7 +198,7 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
             add_equation(writer, equation, labelled if number == 0 else "")
         return style
     picture = next((child for child in inline.children or [] if child.type == "image"), None)
-    written = written_image(content) if picture is not None and writer.styles else None
+    written = written_image(content) if picture is not None else None
     if written:
         add_file_picture(writer, written)
         return ""
@@ -283,9 +283,9 @@ def callout_table(writer, fill, accent):
 def add_container(writer, name, info, tokens):
     attributes = parse_attributes(info)
     if name == "columns":
-        children = top_level_blocks(tokens, bool(writer.styles))
+        children = top_level_blocks(tokens)
         half = (len(children) + 1) // 2
-        weights = writer.styles.columns(attributes.values)[0] if writer.styles else (1, 1)
+        weights = writer.styles.columns(attributes.values)[0]
         widths = [writer.width / 2 - 0.2, writer.width / 2 + 0.2] if weights == (1, 1) else [writer.width * weight / sum(weights) for weight in weights]
         inner = [writer.width / 2 - 0.4] * 2 if weights == (1, 1) else [width - 0.4 for width in widths]
         table = new_table(writer, 1, 2, widths)
@@ -405,8 +405,6 @@ def add_chart(writer, content, settings, ident=""):
     picture = add_picture(writer, io.BytesIO(image), width, f"Chart: {title or data['type']}")
     if target := writer.numbers.get(ident):
         caption(writer, target.text, target=target, anchor=picture)
-    elif title and not writer.styles:
-        caption(writer, title)
 
 
 # renders a diagram or falls back to a Word step table

@@ -9,7 +9,7 @@ from markitdoc.markup.fields import FIELD_TEXT
 from markitdoc.models.attributes import KEY_ALIASES, parse_attributes
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.front_matter import front_matter, front_matter_yaml
-from markitdoc.models.model_constants import DIV_OPEN, FLOW_CONTAINERS, HEADING_LINE, PAGE_SWITCH, PLANNED_KEYS, TRAILING_BRACES
+from markitdoc.models.model_constants import DIV_OPEN, FLOW_CONTAINERS, HEADING_LINE, PAGE_SWITCH, TRAILING_BRACES
 from markitdoc.themes.stylesheet import load_stylesheet, section
 from markitdoc.themes.theme_constants import (
     BORDER_WORDS,
@@ -24,8 +24,6 @@ from markitdoc.themes.theme_constants import (
     PADDING_MM,
     PAGE_FIELDS,
     PARAGRAPH_PROPERTIES,
-    PLANNED_SECTIONS,
-    PLANNED_STYLE_PROPERTIES,
     RADIUS_MM,
     STYLE_COLOR_ROLES,
     STYLE_ONLY_PROPERTIES,
@@ -50,14 +48,12 @@ def line_of(lines, pattern):
     return next((number for number, text in enumerate(lines, 1) if re.match(pattern, text, re.IGNORECASE)), 1)
 
 
-# a warning for a property a style file or front matter section cannot use yet, None for supported ones
+# a warning for a property a style file or front matter section cannot use, None for supported ones
 def property_finding(key, where):
     key = KEY_ALIASES.get(str(key).lower(), str(key).lower())
     if key in SUPPORTED:
         return None
-    if key in PLANNED_KEYS or key in PLANNED_STYLE_PROPERTIES:
-        return warning(1, f"{where}: '{key}' is planned for MarkitDoc language v2 and is ignored for now", "remove it or keep it for a later version")
-    close = get_close_matches(key, SUPPORTED + PLANNED_KEYS + PLANNED_STYLE_PROPERTIES, n=1)
+    close = get_close_matches(key, SUPPORTED, n=1)
     return warning(1, f"{where}: unknown property '{key}'", f"did you mean '{close[0]}'?" if close else "")
 
 
@@ -103,7 +99,7 @@ def contrast_finding(sheet, value, paper, line, where):
     return None
 
 
-# problems in the style layers: planned sections and properties, fonts, contrast
+# problems in the style layers: unknown properties, fonts, contrast
 def layer_findings(sheet, paper, use_line):
     found = []
     for name in sheet.missing:
@@ -114,9 +110,6 @@ def layer_findings(sheet, paper, use_line):
             found.append(warning(use_line, f"font '{name}' ({value}) is not available; using the inherited font",
                                  "use Inter, PT Serif, IBM Plex Sans, JetBrains Mono, Noto Sans or a .ttf path"))
     for layer in sheet.layers:
-        found += [warning(1, f"{layer.label}: '{key}' is planned for MarkitDoc language v2 and is ignored for now",
-                          "remove it or keep it for a later version")
-                  for key in layer.data if key in PLANNED_SECTIONS]
         for where, rule in layer_rules(layer):
             for key, value in rule.items():
                 found.append(property_finding(key, f"{layer.label} {where}"))
@@ -246,7 +239,7 @@ def dropcap_findings(sheet, lines, end):
     return found
 
 
-# language v2 problems in a document: style files, fonts, style names, raw combinations, contrast
+# problems in a document: style files, fonts, style names, raw combinations, contrast
 def style_findings(markdown, folders=()):
     lines = markdown.split("\n")
     front = front_matter_yaml(markdown)

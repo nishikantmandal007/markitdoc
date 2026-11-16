@@ -11,7 +11,7 @@ from markitdoc.markup.blocks import as_flow
 from markitdoc.markup.fields import field_values, with_fields
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
-from markitdoc.models.front_matter import front_matter_yaml, language_version
+from markitdoc.models.front_matter import front_matter_yaml
 from markitdoc.models.references import number_document, resolve_document
 from markitdoc.options import Options, options_in_use, using_options
 from markitdoc.pdf.checks import page_problems
@@ -28,10 +28,8 @@ TRUE_WORDS = ("true", "yes", "on", True)
 PAGE_REFERENCE_PASSES = 2
 
 
-# the stylesheet of a language v2 document, None for version 1 documents which keep today's rendering
-def stylesheet_for(document, markdown, theme):
-    if language_version(document.meta) != 2:
-        return None
+# the stylesheet of a document: its theme, style files and front matter layered
+def stylesheet_for(markdown, theme):
     return load_stylesheet(front_matter_yaml(markdown) or {}, theme, options_in_use().style_folders)
 
 
@@ -61,14 +59,12 @@ def written_in_devanagari(document):
 def render_laid_out_pdf(document, output_path, template, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
-    styles = stylesheet_for(document, markdown, theme)
-    numbering = None
-    if styles:
-        document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
+    styles = stylesheet_for(markdown, theme)
+    document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
     pages = {}
-    for _ in range(PAGE_REFERENCE_PASSES if numbering and numbering.wants_pages else 1):
+    for _ in range(PAGE_REFERENCE_PASSES if numbering.wants_pages else 1):
         found = {}
-        draw_pdf(resolve_document(document, numbering, "pdf", pages) if numbering else document, output_path, theme, styles, numbering, found)
+        draw_pdf(resolve_document(document, numbering, "pdf", pages), output_path, theme, styles, numbering, found)
         if found == pages:
             break
         pages = found
@@ -106,11 +102,9 @@ def draw_pdf(document, output_path, theme, styles, numbering, found):
 def render_laid_out_pptx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
-    styles = stylesheet_for(document, markdown, theme)
-    numbering = None
-    if styles:
-        document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles, inject=False)
-        document = resolve_document(document, numbering, "pptx")
+    styles = stylesheet_for(markdown, theme)
+    document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles, inject=False)
+    document = resolve_document(document, numbering, "pptx")
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, SLIDE_PHOTO_RATIOS)
     render_pptx(document, theme, output_path, images, author, styles, numbering)
     logger.info("Rendered PPTX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
@@ -122,11 +116,9 @@ def render_laid_out_pptx(document, output_path, template, author, markdown=""):
 def render_laid_out_docx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
-    styles = stylesheet_for(document, markdown, theme)
-    numbering = None
-    if styles:
-        document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
-        document = resolve_document(document, numbering, "docx")
+    styles = stylesheet_for(markdown, theme)
+    document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
+    document = resolve_document(document, numbering, "docx")
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
     render_docx(document, theme, output_path, images, author, styles, numbering)
     logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),

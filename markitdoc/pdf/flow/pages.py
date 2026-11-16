@@ -109,7 +109,7 @@ class FlowPages(PdfPages):
     def page_edge(self, page=None):
         return self.page_edges.get(page or self.page_no(), self.edge)
 
-    # the page master of a page, None for documents without language v2
+    # the page master of a page
     def master_of(self, page=None):
         return self.page_masters.get(page or self.page_no())
 
@@ -126,7 +126,7 @@ class FlowPages(PdfPages):
     # the pages of the numbering run each footer's {pages} stands for, patched in once the run is complete
     def _render_footer(self):
         super()._render_footer()
-        if self.styles and self.page in self.pages:
+        if self.page in self.pages:
             page = self.pages[self.page]
             for fragment in page.get_text_substitutions():
                 fragment.render_text_substitution = lambda _, original=fragment.render_text_substitution, run=self.page_runs[id(page)]: original(
@@ -169,7 +169,7 @@ class FlowPages(PdfPages):
     def centred(self):
         scale = min(1, self.w / DESIGNED_PAPER_MM[0], self.h / DESIGNED_PAPER_MM[1])
         shift = ((self.w - DESIGNED_PAPER_MM[0] * scale) / 2, (self.h - DESIGNED_PAPER_MM[1] * scale) / 2)
-        if not self.styles or scale == 1 and abs(shift[0]) + abs(shift[1]) < 0.5:
+        if scale == 1 and abs(shift[0]) + abs(shift[1]) < 0.5:
             yield
             return
         self.fit = (*shift, scale)
@@ -184,11 +184,9 @@ class FlowPages(PdfPages):
     def add_page(self, *args, **kwargs):
         for hook in self.page_ends:
             hook(self.get_y())
-        if self.styles:
-            kwargs = self.enter_master(kwargs)
+        kwargs = self.enter_master(kwargs)
         super().add_page(*args, **kwargs)
-        if self.styles:
-            self.page_runs[id(self.pages[self.page])] = self.run
+        self.page_runs[id(self.pages[self.page])] = self.run
         if self.auto_page_break and self.decorate:
             self.set_auto_page_break(True, margin=self.bottom)
         if self.w < self.h:

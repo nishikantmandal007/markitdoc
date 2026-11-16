@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.catalogue import LAYOUTS
-from markitdoc.models.front_matter import front_matter, language_version
+from markitdoc.models.front_matter import front_matter
 from markitdoc.models.model_constants import (
     BLOCK_START,
     BULLET_SEPARATORS,
@@ -41,7 +41,7 @@ class Document:
 # markdown to a Document: front matter plus designed and flow blocks
 def parse_document(markdown):
     meta, body = front_matter(markdown)
-    chunks = split_blocks(body, language_version(meta) == 2)
+    chunks = split_blocks(body)
     blocks = tuple(parse_block(chunk) for chunk in chunks) or (Block(layout=FLOW_LAYOUT, body=body.strip()),)
     logger.info("Parsed document: %d blocks (%s), front matter %s", len(blocks), ", ".join(block.layout for block in blocks),
                 sorted(meta))
@@ -54,8 +54,8 @@ def div_header(match):
     return [f"layout: {match.group(1).lower()}", *(f"{key}: {value}" for key, value in attributes.items())]
 
 
-# body lines into chunks: one per fenced designed block, free markdown between them as flow; in language v2 any name that is not a designed layout is a flow container
-def split_blocks(body, v2=False):
+# body lines into chunks: one per fenced designed block, free markdown between them as flow; any name that is not a designed layout is a flow container
+def split_blocks(body):
     chunks, current, loose, in_fence, in_div, nested = [], None, [], False, False, 0
     fences = []
 
@@ -77,10 +77,10 @@ def split_blocks(body, v2=False):
         if stripped.startswith(("```", "~~~")):
             in_fence = not in_fence
         container = DIV_OPEN.match(stripped) if not in_fence else None
-        if container and v2 and container.group(1).lower() in LEAF_BLOCKS:
+        if container and container.group(1).lower() in LEAF_BLOCKS:
             (current if current is not None else loose).append(line)
         elif container and not DIV_CLOSE.match(stripped) and (nested or container.group(1).lower() in FLOW_CONTAINERS
-                                                     or (v2 and container.group(1).lower() not in LAYOUTS)):
+                                                     or container.group(1).lower() not in LAYOUTS):
             target = current if current is not None else loose
             target.append(line)
             fences.append((target, len(target) - 1, nested))

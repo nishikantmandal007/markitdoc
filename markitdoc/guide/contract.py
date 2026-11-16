@@ -294,7 +294,7 @@ DESIGNED BLOCKS AS SLIDES
 {pdf_contract()}"""
 
 
-# the writing guide an AI model should read before producing markdown for output_format: the language v2 core card, then
+# the writing guide an AI model should read before producing markdown for output_format: the language core card, then
 # (level "full") the layout catalogue
 def guide(output_format="pdf", level="full"):
     writers = {"pdf": pdf_contract, "pptx": slides_contract, "docx": word_contract}

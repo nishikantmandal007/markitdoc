@@ -29,11 +29,9 @@ def sheet_of(markdown, folders):
     return load_stylesheet(front_matter_yaml(markdown) or {}, theme_for(front_matter(markdown)[0], "default"), folders)
 
 
-# explains the elements on a 1-based line of a language v2 document: block style, then the spans written on that line
+# explains the elements on a 1-based line of a document: block style, then the spans written on that line
 def explain_line(markdown, number, folders=()):
-    meta, body = front_matter(markdown)
-    if str(meta.get("markitdoc", "")) != "2":
-        return ["this document is not 'markitdoc: 2', so no style rules apply"]
+    body = front_matter(markdown)[1]
     sheet = sheet_of(markdown, folders)
     target = number - 1 - (len(markdown.lstrip("\n").split("\n")) - len(body.split("\n")))
     written = markdown.split("\n")[number - 1]

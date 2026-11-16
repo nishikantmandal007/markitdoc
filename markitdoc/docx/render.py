@@ -402,7 +402,7 @@ def render_docx(document: Document, theme: Theme, output_path: Path, images=None
                                     for block in blocks for line in block.body.splitlines() if (found := PAGE_SWITCH.match(line.strip()))]
         cover = first is not None and first.layout == "cover"
         setup_chrome(writer, cover)
-        if styles and styles.pages_defined:
+        if styles.pages_defined:
             apply_master(writer, writer.document.sections[0], styles.master("default"))
         if brand_hooks(theme.name).docx_cover and not cover:
             draw_brand_cover(writer, {"title": title})

@@ -37,7 +37,7 @@ Write plain markdown first: headings, paragraphs, lists, tables, charts. Add the
 
 ## Workflow
 
-1. Write the markdown with front matter ('markitdoc: 2' turns the language on).
+1. Write the markdown, with front matter where the design needs it.
 2. Run `markitdoc check file.md --json --format pdf` (or docx, pptx) and read every finding.
 3. Fix each error and warning, using the 'fix' hint of the finding, and check again until it is clean.
 4. Render with `markitdoc render file.md -o file.pdf` (the suffix picks the format).
@@ -66,7 +66,7 @@ def styles_text():
     fonts = "\n".join(f"- {name}: {pair[4]}" for name, pair in FONT_PAIRS.items())
     return f"""# Styles
 
-Front matter settings (version 1): palette, paper ({' | '.join(PAPERS)}), fonts, text_size ({' | '.join(TEXT_SIZES)}), tables ({' | '.join(TABLE_STYLES)}).
+Front matter settings: palette, paper ({' | '.join(PAPERS)}), fonts, text_size ({' | '.join(TEXT_SIZES)}), tables ({' | '.join(TABLE_STYLES)}).
 
 ## Palettes
 {palettes}

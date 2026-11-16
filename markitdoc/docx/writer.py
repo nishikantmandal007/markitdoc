@@ -48,8 +48,8 @@ class Writer:
         self.photos_by_block = {key: value for key, value in images.items() if not isinstance(key, tuple)}
         self.photos = str(meta.get("photos", "natural")).lower()
         self.table_style = str(meta.get("tables", "lined")).lower()
-        self.numbers = numbering.targets if numbering else {}
-        self.numbered = str(meta.get("numbering", "")).lower() == "decimal" or bool(numbering and numbering.section_numbers)
+        self.numbers = numbering.targets
+        self.numbered = str(meta.get("numbering", "")).lower() == "decimal" or bool(numbering.section_numbers)
         self.headings = [0, 0, 0, 0]
         self.figure_count = self.table_count = 0
         self.notes, self.targets, self.lists = [], set(self.numbers), {}
@@ -71,9 +71,9 @@ class Writer:
         finally:
             self.body, self.width = previous
 
-    # the look of an element under the stylesheet, None for version 1 documents
+    # the look of an element under the stylesheet
     def look(self, selector, classes=(), inline=None):
-        return self.styles.look(selector, classes, inline, context=self.context) if self.styles else None
+        return self.styles.look(selector, classes, inline, context=self.context)
 
     # the Word font name for a look's font: a theme role or a declared font
     def font_named(self, name):
@@ -127,7 +127,7 @@ def format_run(writer, run, piece, size, role, bold, italic, font, look=None):
         run.font.subscript, run.font.superscript = piece.script == "SUB", piece.script == "SUP"
     if look:
         style_run(writer, run, look, piece.role or role)
-    if writer.styles and (lang := dict(piece.style).get("lang")):
+    if lang := dict(piece.style).get("lang"):
         mark = OxmlElement("w:lang")
         mark.set(qn("w:val"), LANGUAGE_TAGS.get(lang, lang))
         run._r.get_or_add_rPr().insert_element_before(mark, "w:eastAsianLayout", "w:specVanish", "w:oMath")
@@ -343,7 +343,7 @@ def setup_chrome(writer, cover):
 # fills page, title, date, and section placeholders in footer text
 def page_fields(writer, paragraph, template):
     here = writer.restarts[writer.section_no:writer.section_no + 2]
-    sections = bool(writer.styles and any(writer.restarts[1:]) and here and here[0] and (len(here) < 2 or here[1]))
+    sections = bool(any(writer.restarts[1:]) and here and here[0] and (len(here) < 2 or here[1]))
     fields = {"{page}": ("PAGE", "1"), "{pages}": ("SECTIONPAGES" if sections else "NUMPAGES", "1"), "{section}": ('STYLEREF "Heading 2"', "")}
     text = template.replace("{title}", writer.title).replace("{date}", long_date(writer.meta.get("date", "")))
     for piece in re.split(r"(\{page\}|\{pages\}|\{section\})", text):

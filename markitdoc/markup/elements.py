@@ -109,9 +109,9 @@ def closing_index(tokens, start, open_type, close_type):
 
 
 # groups tokens into top-level markdown blocks
-def top_level_blocks(tokens, nested=False):
+def top_level_blocks(tokens):
     blocks, current = [], []
-    top = min((token.level for token in tokens), default=0) if nested else 0
+    top = min((token.level for token in tokens), default=0)
     for token in tokens:
         current.append(token)
         if token.level == top and (token.type.endswith("_close") or token.type in ("fence", "math_block", "hr", "code_block")):
