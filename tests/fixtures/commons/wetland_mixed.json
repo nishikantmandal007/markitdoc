@@ -1,0 +1,115 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Wetland marsh near town.jpg",
+    "index": 1,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaMix1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "A wetland marsh with power pylons and apartment blocks behind"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Wetlands"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Power lines"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Apartment buildings"
+     }
+    ]
+   },
+   "1": {
+    "title": "File:Reed marsh at sunrise.jpg",
+    "index": 2,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/2.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/2.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaMix2",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Reeds in a wetland marsh at sunrise"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Wetlands"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Marshes"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Reeds"
+     }
+    ]
+   },
+   "2": {
+    "title": "File:Wetland marsh map.png",
+    "index": 3,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/3.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/3.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaMix3",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Map of the wetland marsh reserve"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Maps of wetlands"
+     }
+    ]
+   }
+  }
+ }
+}

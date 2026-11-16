@@ -156,3 +156,75 @@ def test_should_skip_a_remembered_non_commercial_candidate(monkeypatch, tmp_path
         image = find_image("wetland", 1.5)
 
     assert image.title == "Wetland at dawn.jpg"
+
+
+class TestPhotoRelevance:
+    def titles(self, monkeypatch, tmp_path, query, answer, ratio=1.5, wikidata="wikidata_none.json"):
+        fake = wetland(monkeypatch, tmp_path, wikidata=wikidata, answers=[answer] * 3)
+        with using_options(fake.options):
+            find_image(query, ratio)
+            return [pick["title"] for pick in json.loads((tmp_path / "images" / "choices.json").read_text())[query]]
+
+    def test_should_rank_a_wetland_with_buildings_below_a_plain_reed_marsh(self, monkeypatch, tmp_path):
+        titles = self.titles(monkeypatch, tmp_path, "wetland marsh", "wetland_mixed.json")
+
+        assert titles.index("Reed marsh at sunrise.jpg") < titles.index("Wetland marsh near town.jpg")
+
+    def test_should_not_penalise_city_photos_when_the_query_says_city(self, monkeypatch, tmp_path):
+        titles = self.titles(monkeypatch, tmp_path, "city street", "city_mixed.json")
+
+        assert titles[0] == "City street at night.jpg"
+
+    def test_should_rank_depicts_sourced_candidates_above_text_only_ones_of_equal_quality(self, monkeypatch, tmp_path):
+        pool = [{**one, "depicts": False} for one in json.loads(json.dumps(images.candidates(
+            fixture("equal_pair.json")["query"]["pages"].values(), 1.5, ["marsh"])))]
+        pool[1]["depicts"] = True
+        ranked = sorted(pool, key=lambda one: images.photo_score(one, ["marsh"], 1.5), reverse=True)
+
+        assert ranked[0]["title"] == "Marsh scene.jpg"
+
+    def test_should_never_let_a_map_or_diagram_win_a_cover_slot(self, monkeypatch, tmp_path):
+        titles = self.titles(monkeypatch, tmp_path, "river delta", "map_only_and_photo.json", ratio=0.7)
+
+        assert titles[0] == "Delta at dusk.jpg"
+
+    def test_should_rerank_remembered_candidates_with_the_same_score(self, monkeypatch, tmp_path):
+        fake = wetland(monkeypatch, tmp_path)
+        pool = images.candidates(fixture("wetland_mixed.json")["query"]["pages"].values(), 1.5, ["wetland", "marsh"])
+        (tmp_path / "images").mkdir()
+        (tmp_path / "images" / "choices.json").write_text(json.dumps({"wetland marsh": pool}))
+        with using_options(fake.options):
+            image = find_image("wetland marsh", 1.5)
+
+        assert image.title == "Reed marsh at sunrise.jpg"
+
+    def test_should_rank_a_real_heron_above_a_sculpture_of_herons(self, monkeypatch, tmp_path):
+        titles = self.titles(monkeypatch, tmp_path, "heron in reeds", "heron_art.json")
+
+        assert titles == ["Grey heron in reeds.jpg", "Heron sculpture in reeds.jpg"]
+
+    def test_should_not_penalise_sculptures_when_the_query_says_glass_sculpture(self, monkeypatch, tmp_path):
+        titles = self.titles(monkeypatch, tmp_path, "glass sculpture", "heron_art.json")
+
+        assert titles[0] == "Heron sculpture in reeds.jpg"
+
+    def test_should_use_a_depicts_search_when_only_a_sub_phrase_resolves_on_wikidata(self, monkeypatch, tmp_path):
+        class Heron(FakeWikimedia):
+            def get(self, url, **kwargs):
+                if "wikidata" in url and kwargs["params"]["search"] != "heron":
+                    self.wikidata = "wikidata_none.json"
+                elif "wikidata" in url:
+                    self.wikidata = "wikidata_heron.json"
+                return super().get(url, **kwargs)
+
+        fake = Heron(monkeypatch, tmp_path, answers=["heron_art.json"])
+        with using_options(fake.options):
+            find_image("heron in reeds", 1.5)
+
+        assert fake.searches()[0].startswith("haswbstatement:P180=Q18789")
+        assert [params["search"] for url, params in fake.calls if "wikidata" in url] == ["heron in reeds", "heron reeds", "heron"]
+
+    def test_should_rank_a_photo_whose_only_art_signal_is_a_category_below_a_real_heron(self, monkeypatch, tmp_path):
+        titles = self.titles(monkeypatch, tmp_path, "heron in reeds", "heron_category_art.json")
+
+        assert titles == ["Grey heron in reeds.jpg", "Yellow Herons and Reeds.jpg"]

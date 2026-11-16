@@ -1,0 +1,72 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Yellow Herons and Reeds.jpg",
+    "index": 1,
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Chihuly at Kew Gardens"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Glass art"
+     }
+    ],
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaCat1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Herons and reeds"
+       }
+      }
+     }
+    ]
+   },
+   "1": {
+    "title": "File:Grey heron in reeds.jpg",
+    "index": 2,
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Ardea cinerea"
+     }
+    ],
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/2.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/2.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaCat2",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Herons and reeds"
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}
