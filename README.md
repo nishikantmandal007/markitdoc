@@ -23,4 +23,74 @@ photo search or diagram rendering.
 
 ## Usage
 
-Work in progress: the engine is moving here from its first home, step by step.
+```python
+import markitdoc
+
+markdown = """---
+palette: ocean
+---
+# Quarterly review
+
+Revenue grew **12%** while costs held flat.
+
+| Region | Revenue |
+|---|---|
+| North | 4.2 |
+| South | 3.1 |
+"""
+
+markitdoc.render(markdown, "pdf", "review.pdf")
+markitdoc.render(markdown, "pptx", "review.pptx")
+markitdoc.render(markdown, "docx", "review.docx")
+```
+
+From the command line:
+
+```bash
+markitdoc render review.md -o review.pdf     # the output suffix picks the format
+markitdoc guide pptx                         # the markdown guide for slides
+```
+
+### Writing with an AI model
+
+`markitdoc.guide("pdf" | "pptx" | "docx")` returns the full markdown guide for a format: layouts, slots and their word
+limits, charts, diagrams and front-matter settings. Give it to the model as instructions, then render what it writes.
+
+### Brands
+
+Two neutral themes ship with the library (`professional`, `editorial`), with ten palettes and five font pairs. A brand is
+a folder of theme files with its own logo, partner logos, address, footer and an optional PowerPoint master:
+
+```python
+markitdoc.register_brand("brand/")                  # brand/acme.yml, brand/logo.png, brand/acme.pptx
+markitdoc.render(markdown, "pdf", "out.pdf", template="acme")
+```
+
+A theme file with `locked: true` keeps its own colours and fonts whatever the markdown asks for. Word headers and covers
+that a theme file cannot describe are drawn by hooks: `register_brand(folder, docx_chrome=..., docx_cover=...)`.
+
+### Offline by default
+
+Photos (`images: true`) come from Wikimedia Commons and Mermaid diagrams render through a
+[Gotenberg](https://gotenberg.dev) server set in `GOTENBERG_ENDPOINT`; without them every visual falls back to text.
+Downloads are cached in `~/.cache/markitdoc` (or `MARKITDOC_CACHE`).
+
+## Layout
+
+```
+markitdoc/
+  rendering.py   render(): markdown to a file
+  models/        document parser and the catalogue of designed layouts
+  markup/        inline runs, block preparation, fence and table settings (shared by all formats)
+  themes/        theme files, palettes, font pairs and brand registration
+  guide/         the markdown guide for AI models
+  pdf/ pptx/ docx/   the three renderers
+  visuals/       charts, diagrams, infographics, equations, icons, photos, Gantt plans
+  assets/        bundled fonts (OFL), Lucide icons (ISC), Mermaid and AntV (MIT), themes
+```
+
+## Tests
+
+```bash
+uv run pytest
+```
