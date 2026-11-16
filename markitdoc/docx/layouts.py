@@ -14,7 +14,8 @@ from markitdoc.docx.document import (Writer, add_field, add_picture, caption, fi
                                      write_runs)
 from markitdoc.docx.styles import (border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table,
                                    repeat_header)
-from markitdoc.docx.flow import add_callout, add_notes, render_markdown, step_table
+from markitdoc.docx.flow import add_callout, add_notes, render_markdown
+from markitdoc.docx.tables import step_table
 from markitdoc.markup.inline import inline_runs, parser, plain_text
 from markitdoc.markup.blocks import paragraphs, prepared
 from markitdoc.utils.helpers import creation_date, long_date
