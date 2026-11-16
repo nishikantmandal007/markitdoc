@@ -32,6 +32,7 @@ BOLD_OPEN, BOLD_CLOSE = "\u0001", "\u0002"
 SUBSCRIPTS = str.maketrans("0123456789+-=()aehijklmnoprstuvx", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ")
 SUPERSCRIPTS = str.maketrans("0123456789+-=()abcdefghijklmnoprstuvwxyz", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ")
 ANCHOR = re.compile(r"\s*\{#([\w-]+)\}\s*$")
+UNNUMBERED = re.compile(r"\s*\{\.unnumbered\}\s*$")
 EMPHASIS_ATTRIBUTES = re.compile(r"\{([^{}]*)\}")
 SUPERSCRIPT_DIGITS = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
 

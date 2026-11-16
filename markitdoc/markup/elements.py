@@ -108,6 +108,18 @@ def closing_index(tokens, start, open_type, close_type):
     return len(tokens) - 1
 
 
+# groups tokens into top-level markdown blocks
+def top_level_blocks(tokens, nested=False):
+    blocks, current = [], []
+    top = min((token.level for token in tokens), default=0) if nested else 0
+    for token in tokens:
+        current.append(token)
+        if token.level == top and (token.type.endswith("_close") or token.type in ("fence", "math_block", "hr", "code_block")):
+            blocks.append(current)
+            current = []
+    return blocks + ([current] if current else [])
+
+
 # parses and validates chart data from a code fence
 def chart_data(content):
     data = parse_chart_fence(content.splitlines())

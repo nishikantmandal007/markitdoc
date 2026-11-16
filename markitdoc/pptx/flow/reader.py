@@ -1,6 +1,7 @@
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 
 from markitdoc.markup.elements import (
     TABLE_STYLES,
@@ -9,10 +10,16 @@ from markitdoc.markup.elements import (
     column_alignments,
     element_settings,
     only_display_maths,
+    top_level_blocks,
     without_display_maths,
+    written_image,
 )
-from markitdoc.markup.inline import ANCHOR, parser, plain_text
+from markitdoc.markup.inline import ANCHOR, UNNUMBERED, parser, plain_text
+from markitdoc.models.attributes import parse_attributes
+from markitdoc.models.references import caption_of
+from markitdoc.options import options_in_use
 from markitdoc.pptx.deck import Item
+from markitdoc.themes.theme_constants import STYLE_PROPERTIES
 from markitdoc.visuals.diagrams import chain_steps, diagram_title
 
 logger = logging.getLogger(__name__)
@@ -51,7 +58,7 @@ BREAK_PIECE = Piece("break")
 class FlowReader:
     # sets up the rendering context and its document settings
     def __init__(self, deck):
-        self.deck, self.sections, self.lists, self.caption, self.labels = deck, [], [], "", {}
+        self.deck, self.sections, self.lists, self.caption, self.labels, self.context = deck, [], [], "", {}, None
 
     # returns the current section parts, creating a default section when needed
     @property
@@ -68,6 +75,20 @@ class FlowReader:
     def source_of(self, inline):
         source = FOOTNOTE_MARK.sub(self.number_of, inline.content)
         return CHECKBOX.sub(lambda match: "☐ " if match.group(1) == " " else "☑ ", source)
+
+    # an item with the look the stylesheet gives its element, unchanged for version 1 decks
+    def styled(self, item, selector, attributes=None):
+        if not self.deck.styles:
+            return item
+        found = attributes or parse_attributes("")
+        return replace(item, look=self.deck.look(selector, found.classes, found.values, self.context))
+
+    # the parts the tokens read as, kept apart from the current section
+    def parts_of(self, tokens):
+        saved, self.sections = self.sections, [Section("", 2, [])]
+        self.read(tokens)
+        found, self.sections = [part for section in self.sections for part in section.parts], saved
+        return found
 
     # reads markdown tokens into slide content parts
     def read(self, tokens):
@@ -113,44 +134,76 @@ class FlowReader:
 
     # starts a slide section or adds a subheading from a markdown heading
     def heading(self, tokens, index):
-        level, source = int(tokens[index].tag[1]), ANCHOR.sub("", tokens[index + 1].content)
+        level, source = int(tokens[index].tag[1]), ANCHOR.sub("", UNNUMBERED.sub("", tokens[index + 1].content))
         if level <= 2:
             self.sections.append(Section(plain_text(source), level, []))
         else:
-            self.parts.append(Item(source, "subheading"))
+            self.parts.append(self.styled(Item(source, "subheading"), f"h{min(level, 4)}"))
         return index + 3
 
-    # reads a markdown container and adds its contents to the current section
+    # reads a markdown container and adds its contents to the current section; a styled box and columns become pieces of their own
     def container(self, tokens, index):
         token = tokens[index]
         end = closing_index(tokens, index, token.type, token.type[:-5] + "_close")
         title = re.search(r'title="([^"]*)"', token.info)
         if title:
             self.parts.append(Item(title.group(1), "subheading"))
-        self.read(tokens[index + 1:end])
+        inner, name, found = tokens[index + 1:end], token.type[len("container_"):-len("_open")], parse_attributes(token.info)
+        if self.deck.styles and name == "columns":
+            blocks = top_level_blocks(inner, True)
+            half = (len(blocks) + 1) // 2
+            columns = [self.parts_of([item for block in part for item in block]) for part in (blocks[:half], blocks[half:])]
+            weights, gap = self.deck.styles.columns(found.values)
+            self.parts.append(Piece("columns", (weights, gap, *[[part for part in column if isinstance(part, Item)] for column in columns])))
+            self.parts.extend(part for column in columns for part in column if not isinstance(part, Item))
+            return end + 1
+        look = self.deck.look("box", found.classes, found.values, self.context) if self.deck.styles and name == "box" else None
+        if look and look.boxed():
+            before, self.context = self.context, {key: item for key, item in look.props.items() if key in STYLE_PROPERTIES}
+            parts, self.context = self.parts_of(inner), before
+            self.parts.append(Piece("box", (look, [part for part in parts if isinstance(part, Item)]), title.group(1) if title else ""))
+            self.parts.extend(part for part in parts if not isinstance(part, Item))
+            return end + 1
+        self.read(inner)
         return end + 1
 
     # adds blockquote text to the current slide section
     def quote(self, tokens, index):
         end = closing_index(tokens, index, "blockquote_open", "blockquote_close")
-        self.parts.extend(Item(self.source_of(token), "quote") for token in tokens[index:end] if token.type == "inline")
+        self.parts.extend(self.styled(Item(self.source_of(token), "quote"), "quote") for token in tokens[index:end] if token.type == "inline")
         return end + 1
 
     # turns a markdown paragraph into slide content
     def paragraph(self, tokens, index):
         inline, equations = without_display_maths(tokens[index + 1])
         picture = next((child for child in inline.children or [] if child.type == "image"), None)
-        source = SETTINGS_TAIL.sub("", self.source_of(tokens[index + 1] if not equations else inline)).strip()
-        if picture is not None:
+        raw = self.source_of(tokens[index + 1] if not equations else inline)
+        source, tail = SETTINGS_TAIL.sub("", raw).strip(), SETTINGS_TAIL.search(raw)
+        attributes = parse_attributes(tail.group().strip()) if tail and self.deck.styles else None
+        written = written_image(tokens[index + 1].content.strip()) if picture is not None and self.deck.styles else None
+        if written:
+            self.parts.append(self.file_image(written))
+        elif picture is not None:
             self.parts.append(Piece("figure", picture.content or str(picture.attrs.get("alt", ""))))
         elif source == PAGE_BREAK_MARKER:
             self.parts.append(BREAK_PIECE)
         elif source.startswith("Table:") and not self.lists:
             self.caption = source[6:].strip()
         elif source and not (equations and only_display_maths(tokens[index + 1])):
-            self.parts.append(self.listed_item(source))
+            self.parts.append(self.styled(self.listed_item(source), "list" if self.lists else "paragraph", attributes))
         self.parts.extend(Piece("equation", equation.strip()) for equation in equations)
         return index + 3
+
+    # a piece for an image written with a file path: its path, alt text, width, side and caption, numbered like Word and PDF captions
+    def file_image(self, found):
+        attributes = parse_attributes(found.group(3) or "")
+        folders = options_in_use().style_folders
+        target = self.deck.numbers.get(attributes.id)
+        caption = caption_of(target) if target else str(attributes.values.get("caption", ""))
+        look = self.deck.look("figure", attributes.classes, attributes.values)
+        data = (str((Path(folders[0]) if folders else Path()) / found.group(2)), found.group(1) or found.group(2), look.width,
+                str(attributes.values.get("side", "")).lower(), caption)
+        return Piece("image", data)
 
     # assigns a list item its bullet or numbering details
     def listed_item(self, source):
