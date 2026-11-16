@@ -68,6 +68,7 @@ class PdfPages(FPDF):
         self.add_font("Brand", "B", str(bold))
         self.add_font("Brand", "I", str(theme.fonts["italic"]))
         self.add_font("Brand", "BI", str(bold))
+        self.add_font("Head", "", str(theme.fonts["heading"]))
         self.add_font("Head", "B", str(theme.fonts["heading"]))
         self.add_font("Mono", "", str(fonts_folder / "JetBrainsMono-Regular.ttf"))
         self.add_font("Devanagari", "", str(fonts_folder / "NotoSansDevanagari-Regular.ttf"))
