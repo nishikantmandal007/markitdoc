@@ -408,3 +408,14 @@ def test_should_render_investor_update_as_a_pptx(tmp_path, monkeypatch, caplog):
     deck = Presentation(generate_document(markdown, "pptx", filename_stem="investor_update", output_dir=str(tmp_path)))
     assert len(deck.slides) > 0
     assert not any("failed to draw" in record.getMessage() for record in caplog.records)
+
+
+# checks that styled language preview content renders without block fallback
+def test_should_render_language_preview_as_a_pptx(tmp_path, monkeypatch, caplog):
+    monkeypatch.delenv("GOTENBERG_ENDPOINT", raising=False)
+    monkeypatch.setattr(doc_generator_service, "find_images", lambda wanted, ratios: {})
+    markdown = (Path(__file__).parent / "fixtures" / "language_preview.md").read_text()
+    deck = Presentation(generate_document(markdown, "pptx", filename_stem="language_preview", output_dir=str(tmp_path)))
+
+    assert len(deck.slides) > 0
+    assert not any("failed to draw" in record.getMessage() for record in caplog.records)

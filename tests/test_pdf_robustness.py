@@ -1,7 +1,11 @@
 import pymupdf as fitz
+import pytest
+from fpdf.enums import MethodReturnValue
 from helpers import generate_document
 
 from markitdoc.models.document import parse_document
+from markitdoc.pdf.pages import PdfPages
+from markitdoc.themes.themes import load_theme
 from markitdoc.visuals.infographics import problems_in_infographic
 
 
@@ -12,6 +16,20 @@ def page_texts(path):
 
 def render(markdown, tmp_path, name="robust"):
     return generate_document(markdown, "pdf", filename_stem=name, output_dir=str(tmp_path))
+
+
+@pytest.mark.parametrize("family", ("Brand", "Head", "Mono", "Devanagari", "Symbols", "Latin", "Noto"))
+@pytest.mark.parametrize("style", ("", "B", "I", "BI"))
+# checks that markdown style switches resolve for every registered family
+def test_should_measure_and_draw_markdown_for_every_font_style(family, style):
+    pdf = PdfPages(load_theme(None))
+    assert pdf.fonts["mono"].ttffile != pdf.fonts["monoB"].ttffile and pdf.fonts["latin"].ttffile != pdf.fonts["latinB"].ttffile
+    pdf.add_page()
+    pdf.set_font(family, style, 12)
+    text = "plain **bold __bold italic__** and __italic__"
+
+    assert pdf.multi_cell(180, 8, text, dry_run=True, output=MethodReturnValue.LINES, markdown=True)
+    pdf.multi_cell(180, 8, text, markdown=True)
 
 
 class TestRobustRendering:
