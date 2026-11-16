@@ -1,3 +1,4 @@
+from markitdoc.errors import UnsupportedFormatError
 from markitdoc.markup.elements import callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors, table_styles
 from markitdoc.models.catalogue import layouts
 from markitdoc.models.model_constants import FLOW_CONTAINERS
@@ -281,3 +282,11 @@ DESIGNED BLOCKS AS SLIDES
 {slide_lines}
 
 {pdf_contract()}"""
+
+
+# the writing guide an AI model should read before producing markdown for output_format
+def guide(output_format="pdf"):
+    writers = {"pdf": pdf_contract, "pptx": slides_contract, "docx": word_contract}
+    if output_format not in writers:
+        raise UnsupportedFormatError(f"No guide for {output_format!r}, expected one of {', '.join(writers)}")
+    return writers[output_format]()

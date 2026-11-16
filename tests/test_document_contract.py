@@ -65,3 +65,25 @@ def test_should_give_slides_their_own_guide_with_every_slide_type():
     guide = slides_contract()
 
     assert guide.startswith("SLIDE DESIGN GUIDE") and "action title" in guide and all(f"- {name}:" in guide for name in drawers)
+
+
+def test_should_serve_each_format_its_own_guide_from_the_package():
+    import pytest
+
+    import markitdoc
+
+    assert markitdoc.guide("pptx").startswith("SLIDE DESIGN GUIDE") and markitdoc.guide() == pdf_contract()
+    with pytest.raises(markitdoc.UnsupportedFormatError):
+        markitdoc.guide("odt")
+
+
+def test_should_render_from_the_package_and_reject_bad_input(tmp_path):
+    import pytest
+
+    import markitdoc
+
+    assert markitdoc.render("# Hello\n\nWorld.", "pdf", tmp_path / "hello.pdf").stat().st_size > 0
+    with pytest.raises(markitdoc.EmptyDocumentError):
+        markitdoc.render("  ", "pdf", tmp_path / "empty.pdf")
+    with pytest.raises(markitdoc.UnsupportedFormatError):
+        markitdoc.render("# Hi", "odt", tmp_path / "hi.odt")
