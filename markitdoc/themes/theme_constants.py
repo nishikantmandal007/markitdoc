@@ -49,7 +49,7 @@ MARGIN_WORDS = {"narrow": 14, "normal": 20, "wide": 28}
 DEFAULT_MARGINS_MM = (20, 25, 22, 25)
 PAGE_FIELDS = ("page", "pages", "section", "title", "date")
 STYLE_PROPERTIES = ("font", "size", "color", "weight", "italic", "align", "caps", "tracking")
-STYLE_ONLY_PROPERTIES = ("kind", "based-on")
+STYLE_ONLY_PROPERTIES = ("kind", "based-on", "numbering")
 BORDER_SIDES = ("top", "bottom", "left", "right")
 BOX_PROPERTIES = ("border", *(f"border-{side}" for side in BORDER_SIDES), "padding", "bg", "radius", "width")
 LAYOUT_ATTRIBUTES = ("ratio", "gap", "side", "caption")
@@ -94,5 +94,5 @@ ENGINE_DEFAULTS = {
 BUILTIN_CLASSES = ("left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
                    "roman", "upper-roman", "legal", "underline", "highlight", "accent", "second", "muted", "danger", "success",
                    "callout", "aside")
-PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "numbering", "hyphenate", "repeat", "caption", "dropcap",
+PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "hyphenate", "repeat", "caption", "dropcap",
                             "indent", "orientation", "lang")

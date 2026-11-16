@@ -167,6 +167,11 @@ class Stylesheet:
         self.style_names = {str(name) for layer in self.layers for name in section(layer, "styles")}
         self.base = self.points(self.cascade_base(None).get("size", (None,))[0], BODY_POINTS) or BODY_POINTS
 
+    # the numbering a set rule gives an element such as h2 or figure, None when no layer sets one
+    def numbering(self, selector):
+        values = [rule["numbering"] for layer in self.layers if isinstance(rule := section(layer, "set").get(selector), dict) and "numbering" in rule]
+        return str(values[-1]) if values else None
+
     # the names of the page masters any layer defines, default first
     def master_names(self):
         return ["default", *dict.fromkeys(str(name) for layer in self.layers for name in section(layer, "pages") if str(name) != "default")]
