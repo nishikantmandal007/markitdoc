@@ -9,6 +9,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageChops
 
+from markitdoc.options import options_in_use
 from markitdoc.themes.themes import mixed
 from markitdoc.utils.constants import ASSETS_FOLDER, CACHE_FOLDER
 
@@ -88,13 +89,15 @@ def settings(theme) -> dict:
 
 # renders a validated Mermaid diagram and reuses cached images
 def render_diagram(source: str, theme) -> Path | None:
-    endpoint = os.getenv("GOTENBERG_ENDPOINT")
+    options = options_in_use()
+    endpoint = options.gotenberg_url or os.getenv("GOTENBERG_ENDPOINT")
     if not endpoint or problems_in_diagram(source):
         return None
     configuration = json.dumps(settings(theme), sort_keys=True)
     key = "|".join([source.strip(), theme.name, configuration, MERMAID_BUNDLE.name, Path(theme.fonts["body"]).name,
                     Path(theme.fonts["heading"]).name])
-    path = DIAGRAM_FOLDER / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
+    cache_folder = options.cache_folder / "diagrams" if options.cache_folder else DIAGRAM_FOLDER
+    path = cache_folder / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
     if path.exists():
         return path
     data = (f"window.source = {json.dumps(source.strip())}; window.settings = {configuration}; "

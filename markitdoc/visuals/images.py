@@ -12,6 +12,7 @@ from urllib.parse import quote, urlparse
 import requests
 from PIL import Image
 
+from markitdoc.options import options_in_use
 from markitdoc.utils.constants import CACHE_FOLDER
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,6 @@ LONGEST_WAIT_SECONDS = 10
 FEATURED_FILTER = ' incategory:"Featured_pictures_on_Wikimedia_Commons"'
 QUALITY_FILTER = ' incategory:"Quality_images"'
 IMAGE_FOLDER = CACHE_FOLDER / "images"
-CHOICES_FILE = IMAGE_FOLDER / "choices.json"
 CLIENT_HEADERS = {"User-Agent": "MarkitDoc/0.1 (https://pypi.org/project/markitdoc/) python-requests"}
 
 
@@ -66,6 +66,17 @@ class DocumentImage:
         return f"{name} — {self.artist}, {self.licence}, via Wikimedia Commons"
 
 
+# returns the image cache folder in use
+def image_folder():
+    return options_in_use().cache_folder / "images" if options_in_use().cache_folder else IMAGE_FOLDER
+
+
+# returns request headers with the user agent in use
+def client_headers():
+    user_agent = options_in_use().user_agent
+    return {**CLIENT_HEADERS, "User-Agent": user_agent} if user_agent is not None else CLIENT_HEADERS
+
+
 # finds distinct images for the requested document sections
 def find_images(wanted: dict, ratios: dict) -> dict:
     found, used = {}, set()
@@ -84,8 +95,9 @@ def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | No
     if not words:
         return None
     remembered = remembered_choices().get(" ".join(words).lower())
-    if remembered and (IMAGE_FOLDER / f"{remembered['sha1']}.jpg").exists() and remembered["title"] not in used:
-        return DocumentImage(IMAGE_FOLDER / f"{remembered['sha1']}.jpg", remembered["title"], remembered["artist"], remembered["licence"])
+    folder = image_folder()
+    if remembered and (folder / f"{remembered['sha1']}.jpg").exists() and remembered["title"] not in used:
+        return DocumentImage(folder / f"{remembered['sha1']}.jpg", remembered["title"], remembered["artist"], remembered["licence"])
     image = search_image(words, ratio, used)
     if image:
         remember_choice(" ".join(words).lower(), image)
@@ -95,7 +107,8 @@ def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | No
 # loads saved image choices, returning an empty mapping if unavailable
 def remembered_choices():
     try:
-        return json.loads(CHOICES_FILE.read_text())
+        choices_file = image_folder() / "choices.json"
+        return json.loads(choices_file.read_text())
     except (OSError, ValueError):
         return {}
 
@@ -105,14 +118,16 @@ def remember_choice(query, image):
     choices = remembered_choices()
     choices[query] = {"sha1": image.path.stem, "title": image.title, "artist": image.artist, "licence": image.licence}
     try:
-        CHOICES_FILE.parent.mkdir(parents=True, exist_ok=True)
-        CHOICES_FILE.write_text(json.dumps(choices, sort_keys=True, indent=1))
+        choices_file = image_folder() / "choices.json"
+        choices_file.parent.mkdir(parents=True, exist_ok=True)
+        choices_file.write_text(json.dumps(choices, sort_keys=True, indent=1))
     except OSError as error:
         logger.warning("Could not remember image choice: %s", type(error).__name__)
 
 
 # searches Wikimedia for a permitted image matching the query
 def search_image(words, ratio, used):
+    folder = image_folder()
     full, shorter = " ".join(words), " ".join(words[-3:])
     name = next((plain(word) for word in words if len(word) > 3), "")
     for text, filter_text, needs_title_match, anchor in ((full, FEATURED_FILTER, None, ""), (full, "", False, ""),
@@ -122,7 +137,7 @@ def search_image(words, ratio, used):
         pages = search(f"{text} filetype:bitmap{filter_text}")
         title_words = [plain(word) for word in re.findall(r"\w+", text) if len(word) > 3 or word.isdigit() or word.isupper()]
         for _, url, title, artist, licence, sha1 in sorted(candidates(pages, ratio, used, title_words, needs_title_match, anchor))[:4]:
-            path = IMAGE_FOLDER / f"{sha1}.jpg"
+            path = folder / f"{sha1}.jpg"
             if path.exists() or save_safe_copy(url, path):
                 logger.info("Document image chosen from %s search", filter_text.split(":")[-1] or "plain")
                 return DocumentImage(path, title, artist, licence)
@@ -132,7 +147,7 @@ def search_image(words, ratio, used):
 # queries Wikimedia Commons for matching image files
 def search(text):
     try:
-        response = requests.get(COMMONS_API, headers=CLIENT_HEADERS, timeout=15, params={
+        response = requests.get(COMMONS_API, headers=client_headers(), timeout=15, params={
             "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrlimit": 12,
             "gsrsearch": text, "prop": "imageinfo", "iiprop": "url|size|mime|sha1|extmetadata", "iiurlwidth": 1600})
         return list((response.json().get("query") or {}).get("pages", {}).values())
@@ -188,7 +203,7 @@ def save_safe_copy(url, path: Path):
 def download(url):
     for attempt in range(3):
         try:
-            response = requests.get(url, headers=CLIENT_HEADERS, timeout=30)
+            response = requests.get(url, headers=client_headers(), timeout=30)
         except requests.RequestException as error:
             logger.warning("Image download failed: %s", type(error).__name__)
             return None
