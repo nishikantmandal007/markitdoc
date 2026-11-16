@@ -13,7 +13,7 @@ from pptx.util import Inches, Pt
 import logging
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.models.document import Block, Document
-from markitdoc.pdf.layouts import as_flow, balanced, paragraphs, prepared
+from markitdoc.markup.blocks import as_flow, balanced, paragraphs, prepared
 from markitdoc.utils.helpers import creation_date, lifted, long_date
 from markitdoc.pptx.brand_cover import draw_brand_cover
 from markitdoc.pptx.deck import (Deck, Item, add_badge, add_fade, full_bleed, half_bleed, overlay, side_title,

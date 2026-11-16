@@ -9,7 +9,8 @@ from markitdoc.docx.layouts import document_photo_ratios, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.models.document import Document, parse_document
 from markitdoc.models.catalogue import layouts
-from markitdoc.pdf.layouts import as_flow, page_problems, render_pdf
+from markitdoc.markup.blocks import as_flow
+from markitdoc.pdf.layouts import page_problems, render_pdf
 from markitdoc.pptx.layouts import render_pptx, slide_photo_ratios
 from markitdoc.themes.themes import theme_for
 from markitdoc.visuals.images import find_images
