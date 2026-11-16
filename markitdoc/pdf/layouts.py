@@ -1,5 +1,4 @@
 import io
-import zlib
 import re
 from dataclasses import replace
 from pathlib import Path
@@ -7,8 +6,7 @@ from pathlib import Path
 from fpdf import FPDF, ViewerPreferences
 from fpdf.enums import MethodReturnValue
 from mdit_py_plugins.container import container_plugin
-import numpy
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image
 
 import logging
 from markitdoc.visuals.icons import icon_svg, strip_icon
@@ -20,6 +18,7 @@ from markitdoc.utils.helpers import creation_date, lifted, long_date
 from markitdoc.models.catalogue import (Box, content_limit, content_width, layouts, margin, page_height, page_width,
                                         sectioned_layouts, text_width, trailing_headings)
 from markitdoc.markup.blocks import as_flow, balanced, paragraphs, prepared, slot_pieces
+from markitdoc.visuals.photos import fitted_image
 
 logger = logging.getLogger(__name__)
 white, soft_white, faint_white = (255, 255, 255), (226, 230, 240), (190, 198, 216)
@@ -276,57 +275,6 @@ def credit_on_photo(pdf, x, y, width, height, credit, source):
     pdf.set_text_color(*white)
     pdf.set_xy(left + 1.5, top + 0.6)
     pdf.cell(text_width - 3, 3, text, link=source)
-
-
-def interest_box(picture, target):
-    small = picture.copy()
-    small.thumbnail((160, 160))
-    scale = picture.width / small.width
-    edges = numpy.asarray(small.convert("L").filter(ImageFilter.FIND_EDGES), dtype=float)
-    saturation = numpy.asarray(small.convert("HSV"), dtype=float)[:, :, 1]
-    interest = edges + 0.5 * saturation
-    rows, columns = interest.shape
-    if columns / rows > target:
-        window_height, window_width = rows, max(1, int(rows * target))
-    else:
-        window_width, window_height = columns, max(1, int(columns / target))
-    summed = numpy.pad(interest.cumsum(0).cumsum(1), ((1, 0), (1, 0)))
-    best, best_score = (0, 0), -1.0
-    for top in range(0, rows - window_height + 1, max(1, (rows - window_height) // 24 or 1)):
-        for left in range(0, columns - window_width + 1, max(1, (columns - window_width) // 24 or 1)):
-            total = (summed[top + window_height, left + window_width] - summed[top, left + window_width]
-                     - summed[top + window_height, left] + summed[top, left])
-            centre = abs((left + window_width / 2) / columns - 0.5) + abs((top + window_height / 2) / rows - 0.45)
-            score = total * (1 - 0.35 * centre)
-            if score > best_score:
-                best, best_score = (top, left), score
-    top, left = best
-    box_width, box_height = window_width * scale, window_height * scale
-    return (int(left * scale), int(top * scale), int(min(picture.width, left * scale + box_width)),
-            int(min(picture.height, top * scale + box_height)))
-
-
-def treated(picture, treatment, theme):
-    picture = ImageOps.autocontrast(picture, cutoff=1)
-    if treatment == "mono":
-        return ImageOps.grayscale(picture).convert("RGB")
-    if treatment == "duotone" and theme is not None:
-        return ImageOps.colorize(ImageOps.grayscale(picture), black=theme.rgb("night"), white=lifted(theme.rgb("paper"), 0.2))
-    return picture
-
-
-def fitted_image(path: Path, width, height, work_folder: Path, fades=(), treatment="natural", theme=None):
-    picture = Image.open(path).convert("RGB")
-    picture = treated(picture.crop(interest_box(picture, width / height)), treatment, theme)
-    for top_ratio, bottom_ratio, start, end, rgb in fades:
-        mask = Image.new("L", (1, picture.height), 0)
-        first, last = int(picture.height * top_ratio), int(picture.height * bottom_ratio)
-        for row in range(first, last):
-            mask.putpixel((0, row), int(255 * (start + (end - start) * (row - first) / max(1, last - first - 1))))
-        picture = Image.composite(Image.new("RGB", picture.size, rgb), picture, mask.resize(picture.size))
-    output = work_folder / f"{path.stem}_{int(width)}x{int(height)}_{zlib.crc32(repr(fades).encode()):08x}_{treatment}.jpg"
-    picture.save(output, "JPEG", quality=88)
-    return str(output)
 
 
 def page_heading(pdf, block, label, top=22):

@@ -21,7 +21,8 @@ from markitdoc.visuals.icons import strip_icon
 from markitdoc.visuals.infographics import render_infographic
 from markitdoc.markup.inline import anchor, inline_maths, inline_runs, parser, superscript_digits
 from markitdoc.models.catalogue import page_height, page_width
-from markitdoc.pdf.layouts import PdfPages, escaped, fitted_image, inline_markup, runs_markup
+from markitdoc.pdf.layouts import PdfPages, escaped, inline_markup, runs_markup
+from markitdoc.visuals.photos import fitted_image
 from markitdoc.utils.helpers import lifted
 
 logger = logging.getLogger(__name__)

@@ -16,7 +16,7 @@ from docx.shared import Cm, Pt, RGBColor
 import logging
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.markup.inline import Run
-from markitdoc.pdf.layouts import fitted_image
+from markitdoc.visuals.photos import fitted_image
 from markitdoc.utils.helpers import lifted, long_date
 from markitdoc.pptx.deck import office_font
 from markitdoc.themes.brands import brand_hooks

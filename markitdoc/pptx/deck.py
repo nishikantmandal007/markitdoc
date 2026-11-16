@@ -16,7 +16,8 @@ from pptx.util import Inches, Pt
 import logging
 from markitdoc.markup.inline import inline_runs, parser
 from markitdoc.models.catalogue import Box
-from markitdoc.pdf.layouts import PdfPages, fitted_image
+from markitdoc.pdf.layouts import PdfPages
+from markitdoc.visuals.photos import fitted_image
 from markitdoc.utils.helpers import lifted
 from markitdoc.themes.themes import Theme
 
