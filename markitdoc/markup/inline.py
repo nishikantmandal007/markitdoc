@@ -45,6 +45,7 @@ class Run:
     link: str = ""
     highlight: bool = False
     code: bool = False
+    style: tuple = ()
 
 
 SPAN_ROLES = {"accent": "mood", "second": "second", "muted": "muted", "danger": "danger", "success": "success", "highlight": "ink"}
@@ -60,7 +61,8 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
             runs.append(Run(text, bold=state["bold"] > 0 or extra.get("bold", False), italic=state["italic"] > 0,
                             strike=state["strike"] > 0, underline=any(span[0] for span in spans),
                             role=next((span[1] for span in reversed(spans) if span[1]), ""), script=extra.get("script", script),
-                            link=link, highlight=any(span[2] for span in spans), code=extra.get("code", False)))
+                            link=link, highlight=any(span[2] for span in spans), code=extra.get("code", False),
+                            style=tuple(pair for span in spans for pair in span[3])))
 
     for child in token.children or []:
         kind = child.type
@@ -94,7 +96,7 @@ def inline_runs(token, targets=frozenset()) -> list[Run]:
         elif kind == "span_open":
             classes = str(child.attrs.get("class", "")).split()
             spans.append(("underline" in classes, next((SPAN_ROLES[name] for name in classes if name in SPAN_ROLES), ""),
-                          "highlight" in classes))
+                          "highlight" in classes, tuple((key, str(value)) for key, value in child.attrs.items())))
         elif kind == "span_close" and spans:
             spans.pop()
     return runs

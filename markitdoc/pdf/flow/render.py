@@ -1,5 +1,6 @@
 import logging
 import re
+from dataclasses import replace
 
 from fpdf.enums import XPos, YPos
 
@@ -15,6 +16,7 @@ from markitdoc.markup.elements import (
     without_display_maths,
 )
 from markitdoc.markup.inline import ANCHOR, inline_runs, parser
+from markitdoc.models.attributes import parse_attributes
 from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
@@ -77,7 +79,8 @@ def render_tokens(pdf: FlowPages, tokens):
             level = int(token.tag[1])
             target = ANCHOR.search(tokens[index + 1].content)
             text = ANCHOR.sub("", inline_markup(tokens[index + 1], pdf.targets))
-            add_heading(pdf, text, level, target.group(1) if target else None, opening_height(pdf, tokens, index + 3))
+            add_heading(pdf, text, level, target.group(1) if target else None, opening_height(pdf, tokens, index + 3),
+                        pdf.look(f"h{min(level, 4)}"))
             index += 3
             continue
         if token.type == "paragraph_open":
@@ -86,6 +89,10 @@ def render_tokens(pdf: FlowPages, tokens):
             text = inline_markup(inline, pdf.targets)
             settings_line = re.search(r"\n?\{([^{}]*)\}\s*$", inline.content)
             style = settings_from(settings_line.group(1)).get("class", "") if settings_line else ""
+            block_line = re.search(r"(?<![\]*_`])\{([^{}]*)\}\s*$", inline.content)
+            attributes = parse_attributes(block_line.group(1) if block_line else "")
+            look = pdf.look("list" if list_stack else "paragraph", attributes.classes, attributes.values)
+            align = PARAGRAPH_ALIGNMENTS.get(style) or (look.align if look and look.align else "L")
             if settings_line:
                 text = re.sub(r"\s*\{[^{}]*\}\s*$", "", text)
             if not text and picture is None:
@@ -110,25 +117,27 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_figure(pdf, picture.content or str(picture.attrs.get("alt", "")))
             elif only_display_maths(inline):
                 add_equation(pdf, next(child.content for child in inline.children if child.type == "math_inline_double"))
-            elif needs_runs(inline_runs(inline, pdf.targets)) and not list_stack:
+            elif needs_runs(inline_runs(inline, pdf.targets), look) and not list_stack:
                 place_notes(pdf, inline, note_texts, placed)
-                draw_runs(pdf, inline_runs(inline, pdf.targets), PARAGRAPH_ALIGNMENTS.get(style, "L"),
-                          indent + (INDENT_STEP if "indent" in style else 0))
+                runs = inline_runs(inline, pdf.targets)
+                if look and block_line and runs:
+                    runs[-1] = replace(runs[-1], text=re.sub(r"\s*\{[^{}]*\}\s*$", "", runs[-1].text))
+                draw_runs(pdf, [run for run in runs if run.text], align, indent + (INDENT_STEP if "indent" in style else 0), look=look)
             elif text == PAGE_BREAK_MARKER:
                 if pdf.page_break_trigger - pdf.get_y() < pdf.eph * SOFT_BREAK_SHARE:
                     pdf.add_page()
                 else:
                     logger.info("Page break marker ignored: %.0f%% of the page is still free", 100 * (pdf.page_break_trigger - pdf.get_y()) / pdf.eph)
             elif list_stack and not list_stack[-1].get("fresh"):
-                add_paragraph(pdf, text, "L", 5 * len(list_stack) + 2, after=1)
+                add_paragraph(pdf, text, "L", 5 * len(list_stack) + 2, after=1, look=look)
             elif list_stack:
                 list_stack[-1]["fresh"] = False
                 place_notes(pdf, inline, note_texts, placed)
-                add_list_item(pdf, text, list_stack, inline_runs(inline, pdf.targets))
+                add_list_item(pdf, text, list_stack, inline_runs(inline, pdf.targets), look)
             else:
                 place_notes(pdf, inline, note_texts, placed)
-                add_paragraph(pdf, text, PARAGRAPH_ALIGNMENTS.get(style, "L"), indent + (INDENT_STEP if "indent" in style else 0),
-                              lead="lead" in style, following=opening_height(pdf, tokens, index + 3) if text.endswith(":") else 0)
+                add_paragraph(pdf, text, align, indent + (INDENT_STEP if "indent" in style else 0), lead="lead" in style,
+                              following=opening_height(pdf, tokens, index + 3) if text.endswith(":") else 0, look=look)
             for equation in equations:
                 add_equation(pdf, equation)
             index += 3
@@ -151,7 +160,7 @@ def render_tokens(pdf: FlowPages, tokens):
             indent -= INDENT_STEP
         elif token.type == "blockquote_open":
             end = closing_index(tokens, index, "blockquote_open", "blockquote_close")
-            add_callout(pdf, " ".join(inline_markup(t, pdf.targets) for t in tokens[index:end] if t.type == "inline"))
+            add_callout(pdf, " ".join(inline_markup(t, pdf.targets) for t in tokens[index:end] if t.type == "inline"), pdf.look("quote"))
             index = end + 1
             continue
         elif token.type == "table_open":

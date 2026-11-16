@@ -386,7 +386,7 @@ def fill_contents(writer, title, marker):
 
 
 # renders a document as an editable Word file
-def render_docx(document: Document, theme: Theme, output_path: Path, images=None, user_email=""):
+def render_docx(document: Document, theme: Theme, output_path: Path, images=None, user_email="", styles=None):
     started = time.perf_counter()
     images = images or {}
     blocks = [prepared(block) for block in document.blocks]
@@ -394,7 +394,7 @@ def render_docx(document: Document, theme: Theme, output_path: Path, images=None
     title = (first.slots.get("title") if first is not None else "") or next(
         (line.lstrip("# ").strip() for block in blocks for line in block.body.splitlines() if line.startswith("# ")), "Document")
     with tempfile.TemporaryDirectory() as work_folder:
-        writer = Writer(theme, document.meta, Path(work_folder), images, title)
+        writer = Writer(theme, document.meta, Path(work_folder), images, title, styles)
         cover = first is not None and first.layout == "cover"
         setup_chrome(writer, cover)
         if brand_hooks(theme.name).docx_cover and not cover:

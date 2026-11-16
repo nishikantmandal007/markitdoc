@@ -2,7 +2,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
-from markitdoc.docx.writer import BULLET_MARKS, LIST_FORMATS, write_runs
+from markitdoc.docx.writer import BULLET_MARKS, LIST_FORMATS, align_paragraph, write_runs
 
 
 # creates or reuses the numbering definition for a list style
@@ -70,7 +70,7 @@ def new_list(writer, ordered, scheme, start):
 
 
 # draws a numbered or bulleted list item at its nesting level
-def add_list_item(writer, stack, runs):
+def add_list_item(writer, stack, runs, look=None):
     current = stack[-1]
     paragraph = writer.body.add_paragraph()
     paragraph.paragraph_format.space_after = Pt(3)
@@ -86,4 +86,5 @@ def add_list_item(writer, stack, runs):
         current["fresh"] = False
     else:
         paragraph.paragraph_format.left_indent = Cm(0.55 + (len(stack) - 1) * 0.6 + 0.55)
-    write_runs(writer, paragraph, runs)
+    align_paragraph(paragraph, look)
+    write_runs(writer, paragraph, runs, look=look)

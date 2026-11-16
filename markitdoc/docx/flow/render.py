@@ -12,6 +12,7 @@ from markitdoc.docx.styles import border_bottom, cell_borders, cell_fill, cell_m
 from markitdoc.docx.writer import (
     LIST_FORMATS,
     add_picture,
+    align_paragraph,
     bookmark,
     caption,
     first_paragraph,
@@ -30,6 +31,7 @@ from markitdoc.markup.elements import (
     without_display_maths,
 )
 from markitdoc.markup.inline import ANCHOR, Run, inline_runs, parser
+from markitdoc.models.attributes import parse_attributes
 from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import ZOOM, chain_steps, diagram_as_text, diagram_title, render_diagram
 from markitdoc.visuals.equations import equation_png_bytes, mathtext_ready
@@ -124,10 +126,12 @@ def add_heading(writer, level, inline):
     if level == 1 and writer.skip_title and "".join(run.text for run in runs).strip() == writer.skip_title:
         writer.skip_title = ""
         return None
+    look = writer.look(f"h{min(level, 4)}")
     if level == 1 and not writer.titled:
         writer.titled = True
         paragraph = writer.body.add_paragraph(style="Title")
-        write_runs(writer, paragraph, runs)
+        align_paragraph(paragraph, look)
+        write_runs(writer, paragraph, runs, look=look)
         return paragraph
     if writer.numbered and 2 <= level <= 4:
         writer.headings[level - 1] += 1
@@ -135,7 +139,8 @@ def add_heading(writer, level, inline):
         runs = [Run(".".join(str(number) for number in writer.headings[1:level]) + "   ")] + runs
     paragraph = writer.body.add_paragraph(style=f"Heading {min(level, 4)}")
     start_on_new_page(writer, paragraph)
-    write_runs(writer, paragraph, runs)
+    align_paragraph(paragraph, look)
+    write_runs(writer, paragraph, runs, look=look)
     if found:
         bookmark(writer, paragraph, found.group(1))
     return paragraph
@@ -157,7 +162,7 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
         return ""
     runs = inline_runs(inline, writer.targets)
     if settings and runs:
-        runs[-1] = Run(re.sub(r"\s*\{[^{}]*\}\s*$", "", runs[-1].text), runs[-1].bold, runs[-1].italic, role=runs[-1].role)
+        runs[-1] = Run(re.sub(r"\s*\{[^{}]*\}\s*$", "", runs[-1].text), runs[-1].bold, runs[-1].italic, role=runs[-1].role, style=runs[-1].style)
     text = "".join(run.text for run in runs).strip()
     if content == "+++":
         writer.break_next = True
@@ -165,13 +170,17 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
     if text.startswith("Table:") and not stack:
         writer.pending_caption = text[6:].strip()
         return ""
+    block_line = re.search(r"(?<![\]*_`])\{([^{}]*)\}\s*$", content)
+    attributes = parse_attributes(block_line.group(1) if block_line else "")
+    look = writer.look("list" if stack else "paragraph", attributes.classes, attributes.values)
     if stack:
-        add_list_item(writer, stack, runs)
+        add_list_item(writer, stack, runs, look)
     elif text:
         paragraph = writer.body.add_paragraph(style="Lead" if style == "lead" else None)
+        align_paragraph(paragraph, look)
         if style in ALIGNMENTS:
             paragraph.alignment = ALIGNMENTS[style]
-        write_runs(writer, paragraph, runs)
+        write_runs(writer, paragraph, runs, look=look)
     for equation in equations:
         add_equation(writer, equation)
     return ""
@@ -188,9 +197,11 @@ def add_quote(writer, tokens):
         runs_list = [inline_runs(token, writer.targets) for token in inlines]
         add_callout(writer, label, runs_list)
         return
+    look = writer.look("quote")
     for token in inlines:
         paragraph = writer.body.add_paragraph(style="Quote")
-        write_runs(writer, paragraph, inline_runs(token, writer.targets))
+        align_paragraph(paragraph, look)
+        write_runs(writer, paragraph, inline_runs(token, writer.targets), look=look)
 
 
 # draws a colored callout table in the Word document

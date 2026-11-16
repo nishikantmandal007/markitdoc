@@ -16,19 +16,21 @@ from markitdoc.markup.inline import Run
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
-from markitdoc.utils.helpers import lifted, long_date, office_font
+from markitdoc.utils.helpers import MONO_FONT, lifted, long_date, office_font
 from markitdoc.visuals.photo_fit import fitted_image
 
 WHITE = (255, 255, 255)
 BULLET_MARKS = ("•", "–", "◦")
+WORD_ALIGNS = {"L": WD_ALIGN_PARAGRAPH.LEFT, "C": WD_ALIGN_PARAGRAPH.CENTER, "R": WD_ALIGN_PARAGRAPH.RIGHT, "J": WD_ALIGN_PARAGRAPH.JUSTIFY}
 LIST_FORMATS = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "upperLetter", "roman": "lowerRoman", "upper-roman": "upperRoman",
                 "legal": "decimal"}
 
 
 class Writer:
     # sets up the rendering context and its document settings
-    def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict, title: str):
+    def __init__(self, theme: Theme, meta: dict, work_folder: Path, images: dict, title: str, styles=None):
         self.document = docx.Document()
+        self.styles = styles
         self.theme, self.meta, self.work_folder, self.title = theme, meta, work_folder, title
         self.heading_font, self.body_font = office_font(theme.fonts["heading"]), office_font(theme.fonts["body"])
         self.figures = {key[1]: value for key, value in images.items() if isinstance(key, tuple)}
@@ -56,6 +58,16 @@ class Writer:
         finally:
             self.body, self.width = previous
 
+    # the look of an element under the stylesheet, None for version 1 documents
+    def look(self, selector, classes=(), inline=None):
+        return self.styles.look(selector, classes, inline) if self.styles else None
+
+    # the Word font name for a look's font: a theme role or a declared font
+    def font_named(self, name):
+        if name == "heading":
+            return self.heading_font
+        return MONO_FONT if name == "mono" else self.styles.faces[name].family if name in self.styles.faces else self.body_font
+
     # returns a theme color as a Word RGB value
     def rgb(self, role):
         return RGBColor(*(role if isinstance(role, tuple) else self.theme.rgb(role)))
@@ -71,19 +83,20 @@ class Writer:
 
 
 # writes styled inline text runs into a Word paragraph
-def write_runs(writer, paragraph, runs, size=None, role=None, bold=None, italic=None, font=None):
+def write_runs(writer, paragraph, runs, size=None, role=None, bold=None, italic=None, font=None, look=None):
     for piece in runs:
         if not piece.text:
             continue
+        mine = writer.styles.span_look(piece.style, look) if look and piece.style else look
         if piece.link:
-            add_link(writer, paragraph, piece, size, role)
+            add_link(writer, paragraph, piece, size, role, mine)
             continue
         run = paragraph.add_run(piece.text)
-        format_run(writer, run, piece, size, role, bold, italic, font)
+        format_run(writer, run, piece, size, role, bold, italic, font, mine)
 
 
 # sets font, emphasis, color, and script on a Word text run
-def format_run(writer, run, piece, size, role, bold, italic, font):
+def format_run(writer, run, piece, size, role, bold, italic, font, look=None):
     run.bold = True if bold else piece.bold or None
     run.italic = True if italic else piece.italic or None
     run.underline = piece.underline or None
@@ -96,6 +109,8 @@ def format_run(writer, run, piece, size, role, bold, italic, font):
         run.font.color.rgb = writer.rgb(piece.role or role)
     if piece.script:
         run.font.subscript, run.font.superscript = piece.script == "SUB", piece.script == "SUP"
+    if look:
+        style_run(writer, run, look, piece.role or role)
     if piece.highlight:
         shading = OxmlElement("w:shd")
         for key, value in (("w:val", "clear"), ("w:color", "auto"), ("w:fill", writer.hex(writer.tint("mood", 0.78)))):
@@ -103,8 +118,38 @@ def format_run(writer, run, piece, size, role, bold, italic, font):
         run._r.get_or_add_rPr().append(shading)
 
 
+# applies a stylesheet look to a Word run: font, size, colour, emphasis, small caps and character spacing
+def style_run(writer, run, look, role=""):
+    if look.font:
+        run.font.name = writer.font_named(look.font)
+        fonts = run._r.get_or_add_rPr().get_or_add_rFonts()
+        for key in ("w:cs", "w:eastAsia"):
+            fonts.set(qn(key), run.font.name)
+    if look.size:
+        run.font.size = Pt(look.size)
+    if look.rgb and not role:
+        run.font.color.rgb = RGBColor(*look.rgb)
+    if look.bold is not None and run.bold is None:
+        run.bold = look.bold
+    if look.italic is not None and run.italic is None:
+        run.italic = look.italic
+    run.font.small_caps, run.font.all_caps = (True if look.caps == "small" else None), (True if look.caps == "all" else None)
+    if look.tracking:
+        spacing = OxmlElement("w:spacing")
+        spacing.set(qn("w:val"), str(round(look.tracking * 20)))
+        run._r.get_or_add_rPr().insert_element_before(spacing, "w:w", "w:kern", "w:position", "w:sz", "w:szCs", "w:highlight", "w:u",
+                                                      "w:effect", "w:bdr", "w:shd", "w:fitText", "w:vertAlign", "w:rtl", "w:cs", "w:em",
+                                                      "w:lang", "w:eastAsianLayout", "w:specVanish", "w:oMath")
+
+
+# sets a Word paragraph's alignment from a stylesheet look
+def align_paragraph(paragraph, look):
+    if look and look.align:
+        paragraph.alignment = WORD_ALIGNS[look.align]
+
+
 # adds a hyperlink run to a Word paragraph
-def add_link(writer, paragraph, piece, size, role):
+def add_link(writer, paragraph, piece, size, role, look=None):
     link = OxmlElement("w:hyperlink")
     if piece.link.startswith("#"):
         link.set(qn("w:anchor"), piece.link[1:])
@@ -113,7 +158,7 @@ def add_link(writer, paragraph, piece, size, role):
                                             is_external=True)
         link.set(qn("r:id"), relation)
     run = paragraph.add_run(piece.text)
-    format_run(writer, run, piece, size, "mood", None, None, None)
+    format_run(writer, run, piece, size, "mood", None, None, None, look)
     run.underline = True
     link.append(run._r)
     paragraph._p.append(link)

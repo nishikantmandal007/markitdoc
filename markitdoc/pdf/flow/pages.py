@@ -223,6 +223,7 @@ def probe_of(pdf: FlowPages, y=None):
                  "footer_text", "meta_date", "spacing"):
         setattr(probe, name, getattr(pdf, name))
     probe.headings, probe.measuring = list(pdf.headings), True
+    probe.use_styles(pdf.styles)
     probe.set_auto_page_break(True, margin=pdf.b_margin)
     probe.add_page()
     probe.set_margins(pdf.l_margin, pdf.t_margin, pdf.r_margin)
