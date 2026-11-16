@@ -24,9 +24,10 @@ from markitdoc.pdf.flow_tables import column_widths
 from markitdoc.visuals.equations import mathtext_ready, equation_png
 from markitdoc.markup.inline import anchor, inline_maths, parser, literal, plain_text
 from markitdoc.pptx.diagrams import draw_flow as draw_flow_diagram, flow_graph
-from markitdoc.pptx.deck import (Item, add_image, add_rect, add_runs, add_textbox, body_height, body_top, card_pairs,
-                                 card_preset, draw_panel, panel_fits, comfortable_size, contained, content_width,
-                                 draw_cards, draw_takeaway, figure_cards, fitted_items, full_bleed, half_bleed,
+from markitdoc.pptx.cards import (card_pairs, card_preset, draw_panel, panel_fits, draw_cards, draw_takeaway,
+                                  figure_cards)
+from markitdoc.pptx.deck import (Item, add_image, add_rect, add_runs, add_textbox, body_height, body_top,
+                                 comfortable_size, contained, content_width, fitted_items, full_bleed, half_bleed,
                                  image_ratio, key_sentences, no_grid_table_style, overlay, photo_for, place_title,
                                  set_spacing, side_margin, side_text_width, side_title, slide_width, soft_white,
                                  split_to_fit, stack_height, text_width, tint, visual_left, visual_width, white,
