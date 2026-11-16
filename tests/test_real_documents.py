@@ -5,7 +5,7 @@ import fitz
 import pytest
 from helpers import generate_document
 
-import markitdoc.render as service
+import markitdoc.rendering as service
 
 fixtures = sorted((Path(__file__).parent / "fixtures").glob("*.md"))
 

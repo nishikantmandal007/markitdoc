@@ -202,7 +202,7 @@ class TestCompleteness:
         assert all(b"Sign-in path" not in str(call).encode() for call in sent)
 
     def test_should_link_the_photo_credit_inside_the_figure_caption(self, monkeypatch, tmp_path):
-        import markitdoc.render as service
+        import markitdoc.rendering as service
         from markitdoc.visuals.images import DocumentImage
 
         photo = tmp_path / "photo.jpg"

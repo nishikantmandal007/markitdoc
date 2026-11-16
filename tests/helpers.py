@@ -2,7 +2,7 @@ import uuid
 from pathlib import Path
 
 from markitdoc.errors import MarkitDocError
-from markitdoc.render import render
+from markitdoc.rendering import render
 
 
 # the old generate_document call shape: a path string, or None when the input is rejected

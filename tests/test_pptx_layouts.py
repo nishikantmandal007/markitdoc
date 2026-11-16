@@ -5,7 +5,7 @@ from helpers import generate_document
 from pptx import Presentation
 from pptx.util import Emu, Inches
 
-import markitdoc.render as doc_generator_service
+import markitdoc.rendering as doc_generator_service
 from markitdoc.themes.themes import load_theme
 
 deck_markdown = """---

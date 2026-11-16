@@ -2,7 +2,7 @@ import pytest
 from docx import Document as WordDocument
 from helpers import generate_document
 
-import markitdoc.render as doc_generator_service
+import markitdoc.rendering as doc_generator_service
 
 report = """---
 palette: ocean
