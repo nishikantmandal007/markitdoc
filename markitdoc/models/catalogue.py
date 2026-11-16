@@ -28,6 +28,18 @@ class PdfLayout:
 
 
 FEATURE_TEXT_WIDTH = PAGE_WIDTH - 92 - 12 - MARGIN
+
+
+# the width of a feature page's side panel: wide for a photo, narrow for figures, none otherwise
+def feature_panel(has_image, has_items):
+    return 92 if has_image else 64 if has_items else 0
+
+
+# the text width left on a feature page: one margin beside a panel, two without
+def feature_text_width(panel):
+    return PAGE_WIDTH - panel - 12 - MARGIN if panel else CONTENT_WIDTH
+
+
 LAYOUTS = {
     "cover": PdfLayout("cover", {"kicker": Box(170, 8.5, 1, "B", False), "title": Box(CONTENT_WIDTH, 40, 3, "B"),
                                  "subtitle": Box(150, 13, 3)}, variants=("dark", "photo", "light", "split", "company"),

@@ -2,7 +2,7 @@ import re
 from dataclasses import replace
 
 from markitdoc.markup.blocks import prepared, slot_pieces
-from markitdoc.models.catalogue import CONTENT_LIMIT, LAYOUTS
+from markitdoc.models.catalogue import CONTENT_LIMIT, LAYOUTS, feature_panel, feature_text_width
 from markitdoc.models.document import Document
 from markitdoc.pdf.pages import SHRINK_STEPS, PdfPages, text_of
 from markitdoc.pdf.photos import MEASURING_PHOTO
@@ -47,6 +47,8 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
             continue
         before = len(found)
         for slot, box in layout.boxes.items():
+            if block.layout == "feature":
+                box = replace(box, width=feature_text_width(feature_panel(bool(with_images and block.slots.get("image")), bool(block.items))))
             text = block.slots.get(slot, "")
             if not text:
                 if box.required:
@@ -57,8 +59,9 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
                 lines = measurer.line_count(piece, smallest)
                 if lines > box.lines:
                     found.append((index, f"{where}: {slot} needs {lines} lines even at the smallest size, fits {box.lines} (shorten it)"))
-                if measurer.line_count(piece, box) < box.min_lines:
-                    found.append((index, f"{where}: {slot} is too short to fill its page (at least {box.min_lines} lines)"))
+                measured = measurer.line_count(piece, box)
+                if measured < box.min_lines:
+                    found.append((index, f"{where}: {slot} has {measured} lines; needs at least {box.min_lines} to fill its page"))
         low, high, limits = layout.items
         if limits and not low <= len(block.items) <= high:
             found.append((index, f"{where}: needs {low} to {high} items, has {len(block.items)}"))

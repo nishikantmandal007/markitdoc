@@ -130,3 +130,44 @@ class TestLaidOutPdf:
         body = "Intro\n\n```infographic compare-swot\ndata\n  compares\n    - label Strengths\n```\n"
 
         assert fences(body, "infographic") == ["infographic compare-swot\ndata\n  compares\n    - label Strengths\n"]
+
+
+FEATURE_BODY = " || ".join(["The programme grew from a single speech into the work of four hundred thousand people. " * 5] * 3)
+RIGHT_EDGE = (210 - 20) * 72 / 25.4
+
+
+def feature_page(extra, images=""):
+    return f"---\ntemplate: editorial\n{images}---\n## page\nlayout: feature\ntitle: Touchdown\nbody: {FEATURE_BODY}\n{extra}\n"
+
+
+class TestFeaturePanelWidth:
+    def right_edges(self, markdown, tmp_path, monkeypatch, with_image=False):
+        from PIL import Image
+
+        import markitdoc.rendering as service
+        from markitdoc.visuals.images import DocumentImage
+        photo = tmp_path / "photo.jpg"
+        Image.new("RGB", (600, 400), (90, 120, 160)).save(photo)
+        image = DocumentImage(photo, "File:Sample.jpg", "Jane Doe", "CC BY 4.0")
+        monkeypatch.setattr(service, "find_images", lambda wanted, ratios: {key: image for key in wanted} if with_image else {})
+        path = generate_document(markdown, "pdf", filename_stem="feature", output_dir=str(tmp_path))
+        with fitz.open(path) as pdf:
+            return [word[2] for page in pdf for word in page.get_text("words") if "Touchdown" in page.get_text()], len(pdf)
+
+    def test_should_keep_feature_text_inside_the_margin_with_an_image(self, tmp_path, monkeypatch):
+        markdown = feature_page("image: harbour\n", "images: true\n")
+        edges, _ = self.right_edges(markdown, tmp_path, monkeypatch, with_image=True)
+
+        assert max(edges) <= RIGHT_EDGE + 1 and problems_in(parse_document(markdown)) == []
+
+    def test_should_keep_feature_text_inside_the_margin_with_items_only(self, tmp_path, monkeypatch):
+        markdown = feature_page("- 21.5 hours — on the lunar surface\n- 650 million — people watching live")
+        edges, _ = self.right_edges(markdown, tmp_path, monkeypatch)
+
+        assert max(edges) <= RIGHT_EDGE + 1 and problems_in(parse_document(markdown)) == []
+
+    def test_should_use_the_full_width_for_a_feature_with_neither(self, tmp_path, monkeypatch):
+        markdown = feature_page("")
+        edges, _ = self.right_edges(markdown, tmp_path, monkeypatch)
+
+        assert max(edges) <= RIGHT_EDGE + 1 and min(edges) < RIGHT_EDGE and problems_in(parse_document(markdown)) == []

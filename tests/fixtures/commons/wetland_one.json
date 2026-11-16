@@ -1,0 +1,28 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Wetland at dawn.jpg",
+    "index": 1,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}

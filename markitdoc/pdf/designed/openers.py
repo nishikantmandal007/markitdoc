@@ -1,7 +1,15 @@
-from dataclasses import replace
-
 from markitdoc.markup.blocks import paragraphs
-from markitdoc.models.catalogue import CONTENT_LIMIT, CONTENT_WIDTH, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, TEXT_WIDTH, Box
+from markitdoc.models.catalogue import (
+    CONTENT_LIMIT,
+    CONTENT_WIDTH,
+    MARGIN,
+    PAGE_HEIGHT,
+    PAGE_WIDTH,
+    TEXT_WIDTH,
+    Box,
+    feature_panel,
+    feature_text_width,
+)
 from markitdoc.models.document import Block
 from markitdoc.pdf.pages import SOFT_WHITE, WHITE, PdfPages
 from markitdoc.pdf.photos import placed
@@ -200,12 +208,9 @@ def draw_quote(pdf: PdfPages, block: Block, image, work_folder):
 
 # draws a feature page with an image, body text, and related figures
 def draw_feature(pdf: PdfPages, block: Block, image, work_folder):
-    if not image and not block.items:
-        story = replace(block, layout="chapter", slots={**block.slots, "variant": "plain"})
-        return draw_chapter(pdf, story, None, work_folder)
     pdf.fill_page("paper")
     image_left = block.slots.get("variant", "left") == "left"
-    panel = 92 if image else 64
+    panel = feature_panel(bool(image), bool(block.items))
     panel_x = 0 if image_left else PAGE_WIDTH - panel
     if image:
         placed(pdf, image, panel_x, 0, panel, PAGE_HEIGHT, work_folder, description=block.slots.get("image", "Photograph"))
@@ -219,12 +224,13 @@ def draw_feature(pdf: PdfPages, block: Block, image, work_folder):
             pdf.write_at(panel_x + 10, y, panel - 20, figure, size, "B", "mood", line_height=1.0)
             pdf.write_at(panel_x + 10, y + 14, panel - 20, label, 9, role="muted", line_height=1.35)
             y += 46
-    x = panel + 12 if image_left else MARGIN
-    width = PAGE_WIDTH - panel - 12 - MARGIN
+    x = panel + 12 if image_left and panel else MARGIN
+    width = feature_text_width(panel)
     pdf.kicker(x, 22, "Feature")
-    end = pdf.write_at(x, 30, width, block.slots["title"], pdf.slot_size(block, "title"), "B", line_height=1.15)
+    end = pdf.write_at(x, 30, width, block.slots["title"], pdf.slot_size(block, "title", width), "B", line_height=1.15)
+    body_size = pdf.slot_size(block, "body", width)
     for paragraph in paragraphs(block.slots["body"]):
-        end = pdf.write_at(x, end + 5, width, paragraph, pdf.slot_size(block, "body"), role="body", line_height=1.55, rich=True)
+        end = pdf.write_at(x, end + 5, width, paragraph, body_size, role="body", line_height=1.55, rich=True)
     if image and block.items and end + 10 + 25 * len(block.items) > CONTENT_LIMIT:
         column = width / len(block.items)
         y, end = end + 10, end + 10

@@ -160,7 +160,12 @@ class PdfPages(FPDF):
         self.rect(0 - self.fit[0] / self.fit[2], 0 - self.fit[1] / self.fit[2], self.w / self.fit[2], self.h / self.fit[2], "F")
 
     # draws text at a fixed PDF position and returns its ending height
-    def write_at(self, x, y, width, text, size, style="", role="ink", line_height=1.35, align="L", rgb=None, rich=False):
+    def write_at(self, x, y, width, text, size, style="", role="ink", line_height=1.35, align=None, rgb=None, rich=False):
+        if align is None:
+            align = "J" if role == "body" else "L"
+        if align == "J":
+            from markitdoc.pdf.flow.pages import hyphenated
+            text = hyphenated(text, getattr(self, "lang", "en"))
         self.set_xy(x, y)
         self.set_font("Head" if style == "B" and size >= HEADING_POINT else "Brand", style, size)
         self.set_text_color(*(rgb or self.theme.rgb(role)))
@@ -174,8 +179,9 @@ class PdfPages(FPDF):
                                    markdown=True))
 
     # chooses the largest slot text size that fits its line limit
-    def slot_size(self, block, slot):
+    def slot_size(self, block, slot, width=None):
         box = LAYOUTS[block.layout].boxes[slot]
+        box = replace(box, width=width) if width else box
         pieces = slot_pieces(block, slot)
         for scale in SHRINK_STEPS:
             size = round(box.size * scale, 1)

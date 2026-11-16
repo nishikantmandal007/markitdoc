@@ -1,0 +1,72 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Wetland at dawn.jpg",
+    "index": 1,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   },
+   "1": {
+    "title": "File:Wetland bridge.jpg",
+    "index": 7,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/7.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/7.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet7",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   },
+   "2": {
+    "title": "File:Wetland sunset.jpg",
+    "index": 8,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/8.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/8.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaWet8",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}
