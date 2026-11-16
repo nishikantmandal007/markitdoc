@@ -10,6 +10,7 @@ from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
+from markitdoc.options import Options, using_options
 from markitdoc.pdf.checks import page_problems
 from markitdoc.pdf.render import render_pdf
 from markitdoc.pptx.render import SLIDE_PHOTO_RATIOS, render_pptx
@@ -95,7 +96,7 @@ def render_laid_out_docx(document, output_path, template, author):
 
 
 # markdown to a PDF, PowerPoint or Word file at output; returns the written path
-def render(markdown, output_format, output, template="default", author=""):
+def render(markdown, output_format, output, template="default", author="", options=None):
     if output_format not in FORMATS:
         raise UnsupportedFormatError(f"Unsupported format {output_format!r}, expected one of {', '.join(FORMATS)}")
     if not markdown or not markdown.strip():
@@ -103,8 +104,9 @@ def render(markdown, output_format, output, template="default", author=""):
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Rendering %s: %d characters, template %s, to %s", output_format, len(markdown), template, output_path)
-    if output_format == "docx":
-        return render_laid_out_docx(parse_document(markdown), output_path, template, author)
-    if output_format == "pptx":
-        return render_laid_out_pptx(parse_document(markdown), output_path, template, author)
-    return render_laid_out_pdf(parse_document(markdown), output_path, template)
+    with using_options(options or Options()):
+        if output_format == "docx":
+            return render_laid_out_docx(parse_document(markdown), output_path, template, author)
+        if output_format == "pptx":
+            return render_laid_out_pptx(parse_document(markdown), output_path, template, author)
+        return render_laid_out_pdf(parse_document(markdown), output_path, template)

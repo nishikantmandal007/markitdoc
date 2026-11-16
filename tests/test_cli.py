@@ -16,3 +16,21 @@ def test_should_print_the_guide_and_fail_cleanly_on_an_unknown_suffix(tmp_path, 
 
     assert main(["render", str(source), "-o", str(tmp_path / "note.odt")]) == 1
     assert "Unsupported format" in capsys.readouterr().err
+
+
+def test_should_pass_gotenberg_and_cache_options_to_render(tmp_path, monkeypatch):
+    from markitdoc import Options, cli
+
+    source, output = tmp_path / "note.md", tmp_path / "out.pdf"
+    source.write_text("# Note")
+    captured = {}
+
+    def capture_render(*args, **kwargs):
+        captured["options"] = kwargs["options"]
+        return output
+
+    monkeypatch.setattr(cli, "render", capture_render)
+
+    assert main(["render", str(source), "-o", str(output), "--gotenberg", "http://renderer.test",
+                 "--cache", str(tmp_path)]) == 0
+    assert captured["options"] == Options(gotenberg_url="http://renderer.test", cache_folder=tmp_path)

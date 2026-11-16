@@ -9,6 +9,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageChops
 
+from markitdoc.options import options_in_use
 from markitdoc.utils.constants import ASSETS_FOLDER, CACHE_FOLDER
 
 logger = logging.getLogger(__name__)
@@ -81,12 +82,14 @@ def themed(syntax: str, theme) -> str:
 
 # renders a validated infographic and reuses cached images
 def render_infographic(syntax: str, theme) -> Path | None:
-    endpoint = os.getenv("GOTENBERG_ENDPOINT")
+    options = options_in_use()
+    endpoint = options.gotenberg_url or os.getenv("GOTENBERG_ENDPOINT")
     if not endpoint or problems_in_infographic(syntax):
         return None
     source = themed(syntax, theme)
     key = "|".join([source, theme.name, ANTV_BUNDLE.name, Path(theme.fonts["body"]).name, Path(theme.fonts["heading"]).name])
-    path = INFOGRAPHIC_FOLDER / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
+    cache_folder = options.cache_folder / "infographics" if options.cache_folder else INFOGRAPHIC_FOLDER
+    path = cache_folder / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
     if path.exists():
         return path
     files = [("files", ("index.html", PAGE.encode(), "text/html")),

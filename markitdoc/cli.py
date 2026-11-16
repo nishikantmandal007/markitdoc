@@ -4,6 +4,7 @@ from pathlib import Path
 
 from markitdoc.errors import MarkitDocError
 from markitdoc.guide.contract import guide
+from markitdoc.options import Options
 from markitdoc.rendering import FORMATS, render
 
 
@@ -16,6 +17,8 @@ def main(arguments=None):
     render_command.add_argument("-o", "--output", type=Path, required=True, help="output file; its suffix picks the format")
     render_command.add_argument("--template", default="default", help="theme or registered brand name")
     render_command.add_argument("--author", default="", help="author stamped on PowerPoint and Word files")
+    render_command.add_argument("--gotenberg", help="Gotenberg server URL for diagrams")
+    render_command.add_argument("--cache", type=Path, help="cache folder for images and diagrams")
     guide_command = commands.add_parser("guide", help="print the markdown guide for a format")
     guide_command.add_argument("format", nargs="?", default="pdf", choices=FORMATS)
     options = parser.parse_args(arguments)
@@ -24,7 +27,8 @@ def main(arguments=None):
             print(guide(options.format))
             return 0
         path = render(options.source.read_text(encoding="utf-8"), options.output.suffix.lstrip(".").lower(), options.output,
-                      template=options.template, author=options.author)
+                      template=options.template, author=options.author,
+                      options=Options(gotenberg_url=options.gotenberg, cache_folder=options.cache))
         print(path)
         return 0
     except (MarkitDocError, OSError) as error:

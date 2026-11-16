@@ -74,6 +74,7 @@ that a theme file cannot describe are drawn by hooks: `register_brand(folder, do
 Photos (`images: true`) come from Wikimedia Commons and Mermaid diagrams render through a
 [Gotenberg](https://gotenberg.dev) server set in `GOTENBERG_ENDPOINT`; without them every visual falls back to text.
 Downloads are cached in `~/.cache/markitdoc` (or `MARKITDOC_CACHE`).
+Per-render settings can override both defaults: `markitdoc.render(..., options=markitdoc.Options(gotenberg_url="http://localhost:3000", cache_folder=Path("./cache")))`.
 
 ## Layout
 
