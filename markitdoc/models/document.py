@@ -2,8 +2,8 @@ import logging
 from dataclasses import dataclass, field
 
 from markitdoc.models.front_matter import front_matter
-from markitdoc.models.model_constants import (ATTRIBUTE, BLOCK_START, BULLET_SEPARATORS, DIV_CLOSE, DIV_OPEN, FLOW_CONTAINERS,
-                                              FLOW_LAYOUT, SLOT_LINE, STRONG_SEPARATORS)
+from markitdoc.models.model_constants import (ATTRIBUTE, BLOCK_START, BULLET_SEPARATORS, DIV_CLOSE, DIV_OPEN,
+                                              FLOW_CONTAINERS, FLOW_LAYOUT, SLOT_LINE, STRONG_SEPARATORS)
 
 logger = logging.getLogger(__name__)
 

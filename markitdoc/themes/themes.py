@@ -6,9 +6,10 @@ from pathlib import Path
 import yaml
 
 from markitdoc.errors import ThemeError
-from markitdoc.themes.theme_constants import (ACCENTS, ASSETS_FOLDER, COLOR_ROLES, COMPANY_THEME, COVER_STYLES, DEFAULT_PALETTE,
+from markitdoc.themes.theme_constants import (ACCENTS, COLOR_ROLES, COMPANY_THEME, COVER_STYLES, DEFAULT_PALETTE,
                                               DEFAULT_THEME, FONT_PAIRS, FONT_ROLES, HEX_COLOR, LEGACY_THEME_NAMES,
                                               MINIMUM_CONTRAST, NIGHT_BASE, PALETTES, PAPERS, THEMES_FOLDER, TONES)
+from markitdoc.utils.constants import ASSETS_FOLDER
 
 logger = logging.getLogger(__name__)
 

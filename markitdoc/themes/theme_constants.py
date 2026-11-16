@@ -1,7 +1,7 @@
 import re
-from pathlib import Path
 
-ASSETS_FOLDER = Path(__file__).parent.parent / "assets"
+from markitdoc.utils.constants import ASSETS_FOLDER
+
 THEMES_FOLDER = ASSETS_FOLDER / "themes"
 DEFAULT_THEME = "professional"
 LEGACY_THEME_NAMES = {"default": DEFAULT_THEME}
