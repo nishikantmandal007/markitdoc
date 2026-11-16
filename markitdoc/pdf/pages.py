@@ -1,7 +1,9 @@
 import re
 from dataclasses import replace
+from functools import lru_cache
 from pathlib import Path
 
+from fontTools.ttLib import TTFont
 from fpdf import FPDF
 from fpdf.enums import MethodReturnValue
 from PIL import Image
@@ -16,6 +18,14 @@ from markitdoc.utils.helpers import lifted
 WHITE, SOFT_WHITE, FAINT_WHITE = (255, 255, 255), (226, 230, 240), (190, 198, 216)
 SHRINK_STEPS = (1, 0.95, 0.9, 0.85)
 HEADING_POINT = 12
+FALLBACK_FAMILIES = ("Devanagari", "Symbols", "Latin", "Noto")
+
+
+# reads the code points a font file can draw, once per process
+@lru_cache(maxsize=None)
+def cmap_of(path):
+    with TTFont(str(path), lazy=True) as font:
+        return frozenset(font.getBestCmap())
 
 
 # protects PDF text markers from being interpreted as formatting
@@ -62,9 +72,15 @@ def rich_markup(text):
     return inline_markup(tokens[0]) if tokens else ""
 
 
+# gathers every character a document can draw so only the fonts that cover them are loaded
+def text_of(document, theme: Theme):
+    return "\n".join([str(document.meta), theme.brand or "", theme.tagline or "", theme.header_note or "", theme.footer_text or "",
+                      *(f"{block.body}\n{block.slots}" for block in document.blocks)])
+
+
 class PdfPages(FPDF):
     # sets up the rendering context and its document settings
-    def __init__(self, theme: Theme):
+    def __init__(self, theme: Theme, text=None, donor=None):
         super().__init__(format="A4")
         self.theme = theme
         fonts_folder = Path(theme.fonts["body"]).parent
@@ -82,10 +98,12 @@ class PdfPages(FPDF):
             "Noto": (fonts_folder / "NotoSans-Regular.ttf", fonts_folder / "NotoSans-Bold.ttf",
                      fonts_folder / "NotoSans-Italic.ttf", fonts_folder / "NotoSans-BoldItalic.ttf"),
         }
-        for family, files in faces.items():
-            for style, path in zip(("", "B", "I", "BI"), files):
-                self.add_font(family, style, str(path))
-        self.set_fallback_fonts(["Devanagari", "Symbols", "Latin", "Noto"], exact_match=False)
+        self.family_files, self.document_text, self.donor, self.lender = faces, text, donor, None
+        self.primaries = [faces[family][0] for family in ("Brand", "Head", "Mono")]
+        has_code = text is None or "`" in text or "~~~" in text or re.search(r"^(?: {4}|\t)", text, re.M)
+        for family in faces if text is None else ("Brand", "Head", *(("Mono",) if has_code else ())):
+            self.add_family(family, faces[family])
+        self.use_fallbacks()
         self.photos, self.work_folder, self.photo_credit = "natural", None, None
         self.tightness = 1.0
         self.styles = None
@@ -93,13 +111,38 @@ class PdfPages(FPDF):
         self.set_auto_page_break(False)
         self.set_margins(0, 0, 0)
 
+    # registers the four styles of a font family, parsing each file once per document through the donor
+    def add_family(self, family, files):
+        owner = self.donor or self
+        for style, path in zip(("", "B", "I", "BI"), files):
+            key = f"{family.lower()}{style}"
+            if key not in owner.fonts:
+                owner.add_font(family, style, str(path))
+            self.fonts[key] = owner.fonts[key]
+
+    # loads a bundled font family the first time a document draws with it
+    def set_font(self, family=None, style="", size=0):
+        if family in self.family_files:
+            self.add_family(family, self.family_files[family])
+        super().set_font(family, style, size)
+
+    # loads only the fallback families that draw characters the main fonts cannot
+    def use_fallbacks(self):
+        missing = None if self.document_text is None else {ord(char) for char in set(self.document_text) if char.isprintable()
+                                                  if any(ord(char) not in cmap_of(path) for path in self.primaries)}
+        chosen = [family for family in FALLBACK_FAMILIES if missing is None or missing & cmap_of(self.family_files[family][0])]
+        for family in chosen:
+            self.add_family(family, self.family_files[family])
+        self.set_fallback_fonts(chosen, exact_match=False)
+
     # turns on the language v2 stylesheet and registers the fonts it declares in all four styles
     def use_styles(self, styles):
         self.styles = styles
         for name, face in (styles.faces if styles else {}).items():
             if face:
-                for style, path in zip(("", "B", "I", "BI"), face.files):
-                    self.add_font(f"Face-{name}", style, str(path))
+                self.add_family(f"Face-{name}", face.files)
+                self.primaries.append(face.files[0])
+        self.use_fallbacks()
 
     # the look of an element under the stylesheet, None for version 1 documents
     def look(self, selector, classes=(), inline=None):

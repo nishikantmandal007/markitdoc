@@ -1,6 +1,7 @@
 import time
 
 import pymupdf as fitz
+from fpdf import FPDF
 from helpers import generate_document
 
 paragraph = ("AI-Safe detects personal data, replaces it with realistic fakes and restores the real values in the answer. "
@@ -36,6 +37,19 @@ class TestFlowPdf:
         assert seconds < 60
         assert all(f"Section {n}: Findings" in " ".join(texts) for n in (1, 60, 120))
         assert "Contents" in texts[0] and "Section 1: Findings" in texts[0]
+
+    def test_should_load_fonts_a_bounded_number_of_times_however_many_tables_it_measures(self, tmp_path, monkeypatch):
+        loaded = []
+        add_font = FPDF.add_font
+        monkeypatch.setattr(FPDF, "add_font", lambda self, *args, **kwargs: (loaded.append(args), add_font(self, *args, **kwargs))[1])
+        render("# One\n\nText\n", tmp_path, "one")
+        one_document = len(loaded)
+        loaded.clear()
+
+        render("# Tables\n\n" + "\n".join(section(n) for n in range(1, 31)), tmp_path, "thirty")
+
+        assert 0 < one_document <= 16
+        assert len(loaded) <= 2 * one_document
 
     def test_should_add_a_bookmark_for_every_section(self, tmp_path):
         markdown = "---\nstyle: report\n---\n# Report\n\n" + "\n".join(section(n) for n in range(1, 4))

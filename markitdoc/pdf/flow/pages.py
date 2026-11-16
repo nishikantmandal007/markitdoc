@@ -40,8 +40,8 @@ def hyphenated(text, lang):
 
 class FlowPages(PdfPages):
     # sets up the rendering context and its document settings
-    def __init__(self, theme, title, plain):
-        super().__init__(theme)
+    def __init__(self, theme, title, plain, text=None, donor=None):
+        super().__init__(theme, text, donor)
         self.document_title, self.plain, self.decorate = title, plain, True
         self.table_style = "lined"
         self.flow_images, self.figure_count, self.table_count = {}, 0, 0
@@ -218,7 +218,11 @@ FlowPages.fields = page_fields
 
 # copies PDF layout settings into a temporary measuring document
 def probe_of(pdf: FlowPages, y=None):
-    probe = FlowPages(pdf.theme, pdf.document_title, pdf.plain)
+    donor = pdf.donor or pdf.lender
+    if donor is None:
+        donor = pdf.lender = FlowPages(pdf.theme, pdf.document_title, pdf.plain, pdf.document_text)
+        donor.use_styles(pdf.styles)
+    probe = FlowPages(pdf.theme, pdf.document_title, pdf.plain, pdf.document_text, donor)
     for name in ("scale", "table_style", "lang", "targets", "flow_images", "numbering", "notes_at_page_bottom", "header_text",
                  "footer_text", "meta_date", "spacing"):
         setattr(probe, name, getattr(pdf, name))
