@@ -9,10 +9,11 @@ from docx.shared import Cm, Pt
 
 import logging
 from markitdoc.models.document import Document
-from markitdoc.docx.document import (Writer, add_field, add_picture, border_bottom, caption, cell_borders, cell_fill,
-                                     cell_margins, first_paragraph, keep_together, new_table, page_break, photo, plain,
-                                     repeat_header, save_document, setup_chrome, stamp_properties, start_on_new_page,
-                                     white, write_runs)
+from markitdoc.docx.document import (Writer, add_field, add_picture, caption, first_paragraph, page_break, photo, plain,
+                                     save_document, setup_chrome, stamp_properties, start_on_new_page, white,
+                                     write_runs)
+from markitdoc.docx.styles import (border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table,
+                                   repeat_header)
 from markitdoc.docx.flow import add_callout, add_notes, render_markdown, step_table
 from markitdoc.markup.inline import inline_runs, parser, plain_text
 from markitdoc.markup.blocks import paragraphs, prepared

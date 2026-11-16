@@ -12,10 +12,10 @@ import logging
 from markitdoc.visuals.charts import render_chart
 from markitdoc.visuals.diagrams import chain_steps, diagram_as_text, diagram_title, render_diagram, zoom
 from markitdoc.visuals.infographics import render_infographic
-from markitdoc.docx.document import (add_picture, bookmark, border_bottom, bullet_marks, caption, cell_borders,
-                                     cell_fill, cell_margins, first_paragraph, landscape_section, keep_together,
-                                     list_formats, new_table, page_break, photo, plain, repeat_header,
-                                     start_on_new_page, white, write_runs)
+from markitdoc.docx.document import (add_picture, bookmark, bullet_marks, caption, first_paragraph, landscape_section,
+                                     list_formats, page_break, photo, plain, start_on_new_page, white, write_runs)
+from markitdoc.docx.styles import (border_bottom, cell_borders, cell_fill, cell_margins, keep_together, new_table,
+                                   repeat_header)
 from markitdoc.markup.elements import (callout_kinds, chart_data, closing_index, column_alignments, element_settings,
                                        settings_from, table_styles, totals_row, without_display_maths, rating_level,
                                        signed_number, table_marks)
