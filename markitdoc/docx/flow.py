@@ -18,7 +18,7 @@ from markitdoc.docx.document import (add_picture, bookmark, border_bottom, bulle
                                      start_on_new_page, white, write_runs)
 from markitdoc.markup.elements import (callout_kinds, chart_data, closing_index, column_alignments, element_settings,
                                        settings_from, table_styles, totals_row, without_display_maths)
-from markitdoc.pdf.flow import mathtext_ready
+from markitdoc.visuals.equations import mathtext_ready
 from markitdoc.markup.inline import Run, anchor, inline_runs, parser
 from markitdoc.pptx.flow import equation_png_bytes, rating_level, signed_number, table_marks
 

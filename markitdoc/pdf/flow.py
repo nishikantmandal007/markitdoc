@@ -3,9 +3,7 @@ from dataclasses import replace
 import re
 from functools import lru_cache
 
-import matplotlib.pyplot as plt
 import pyphen
-import ziamath
 
 from fpdf.enums import MethodReturnValue, TableCellFillMode, XPos, YPos
 from fpdf.fonts import FontFace
@@ -24,6 +22,7 @@ from markitdoc.markup.elements import (bullet_markers, callout_kinds, chart_data
                                        column_alignments, element_settings, list_schemes, numbering_schemes,
                                        numeric_cell, only_display_maths, paragraph_alignments, settings_from,
                                        table_styles, totals_row, without_display_maths)
+from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 
 logger = logging.getLogger(__name__)
 page_break_marker = "+++"
@@ -481,53 +480,6 @@ def add_columns(pdf: FlowPages, inner, gutter=8):
     pdf.set_left_margin(margins[0])
     pdf.set_right_margin(margins[1])
     pdf.set_xy(margins[0], bottom + 2)
-
-
-@lru_cache(maxsize=64)
-def equation_svg(tex, color):
-    previous = {key: plt.rcParams[key] for key in ("svg.fonttype", "svg.hashsalt", "mathtext.fontset")}
-    plt.rcParams.update({"svg.fonttype": "path", "svg.hashsalt": "docgen", "mathtext.fontset": "stix"})
-    figure = plt.figure(figsize=(0.01, 0.01))
-    try:
-        figure.text(0, 0, f"${tex}$", fontsize=15, color=color)
-        buffer = io.BytesIO()
-        figure.savefig(buffer, format="svg", bbox_inches="tight", pad_inches=0.03, transparent=True, metadata={"Date": None})
-        return re.sub(rb"<metadata>.*?</metadata>", b"", buffer.getvalue(), flags=re.S)
-    finally:
-        plt.close(figure)
-        plt.rcParams.update(previous)
-
-
-mathtext_equivalents = {r"\implies": r"\Rightarrow", r"\impliedby": r"\Leftarrow", r"\iff": r"\Leftrightarrow",
-                        r"\dfrac": r"\frac", r"\tfrac": r"\frac", r"\operatorname": r"\mathrm", r"\lvert": "|",
-                        r"\rvert": "|", r"\lVert": r"\Vert", r"\rVert": r"\Vert", r"\le ": r"\leq ", r"\ge ": r"\geq "}
-
-
-def mathtext_ready(tex):
-    tex = " ".join(tex.split())
-    for command, equivalent in mathtext_equivalents.items():
-        tex = re.sub(re.escape(command) + r"(?![A-Za-z])", lambda _: equivalent, tex)
-    return tex
-
-
-@lru_cache(maxsize=64)
-def typeset_svg(tex, color):
-    return ziamath.Latex(tex, size=15, color=color).svg().encode()
-
-
-def equation_drawing(tex, color):
-    try:
-        return typeset_svg(tex, color)
-    except Exception as error:
-        logger.info("Equation typeset with the fallback engine: %s", type(error).__name__)
-    return equation_svg(tex, color)
-
-
-def svg_size(svg):
-    width = re.search(rb'width="([\d.]+)(pt|px)?"', svg)
-    height = re.search(rb'height="([\d.]+)(pt|px)?"', svg)
-    unit = 0.3528 if width and width.group(2) == b"pt" else 0.2646
-    return (float(width.group(1)) * unit, float(height.group(1)) * unit) if width and height else (60.0, 12.0)
 
 
 def add_equation(pdf: FlowPages, tex: str):
