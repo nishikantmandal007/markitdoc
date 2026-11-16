@@ -125,4 +125,4 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
         for row in rows[1:]:
             add_paragraph(pdf, "  ·  ".join(f"**{heading}:** {cell}" for heading, cell in zip(rows[0], row)))
     pdf.ln(4)
-    pdf.back_to_portrait = pdf.w > pdf.h
+    pdf.back_to_portrait = pdf.w > pdf.h and not pdf.master_landscape

@@ -16,6 +16,7 @@ from markitdoc.docx.writer import (
     Writer,
     add_field,
     add_picture,
+    apply_master,
     caption,
     first_paragraph,
     page_break,
@@ -397,6 +398,8 @@ def render_docx(document: Document, theme: Theme, output_path: Path, images=None
         writer = Writer(theme, document.meta, Path(work_folder), images, title, styles)
         cover = first is not None and first.layout == "cover"
         setup_chrome(writer, cover)
+        if styles and styles.pages_defined:
+            apply_master(writer, writer.document.sections[0], styles.master("default"))
         if brand_hooks(theme.name).docx_cover and not cover:
             draw_brand_cover(writer, {"title": title})
             writer.skip_title = plain_text(title)

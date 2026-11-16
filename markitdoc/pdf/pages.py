@@ -106,7 +106,7 @@ class PdfPages(FPDF):
         self.use_fallbacks()
         self.photos, self.work_folder, self.photo_credit = "natural", None, None
         self.tightness = 1.0
-        self.styles, self.context = None, None
+        self.styles, self.context, self.fit = None, None, (0, 0, 1)
         self.set_text_shaping(True)
         self.set_auto_page_break(False)
         self.set_margins(0, 0, 0)
@@ -157,7 +157,7 @@ class PdfPages(FPDF):
     # fills the PDF page with a theme color
     def fill_page(self, role):
         self.set_fill_color(*self.theme.rgb(role))
-        self.rect(0, 0, self.w, self.h, "F")
+        self.rect(0 - self.fit[0] / self.fit[2], 0 - self.fit[1] / self.fit[2], self.w / self.fit[2], self.h / self.fit[2], "F")
 
     # draws text at a fixed PDF position and returns its ending height
     def write_at(self, x, y, width, text, size, style="", role="ink", line_height=1.35, align="L", rgb=None, rich=False):

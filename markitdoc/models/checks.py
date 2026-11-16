@@ -4,7 +4,7 @@ from difflib import get_close_matches
 
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, language_version
-from markitdoc.models.model_constants import DIV_CLOSE, DIV_OPEN, KNOWN_KEYS, PLANNED_KEYS
+from markitdoc.models.model_constants import DIV_CLOSE, DIV_OPEN, KNOWN_KEYS, PAGE_SWITCH, PLANNED_KEYS
 from markitdoc.models.style_checks import SPAN_ATTRIBUTES, style_findings
 from markitdoc.themes.theme_constants import BOX_PROPERTIES, LAYOUT_ATTRIBUTES, STYLE_PROPERTIES
 
@@ -21,7 +21,7 @@ class Finding:
 
 # warns about each attribute key no renderer reads: planned keys are named as such, others get the closest key
 def unknown_keys(text, line, v2=False):
-    findings, taken = [], STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + ("italic",) if v2 else ()
+    findings, taken = [], STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + ("italic", "page", "numbers") if v2 else ()
     planned, known = tuple(key for key in PLANNED_KEYS if key not in taken), KNOWN_KEYS + taken
     for key in parse_attributes(text).values:
         if key in planned:
@@ -59,6 +59,8 @@ def check_document(markdown, folders=()) -> list[Finding]:
         elif opening := DIV_OPEN.match(stripped):
             open_blocks.append(number)
             findings += unknown_keys(opening.group(2), number, v2)
+        elif v2 and (switch := PAGE_SWITCH.match(stripped)):
+            findings += unknown_keys(switch.group(1), number, v2)
         elif stripped.startswith("{") and stripped.endswith("}"):
             findings += unknown_keys(stripped, number, v2)
         elif v2:

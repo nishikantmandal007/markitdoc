@@ -1,9 +1,11 @@
 import re
+from contextlib import contextmanager
 from functools import lru_cache
 
 import pyphen
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
+from markitdoc.markup.fields import replace_fields
 from markitdoc.markup.inline import SUPERSCRIPT_DIGITS
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.utils.helpers import lifted
@@ -15,6 +17,28 @@ MARGIN = 25
 HIGHLIGHT_LINK = "§highlight"
 HYPHENATION_LANGUAGES = {"en": "en_GB", "de": "de_DE", "fr": "fr", "es": "es"}
 LONG_WORD = re.compile(r"[^\W\d_]{7,}")
+ROMAN_DIGITS = ((1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"), (50, "l"), (40, "xl"), (10, "x"), (9, "ix"),
+                (5, "v"), (4, "iv"), (1, "i"))
+LABEL_STYLES = {"arabic": "D", "roman": "r", "Roman": "R", "alpha": "a"}
+DESIGNED_PAPER_MM = (210, 297)
+
+
+# a page number as text in a numbering style: arabic, roman, Roman, alpha, or none for no number
+def number_label(number, style):
+    if style == "none":
+        return ""
+    if style in ("roman", "Roman"):
+        text = ""
+        for value, letters in ROMAN_DIGITS:
+            text, number = text + letters * (number // value), number % value
+        return text.upper() if style == "Roman" else text
+    if style == "alpha":
+        text = ""
+        while number > 0:
+            number, rest = divmod(number - 1, 26)
+            text = chr(97 + rest) + text
+        return text
+    return str(number)
 
 
 # loads the hyphenation dictionary for a supported language
@@ -56,6 +80,9 @@ class FlowPages(PdfPages):
         self.scale = 1.0
         self.flow_pages = set()
         self.page_ends, self.page_starts, self.floating = [], [], None
+        self.edge, self.page_edges, self.page_masters, self.page_labels, self.page_section = (MARGIN, 20, MARGIN, 22), {}, {}, {}, {}
+        self.masters, self.master_name, self.next_master, self.restart = {}, None, None, False
+        self.counter, self.number_style, self.master_landscape, self.field_values = 0, None, False, {}
         self.set_auto_page_break(True, margin=22)
         self.set_margins(MARGIN, 20, MARGIN)
 
@@ -76,13 +103,72 @@ class FlowPages(PdfPages):
                 self.rect(x - 0.4, y - 0.5, w + 0.8, h + 0.9, "F")
         self.page, self.highlights = current, []
 
+    # the left, top, right and bottom margins in mm of a page, the current page by default
+    def page_edge(self, page=None):
+        return self.page_edges.get(page or self.page_no(), self.edge)
+
+    # the page master of a page, None for documents without language v2
+    def master_of(self, page=None):
+        return self.page_masters.get(page or self.page_no())
+
+    # the number shown for a page: its label under the page master, the page index otherwise
+    def shown_page(self, page=None):
+        return self.page_labels.get(page or self.page_no(), str(page or self.page_no()))
+
+    # the bottom margin in mm of the current page
+    @property
+    def bottom(self):
+        return self.page_edge()[3]
+
+    # chooses the page master of the next page and returns the add_page arguments with its paper, orientation and number label
+    def enter_master(self, kwargs):
+        switching = self.next_master is not None
+        name = self.next_master or self.master_name or "default"
+        master = self.masters.setdefault(name, self.styles.master(name))
+        landscape = kwargs.get("orientation", "").upper().startswith("L") or master.width > master.height
+        top, right, bottom, left = master.margins
+        page, edge = self.page + 1, (left, top, right, bottom)
+        if name != self.master_name:
+            self.set_margins(left, top, right)
+        if self.auto_page_break:
+            self.set_auto_page_break(True, margin=bottom)
+        number = 1 if self.restart else self.counter + 1
+        labelled = {"label_style": LABEL_STYLES[master.numbers], "label_start": number} if master.numbers in LABEL_STYLES and (
+            self.restart or master.numbers != self.number_style) else {}
+        self.edge, self.page_edges[page], self.page_masters[page] = edge, edge, master
+        self.page_labels[page] = number_label(number, master.numbers)
+        self.counter, self.restart, self.number_style = number, False, master.numbers
+        self.master_name, self.next_master, self.master_landscape = name, None, master.width > master.height
+        if kwargs.get("same") and not switching:
+            return kwargs
+        return {**{key: item for key, item in kwargs.items() if key != "same"}, **labelled,
+                "format": tuple(sorted((master.width, master.height))), "orientation": "L" if landscape else "P"}
+
+    # runs designed page drawing centred, and shrunk on smaller paper, when the paper is not the A4 the designs are made for
+    @contextmanager
+    def centred(self):
+        scale = min(1, self.w / DESIGNED_PAPER_MM[0], self.h / DESIGNED_PAPER_MM[1])
+        shift = ((self.w - DESIGNED_PAPER_MM[0] * scale) / 2, (self.h - DESIGNED_PAPER_MM[1] * scale) / 2)
+        if not self.styles or scale == 1 and abs(shift[0]) + abs(shift[1]) < 0.5:
+            yield
+            return
+        self.fit = (*shift, scale)
+        self._out(f"q {scale:.4f} 0 0 {scale:.4f} {shift[0] * self.k:.2f} {(self.h * (1 - scale) - shift[1]) * self.k:.2f} cm")
+        try:
+            yield
+        finally:
+            self._out("Q")
+            self.fit = (0, 0, 1)
+
     # adds a page and resets portrait tracking when needed
     def add_page(self, *args, **kwargs):
         for hook in self.page_ends:
             hook(self.get_y())
+        if self.styles:
+            kwargs = self.enter_master(kwargs)
         super().add_page(*args, **kwargs)
         if self.auto_page_break and self.decorate:
-            self.set_auto_page_break(True, margin=22)
+            self.set_auto_page_break(True, margin=self.bottom)
         if self.w < self.h:
             self.back_to_portrait = False
         for hook in self.page_starts:
@@ -98,22 +184,23 @@ class FlowPages(PdfPages):
         if self.decorate:
             self.flow_pages.add(self.page_no())
             self.fill_page("paper")
-        if self.plain or not self.decorate or self.page_no() == 1:
+        left, top, right, _ = self.page_edge()
+        if self.plain or not self.decorate or self.page_no() == 1 or (self.master_of() and self.master_of().header is not None):
             return
         self.set_font("Brand", "I" if self.theme.header_note else "B", 7.5)
         self.set_text_color(*self.theme.rgb("muted"))
-        self.set_xy(MARGIN, 9)
+        self.set_xy(left, top - 11)
         self.cell(110, 5, self.fields(self.header_text) or self.theme.header_note or self.document_title.upper()[:80])
         if self.theme.logo:
-            self.image(str(self.theme.logo), self.w - MARGIN - 45, 8, h=6)
+            self.image(str(self.theme.logo), self.w - right - 45, top - 12, h=6)
         if self.theme.brand:
             self.set_font("Brand", "B", 7.5)
             self.set_text_color(*self.theme.rgb("ink"))
-            self.set_xy(self.w - MARGIN - 38, 9)
+            self.set_xy(self.w - right - 38, top - 11)
             self.cell(38, 5, self.theme.brand, align="R")
         self.set_draw_color(*self.theme.rgb("primary" if self.theme.header_note else "rule"))
         self.set_line_width(0.3 if self.theme.header_note else 0.2)
-        self.line(MARGIN, 15, self.w - MARGIN, 15)
+        self.line(left, top - 5, self.w - right, top - 5)
         self.set_xy(self.l_margin, self.t_margin)
 
     # draws the watermark and classification label on the page
@@ -136,16 +223,36 @@ class FlowPages(PdfPages):
         if self.page_no() not in self.flow_pages:
             return
         self.draw_page_notes()
+        left, top, right, bottom = self.page_edge()
         self.set_font("Brand", "", 7.5)
         self.set_text_color(*self.theme.rgb("muted"))
+        if self.master_of() and (self.master_of().header is not None or self.master_of().footer is not None):
+            self.draw_slots()
+            return
         if "{page}" not in self.footer_text:
-            self.set_xy(MARGIN, -13)
-            self.cell(self.w - 2 * MARGIN, 5, f"{self.page_no()} / {{nb}}", align="R")
+            self.set_xy(left, -(bottom - 9))
+            self.cell(self.w - left - right, 5, f"{self.shown_page()} / {{nb}}" if self.shown_page() else "", align="R")
         footer = self.fields(self.footer_text) or (self.theme.footer_text if not self.plain else "")
         if footer:
             self.set_font("Brand", "", 7.5)
-            self.set_xy(MARGIN, -13)
-            self.cell(self.w - 2 * MARGIN - 20, 5, footer)
+            self.set_xy(left, -(bottom - 9))
+            self.cell(self.w - left - right - 20, 5, footer)
+
+    # draws the header and footer of the page master as left, centre and right slots
+    def draw_slots(self):
+        left, top, right, bottom = self.page_edge()
+        master = self.master_of()
+        for text, y in ((master.header, top - 11), (master.footer, self.h - bottom + 9)):
+            if text is None or text.strip().lower() == "none":
+                continue
+            slots = [self.fields(slot.strip()) for slot in (text.split("|", 2) + ["", ""])[:3]]
+            for slot, align in zip(slots, "LCR"):
+                self.set_xy(left, y)
+                self.cell(self.w - left - right, 5, slot, align=align)
+            if y < top and any(slots):
+                self.set_draw_color(*self.theme.rgb("rule"))
+                self.set_line_width(0.2)
+                self.line(left, top - 5, self.w - right, top - 5)
 
 
 # places new footnotes at the bottom of the current PDF page
@@ -162,7 +269,7 @@ def place_notes(pdf, inline, note_texts, placed):
 # measures the height needed to draw one footnote
 def note_height(pdf, number, text):
     pdf.set_font("Brand", "", BODY_SIZE * pdf.scale * 0.8)
-    lines = pdf.multi_cell(pdf.w - 2 * MARGIN, BODY_SIZE * pdf.scale * 0.42, f"{number} {text}", markdown=True,
+    lines = pdf.multi_cell(pdf.w - pdf.page_edge()[0] - pdf.page_edge()[2], BODY_SIZE * pdf.scale * 0.42, f"{number} {text}", markdown=True,
                            dry_run=True, output=MethodReturnValue.LINES)
     return len(lines) * BODY_SIZE * pdf.scale * 0.42 + 1
 
@@ -173,14 +280,15 @@ def draw_page_notes(pdf):
     if not notes:
         return
     height = sum(note_height(pdf, number, text) for number, text in notes) + 4
-    top = pdf.h - 20 - height
+    left, _, right, bottom = pdf.page_edge()
+    top = pdf.h - (bottom - 2) - height
     pdf.set_draw_color(*pdf.theme.rgb("rule"))
     pdf.set_line_width(0.2)
-    pdf.line(MARGIN, top, MARGIN + 40, top)
-    pdf.set_xy(MARGIN, top + 2.5)
+    pdf.line(left, top, left + 40, top)
+    pdf.set_xy(left, top + 2.5)
     pdf.set_text_color(*pdf.theme.rgb("muted"))
     for number, text in notes:
-        hanging_note(pdf, number, text, pdf.w - 2 * MARGIN, 0.8)
+        hanging_note(pdf, number, text, pdf.w - left - right, 0.8)
         pdf.ln(1)
 
 
@@ -205,7 +313,7 @@ def place_page_notes(pdf, inline, note_texts, placed):
     page_notes.extend(fresh)
     placed.update(reference for reference in references if reference in note_texts)
     reserved = sum(note_height(pdf, number, text) for number, text in page_notes) + 6
-    pdf.set_auto_page_break(True, margin=22 + reserved)
+    pdf.set_auto_page_break(True, margin=pdf.bottom + reserved)
     return fresh
 
 
@@ -214,8 +322,9 @@ FlowPages.draw_page_notes = draw_page_notes
 
 # fills page, title, date, and section placeholders in footer text
 def page_fields(pdf, text):
-    return (text.replace("{page}", str(pdf.page_no())).replace("{pages}", "{nb}")
-            .replace("{title}", pdf.document_title).replace("{date}", pdf.meta_date).replace("{section}", pdf.current_section))[:110]
+    text = replace_fields(text, pdf.field_values)
+    return (text.replace("{page}", pdf.shown_page()).replace("{pages}", "{nb}").replace("{title}", pdf.document_title)
+            .replace("{date}", pdf.meta_date).replace("{section}", pdf.page_section.get(pdf.page_no()) or pdf.current_section))[:110]
 
 
 FlowPages.fields = page_fields
@@ -229,10 +338,11 @@ def probe_of(pdf: FlowPages, y=None):
         donor.use_styles(pdf.styles)
     probe = FlowPages(pdf.theme, pdf.document_title, pdf.plain, pdf.document_text, donor)
     for name in ("scale", "table_style", "lang", "targets", "flow_images", "numbering", "notes_at_page_bottom", "header_text",
-                 "footer_text", "meta_date", "spacing"):
+                 "footer_text", "meta_date", "spacing", "field_values"):
         setattr(probe, name, getattr(pdf, name))
     probe.headings, probe.measuring = list(pdf.headings), True
     probe.use_styles(pdf.styles)
+    probe.next_master = pdf.master_name
     probe.set_auto_page_break(True, margin=pdf.b_margin)
     probe.add_page()
     probe.set_margins(pdf.l_margin, pdf.t_margin, pdf.r_margin)
