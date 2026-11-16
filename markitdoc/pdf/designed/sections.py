@@ -2,7 +2,7 @@ import io
 
 from markitdoc.models.catalogue import CONTENT_LIMIT, CONTENT_WIDTH, MARGIN, PAGE_WIDTH
 from markitdoc.models.document import Block
-from markitdoc.pdf.pages import PdfPages, faint_white, white
+from markitdoc.pdf.pages import PdfPages, FAINT_WHITE, WHITE
 from markitdoc.utils.helpers import lifted
 from markitdoc.visuals.icons import icon_svg, strip_icon
 
@@ -144,9 +144,9 @@ def draw_process(pdf: PdfPages, block: Block, image, work_folder):
             pdf.set_fill_color(*pdf.theme.rgb("mood"))
             pdf.ellipse(center - 7, top, 14, 14, "F")
             if icon:
-                pdf.image(io.BytesIO(icon_svg(icon, white)), x=center - 4, y=top + 3, w=8, h=8)
+                pdf.image(io.BytesIO(icon_svg(icon, WHITE)), x=center - 4, y=top + 3, w=8, h=8)
             else:
-                pdf.write_at(center - 7, top + 3.4, 14, str(index + 1), 13, "B", rgb=white, align="C", line_height=1.0)
+                pdf.write_at(center - 7, top + 3.4, 14, str(index + 1), 13, "B", rgb=WHITE, align="C", line_height=1.0)
             title_end = pdf.write_at(MARGIN + width * index + 3, top + 22, width - 6, title, 12.5, "B", line_height=1.2, align="C")
             bottom = max(bottom, pdf.write_at(MARGIN + width * index + 3, title_end + 3, width - 6, description, 9.6,
                                               role="body", line_height=1.5, align="C", rich=True))
@@ -165,9 +165,9 @@ def draw_process(pdf: PdfPages, block: Block, image, work_folder):
         pdf.set_fill_color(*pdf.theme.rgb("mood"))
         pdf.ellipse(axis - 7, y, 14, 14, "F")
         if icon:
-            pdf.image(io.BytesIO(icon_svg(icon, white)), x=axis - 4, y=y + 3, w=8, h=8)
+            pdf.image(io.BytesIO(icon_svg(icon, WHITE)), x=axis - 4, y=y + 3, w=8, h=8)
         else:
-            pdf.write_at(axis - 7, y + 3.4, 14, str(index + 1), 13, "B", rgb=white, align="C", line_height=1.0)
+            pdf.write_at(axis - 7, y + 3.4, 14, str(index + 1), 13, "B", rgb=WHITE, align="C", line_height=1.0)
         title_end = pdf.write_at(axis + 13, y + 1, CONTENT_WIDTH - 20, title, 13, "B", line_height=1.2)
         bottom = pdf.write_at(axis + 13, max(y + 8, title_end + 1.5), CONTENT_WIDTH - 20, description, 9.8, role="body",
                               line_height=1.45, rich=True)
@@ -182,8 +182,8 @@ def draw_timeline(pdf: PdfPages, block: Block, image, work_folder):
     dark = variant == "dark"
     pdf.fill_page("night" if dark else "paper")
     tone = lifted(pdf.theme.rgb("mood"), 0.55) if dark else pdf.theme.rgb("mood")
-    ink = white if dark else pdf.theme.rgb("ink")
-    body = faint_white if dark else pdf.theme.rgb("body")
+    ink = WHITE if dark else pdf.theme.rgb("ink")
+    body = FAINT_WHITE if dark else pdf.theme.rgb("body")
     pdf.kicker(MARGIN, 22, "Timeline", on_dark=dark)
     end = pdf.write_at(MARGIN, 30, CONTENT_WIDTH, block.slots["title"], pdf.slot_size(block, "title"), "B", rgb=ink, line_height=1.1)
     end = pdf.write_at(MARGIN, end + 4, 150, block.slots.get("lead", ""), pdf.slot_size(block, "lead"),

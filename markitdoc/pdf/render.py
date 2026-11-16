@@ -35,7 +35,7 @@ for container_name in ("box", "sidebar", "columns"):
     container_plugin(parser, container_name, validate=lambda params, *_, name=container_name: name in re.findall(r"[\w-]+", params)[:1])
 
 
-drawers = {"cover": draw_cover, "summary": draw_summary, "divider": draw_divider, "chapter": draw_chapter,
+DRAWERS = {"cover": draw_cover, "summary": draw_summary, "divider": draw_divider, "chapter": draw_chapter,
            "figures": draw_figures, "keypoints": draw_keypoints, "matrix": draw_matrix, "quote": draw_quote,
            "comparison": draw_comparison, "process": draw_process, "timeline": draw_timeline, "feature": draw_feature}
 
@@ -44,7 +44,7 @@ drawers = {"cover": draw_cover, "summary": draw_summary, "divider": draw_divider
 def draw_block(pdf, block, image, work_folder, credits):
     if block.layout == "closing":
         return draw_closing(pdf, block, image, work_folder, credits)
-    return drawers[block.layout](pdf, block, image, work_folder)
+    return DRAWERS[block.layout](pdf, block, image, work_folder)
 
 
 # renders a document as a PDF file

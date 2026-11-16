@@ -6,7 +6,7 @@ from fpdf.enums import XPos, YPos
 from PIL import Image
 
 from markitdoc.markup.elements import chart_data, CHART_SIZES, settings_from
-from markitdoc.pdf.flow.pages import FlowPages, body_size
+from markitdoc.pdf.flow.pages import FlowPages, BODY_SIZE
 from markitdoc.pdf.flow.text import add_heading, add_list_item
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.charts import render_chart
@@ -15,7 +15,7 @@ from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)
 
-box_drawing = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
+BOX_DRAWING = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
 
 # shrinks an image proportionally when only part of it fits on the page
@@ -40,7 +40,7 @@ def add_fence(pdf: FlowPages, language: str, content: str):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
     language = language.split("{")[0].strip()
     width = (pdf.area) * CHART_SIZES.get(settings.get("size", "full"), 1.0)
-    if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in box_drawing) >= 6:
+    if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in BOX_DRAWING) >= 6:
         add_text_art(pdf, content)
         return
     if language.split()[:1] == ["infographic"]:
@@ -130,9 +130,9 @@ def add_diagram(pdf: FlowPages, source: str):
     pdf.ln(1.5)
     if titled:
         pdf.figure_count += 1
-        pdf.set_font("Brand", "I", body_size * pdf.scale * 0.85)
+        pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * 0.85)
         pdf.set_text_color(*pdf.theme.rgb("muted"))
-        pdf.multi_cell(pdf.area, body_size * pdf.scale * 0.45, f"Figure {pdf.figure_count}. {escaped(title)}", align="C",
+        pdf.multi_cell(pdf.area, BODY_SIZE * pdf.scale * 0.45, f"Figure {pdf.figure_count}. {escaped(title)}", align="C",
                        new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(3)
 

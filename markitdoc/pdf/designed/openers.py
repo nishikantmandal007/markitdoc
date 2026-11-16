@@ -3,7 +3,7 @@ from dataclasses import replace
 from markitdoc.markup.blocks import paragraphs
 from markitdoc.models.catalogue import Box, CONTENT_LIMIT, CONTENT_WIDTH, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, TEXT_WIDTH
 from markitdoc.models.document import Block
-from markitdoc.pdf.pages import PdfPages, soft_white, white
+from markitdoc.pdf.pages import PdfPages, SOFT_WHITE, WHITE
 from markitdoc.pdf.photos import placed
 from markitdoc.utils.helpers import lifted, long_date
 
@@ -12,8 +12,8 @@ from markitdoc.utils.helpers import lifted, long_date
 def cover_text(pdf, block, on_dark, top):
     pdf.bar(MARGIN, top - 8, rgb=lifted(pdf.theme.rgb("mood"), 0.55) if on_dark else pdf.theme.rgb("mood"))
     end = pdf.write_at(MARGIN, top, CONTENT_WIDTH, block.slots["title"], pdf.slot_size(block, "title"), "B",
-                       rgb=white if on_dark else pdf.theme.rgb("ink"), line_height=1.08)
-    return pdf.write_at(MARGIN, end + 6, 150, block.slots["subtitle"], pdf.slot_size(block, "subtitle"), rgb=soft_white if on_dark else pdf.theme.rgb("body"),
+                       rgb=WHITE if on_dark else pdf.theme.rgb("ink"), line_height=1.08)
+    return pdf.write_at(MARGIN, end + 6, 150, block.slots["subtitle"], pdf.slot_size(block, "subtitle"), rgb=SOFT_WHITE if on_dark else pdf.theme.rgb("body"),
                         line_height=1.4)
 
 
@@ -114,8 +114,8 @@ def draw_divider(pdf: PdfPages, block: Block, image, work_folder):
     pdf.write_at(MARGIN, 64, 80, block.slots.get("number", ""), pdf.slot_size(block, "number"), "B", rgb=tone, line_height=1.0)
     pdf.bar(MARGIN, 96, rgb=tone)
     end = pdf.write_at(MARGIN, 104, CONTENT_WIDTH, block.slots["title"], pdf.slot_size(block, "title"), "B",
-                       rgb=white if dark else pdf.theme.rgb("ink"), line_height=1.1)
-    end = pdf.write_at(MARGIN, end + 6, 150, block.slots.get("lead", ""), pdf.slot_size(block, "lead"), rgb=soft_white if dark else pdf.theme.rgb("body"),
+                       rgb=WHITE if dark else pdf.theme.rgb("ink"), line_height=1.1)
+    end = pdf.write_at(MARGIN, end + 6, 150, block.slots.get("lead", ""), pdf.slot_size(block, "lead"), rgb=SOFT_WHITE if dark else pdf.theme.rgb("body"),
                        line_height=1.45)
     if block.items:
         y = max(end + 18, 190)
@@ -125,7 +125,7 @@ def draw_divider(pdf: PdfPages, block: Block, image, work_folder):
             pdf.set_draw_color(*((70, 82, 120) if dark else pdf.theme.rgb("rule")))
             pdf.line(MARGIN, y, MARGIN + 120, y)
             pdf.write_at(MARGIN, y + 2.5, 10, f"{number:02d}", 9, "B", rgb=tone)
-            y = pdf.write_at(MARGIN + 12, y + 2.5, 108, entry, 10, rgb=soft_white if dark else pdf.theme.rgb("ink")) + 2.5
+            y = pdf.write_at(MARGIN + 12, y + 2.5, 108, entry, 10, rgb=SOFT_WHITE if dark else pdf.theme.rgb("ink")) + 2.5
         end = y
     return end, CONTENT_LIMIT
 
@@ -188,13 +188,13 @@ def draw_quote(pdf: PdfPages, block: Block, image, work_folder):
     top = max(50, (PAGE_HEIGHT - height) / 2)
     pdf.write_at(MARGIN, top - 34, 40, "“", 110, "B", rgb=tone, line_height=0.8)
     end = pdf.write_at(MARGIN + 10, top, CONTENT_WIDTH - 10, block.slots["quote"], pdf.slot_size(block, "quote"), "I",
-                       rgb=white if dark else pdf.theme.rgb("ink"), line_height=1.3)
+                       rgb=WHITE if dark else pdf.theme.rgb("ink"), line_height=1.3)
     if block.slots.get("quote_by"):
         pdf.bar(MARGIN + 10, end + 8, rgb=tone)
         end = pdf.write_at(MARGIN + 10, end + 13, 150, block.slots["quote_by"], pdf.slot_size(block, "quote_by"), "B", rgb=tone)
     if block.slots.get("context"):
         end = pdf.write_at(MARGIN + 10, end + 8, 130, block.slots["context"], pdf.slot_size(block, "context"),
-                           rgb=soft_white if dark else pdf.theme.rgb("body"), line_height=1.55)
+                           rgb=SOFT_WHITE if dark else pdf.theme.rgb("body"), line_height=1.55)
     return end, CONTENT_LIMIT
 
 

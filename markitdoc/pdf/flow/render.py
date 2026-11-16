@@ -15,7 +15,7 @@ from markitdoc.markup.elements import (
     without_display_maths,
 )
 from markitdoc.markup.inline import ANCHOR, inline_runs, parser
-from markitdoc.pdf.flow.pages import FlowPages, body_size, measured, place_notes, probe_of, top_height
+from markitdoc.pdf.flow.pages import FlowPages, BODY_SIZE, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
     add_callout,
@@ -33,12 +33,12 @@ from markitdoc.pdf.pages import escaped, inline_markup
 from markitdoc.utils.helpers import lifted
 
 logger = logging.getLogger(__name__)
-page_break_marker = "+++"
-plain_style = "plain"
+PAGE_BREAK_MARKER = "+++"
+PLAIN_STYLE = "plain"
 
 
-indent_step = 8
-soft_break_share = 0.35
+INDENT_STEP = 8
+SOFT_BREAK_SHARE = 0.35
 
 
 # parses and renders markdown into flowing PDF pages
@@ -113,9 +113,9 @@ def render_tokens(pdf: FlowPages, tokens):
             elif needs_runs(inline_runs(inline, pdf.targets)) and not list_stack:
                 place_notes(pdf, inline, note_texts, placed)
                 draw_runs(pdf, inline_runs(inline, pdf.targets), PARAGRAPH_ALIGNMENTS.get(style, "L"),
-                          indent + (indent_step if "indent" in style else 0))
-            elif text == page_break_marker:
-                if pdf.page_break_trigger - pdf.get_y() < pdf.eph * soft_break_share:
+                          indent + (INDENT_STEP if "indent" in style else 0))
+            elif text == PAGE_BREAK_MARKER:
+                if pdf.page_break_trigger - pdf.get_y() < pdf.eph * SOFT_BREAK_SHARE:
                     pdf.add_page()
                 else:
                     logger.info("Page break marker ignored: %.0f%% of the page is still free", 100 * (pdf.page_break_trigger - pdf.get_y()) / pdf.eph)
@@ -127,7 +127,7 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_list_item(pdf, text, list_stack, inline_runs(inline, pdf.targets))
             else:
                 place_notes(pdf, inline, note_texts, placed)
-                add_paragraph(pdf, text, PARAGRAPH_ALIGNMENTS.get(style, "L"), indent + (indent_step if "indent" in style else 0),
+                add_paragraph(pdf, text, PARAGRAPH_ALIGNMENTS.get(style, "L"), indent + (INDENT_STEP if "indent" in style else 0),
                               lead="lead" in style)
             for equation in equations:
                 add_equation(pdf, equation)
@@ -146,9 +146,9 @@ def render_tokens(pdf: FlowPages, tokens):
             index = closing_index(tokens, index, "dt_open", "dt_close") + 1
             continue
         elif token.type == "dd_open":
-            indent += indent_step
+            indent += INDENT_STEP
         elif token.type == "dd_close":
-            indent -= indent_step
+            indent -= INDENT_STEP
         elif token.type == "blockquote_open":
             end = closing_index(tokens, index, "blockquote_open", "blockquote_close")
             add_callout(pdf, " ".join(inline_markup(t, pdf.targets) for t in tokens[index:end] if t.type == "inline"))
@@ -218,9 +218,9 @@ def add_container(pdf: FlowPages, kind: str, info: str, inner):
         target.set_right_margin(target.w - left - width + pad)
         target.set_xy(target.l_margin, target.get_y() + pad)
         if title:
-            target.set_font("Head", "B", body_size * target.scale)
+            target.set_font("Head", "B", BODY_SIZE * target.scale)
             target.set_text_color(*target.theme.rgb("ink"))
-            target.multi_cell(target.area, body_size * target.scale * 0.55, escaped(title), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            target.multi_cell(target.area, BODY_SIZE * target.scale * 0.55, escaped(title), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             target.ln(1.5)
         render_tokens(target, inner)
         target.narrow = False

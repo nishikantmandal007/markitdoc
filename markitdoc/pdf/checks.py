@@ -4,12 +4,12 @@ from dataclasses import replace
 from markitdoc.markup.blocks import prepared, slot_pieces
 from markitdoc.models.catalogue import CONTENT_LIMIT, LAYOUTS
 from markitdoc.models.document import Document
-from markitdoc.pdf.pages import PdfPages, shrink_steps
-from markitdoc.pdf.photos import measuring_photo
+from markitdoc.pdf.pages import PdfPages, SHRINK_STEPS
+from markitdoc.pdf.photos import MEASURING_PHOTO
 from markitdoc.pdf.render import draw_block
 from markitdoc.themes.themes import Theme
 
-tightness_steps = (1.0, 0.92, 0.85)
+TIGHTNESS_STEPS = (1.0, 0.92, 0.85)
 
 
 # returns the validation messages for every page in the document
@@ -51,7 +51,7 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
                 if box.required:
                     found.append((index, f"{where}: {slot} is missing"))
                 continue
-            smallest = replace(box, size=round(box.size * shrink_steps[-1], 1))
+            smallest = replace(box, size=round(box.size * SHRINK_STEPS[-1], 1))
             for piece in slot_pieces(block, slot):
                 lines = measurer.line_count(piece, smallest)
                 if lines > box.lines:
@@ -62,9 +62,9 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
         if limits and not low <= len(block.items) <= high:
             found.append((index, f"{where}: needs {low} to {high} items, has {len(block.items)}"))
         if len(found) == before:
-            photo = measuring_photo if with_images and block.slots.get("image") and layout.image_ratio else None
+            photo = MEASURING_PHOTO if with_images and block.slots.get("image") and layout.image_ratio else None
             try:
-                for tightness in tightness_steps:
+                for tightness in TIGHTNESS_STEPS:
                     measurer.add_page()
                     measurer.tightness = tightness
                     end, limit = draw_block(measurer, block, photo, None, credits)
