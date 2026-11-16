@@ -5,6 +5,7 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
+from markitdoc.docx.layouts import document_photo_ratios, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.models.document import Document, parse_document
 from markitdoc.pdf.layouts import as_flow, layouts, page_problems, render_pdf
@@ -14,7 +15,7 @@ from markitdoc.visuals.images import find_images
 
 logger = logging.getLogger(__name__)
 
-FORMATS = ("pdf", "pptx")
+FORMATS = ("pdf", "pptx", "docx")
 TRUE_WORDS = ("true", "yes", "on", True)
 
 
@@ -79,6 +80,17 @@ def render_laid_out_pptx(document, output_path, template, author):
     return output_path
 
 
+# a parsed document to a Word file
+def render_laid_out_docx(document, output_path, template, author):
+    started = time.perf_counter()
+    theme = theme_for(document.meta, template)
+    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, document_photo_ratios)
+    render_docx(document, theme, output_path, images, author)
+    logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
+                output_path.stat().st_size, time.perf_counter() - started)
+    return output_path
+
+
 # markdown to a PDF, PowerPoint or Word file at output; returns the written path
 def render(markdown, output_format, output, template="default", author=""):
     if output_format not in FORMATS:
@@ -88,6 +100,8 @@ def render(markdown, output_format, output, template="default", author=""):
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Rendering %s: %d characters, template %s, to %s", output_format, len(markdown), template, output_path)
+    if output_format == "docx":
+        return render_laid_out_docx(parse_document(markdown), output_path, template, author)
     if output_format == "pptx":
         return render_laid_out_pptx(parse_document(markdown), output_path, template, author)
     return render_laid_out_pdf(parse_document(markdown), output_path, template)
