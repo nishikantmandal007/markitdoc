@@ -43,7 +43,11 @@ TONES = {"formal": ("professional", "navy"), "warm": ("editorial", "terracotta")
          "technical": ("professional", "ocean"), "celebratory": ("editorial", "forest"), "neutral": ("professional", "graphite")}
 
 STYLE_FILE_SUFFIX = ".style.yml"
-PLANNED_SECTIONS = ("page", "pages", "fields", "refs")
+PLANNED_SECTIONS = ("refs",)
+PAPER_MM = {"a3": (297, 420), "a4": (210, 297), "a5": (148, 210), "letter": (215.9, 279.4), "legal": (215.9, 355.6)}
+MARGIN_WORDS = {"narrow": 14, "normal": 20, "wide": 28}
+DEFAULT_MARGINS_MM = (20, 25, 22, 25)
+PAGE_FIELDS = ("page", "pages", "section", "title", "date")
 STYLE_PROPERTIES = ("font", "size", "color", "weight", "italic", "align", "caps", "tracking")
 STYLE_ONLY_PROPERTIES = ("kind", "based-on")
 BORDER_SIDES = ("top", "bottom", "left", "right")

@@ -13,13 +13,16 @@ from markitdoc.themes.theme_constants import (
     BUNDLED_FONTS,
     COLUMN_GAP_MM,
     COLUMN_RATIOS,
+    DEFAULT_MARGINS_MM,
     ENGINE_DEFAULTS,
     FONT_WORDS,
     FRACTION,
     HEX_STYLE_COLOR,
     LENGTH_UNIT,
+    MARGIN_WORDS,
     MAX_BASED_ON,
     PADDING_MM,
+    PAPER_MM,
     PERCENT,
     POINT_MM,
     RADIUS_MM,
@@ -49,6 +52,17 @@ class Layer:
 class Face:
     family: str
     files: tuple
+
+
+@dataclass(frozen=True)
+class Master:
+    name: str
+    width: float
+    height: float
+    margins: tuple
+    header: str | None
+    footer: str | None
+    numbers: str
 
 
 @dataclass(frozen=True)
@@ -148,8 +162,37 @@ class Stylesheet:
             self.colors.update({str(name): value for name, value in section(layer, "colors").items()})
             self.faces.update({str(name): face_of(value, layer.folder) for name, value in section(layer, "fonts").items()})
         self.raw_allowed = all(str(section(layer, "allow").get("raw")).lower() != "false" for layer in self.layers)
+        self.fields = {str(name): str(value) for layer in self.layers for name, value in section(layer, "fields").items()}
+        self.pages_defined = any(section(layer, "page") or section(layer, "pages") for layer in self.layers)
         self.style_names = {str(name) for layer in self.layers for name in section(layer, "styles")}
         self.base = self.points(self.cascade_base(None).get("size", (None,))[0], BODY_POINTS) or BODY_POINTS
+
+    # the names of the page masters any layer defines, default first
+    def master_names(self):
+        return ["default", *dict.fromkeys(str(name) for layer in self.layers for name in section(layer, "pages") if str(name) != "default")]
+
+    # the page master called name: the page section, then the default master, then the named master, each merged over the layers
+    def master(self, name="default"):
+        found = {}
+        for source in (None, "default", name):
+            for layer in self.layers:
+                rule = section(layer, "page") if source is None else section(layer, "pages").get(source)
+                found.update({str(key).lower(): value for key, value in (rule if isinstance(rule, dict) else {}).items()})
+        width, height = PAPER_MM.get(str(found.get("paper", "a4")).lower(), PAPER_MM["a4"])
+        if str(found.get("orientation", "")).lower() == "landscape":
+            width, height = height, width
+        header, footer = (None if found.get(key) is None else str(found[key]).strip() for key in ("header", "footer"))
+        return Master(name, width, height, self.margins_of(found.get("margins")), header, footer, str(found.get("numbers", "arabic")))
+
+    # the top, right, bottom and left margins in mm of a margins value: a word, or one, two or four lengths
+    def margins_of(self, value):
+        text = str(value).strip().lower()
+        if text in MARGIN_WORDS:
+            return (MARGIN_WORDS[text],) * 4
+        sizes = [self.length(word if LENGTH_UNIT.match(word) else f"{word}mm") for word in text.split()]
+        if None in sizes or len(sizes) not in (1, 2, 4):
+            return DEFAULT_MARGINS_MM
+        return {1: sizes * 4, 2: sizes * 2, 4: sizes}[len(sizes)]
 
     # a rule's properties with an unusable font dropped, so the element keeps the font it would have had without that key
     def tag(self, rule, source):

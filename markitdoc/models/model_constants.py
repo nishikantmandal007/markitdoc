@@ -19,5 +19,6 @@ BARE_DIRECTIVES = {
 BLOCK_START = re.compile(r"^##\s+(page|slide)(\s+\d+)?\s*:?\s*$", re.IGNORECASE)
 SLOT_LINE = re.compile(r"^([a-z_]+):\s*(.*)$")
 DIV_OPEN = re.compile(r"^:::+\s*\{?\s*\.?([a-z][\w-]*)(.*?)\}?\s*$", re.IGNORECASE)
+PAGE_SWITCH = re.compile(r"^\+\+\+\s*\{([^{}]*)\}$")
 DIV_CLOSE = re.compile(r"^:::+\s*$")
 BARE_DIRECTIVE = re.compile(r"^([A-Za-z]+)\s*:\s*(\S.*?)\s*$")

@@ -4,10 +4,11 @@ from difflib import get_close_matches
 from pathlib import Path
 
 from markitdoc.markup.elements import IMAGE_WRITTEN, written_image
+from markitdoc.markup.fields import FIELD_TEXT
 from markitdoc.models.attributes import KEY_ALIASES, parse_attributes
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.front_matter import front_matter, front_matter_yaml
-from markitdoc.models.model_constants import DIV_OPEN, FLOW_CONTAINERS, PLANNED_KEYS
+from markitdoc.models.model_constants import DIV_OPEN, FLOW_CONTAINERS, PAGE_SWITCH, PLANNED_KEYS
 from markitdoc.themes.stylesheet import load_stylesheet, section
 from markitdoc.themes.theme_constants import (
     BORDER_WORDS,
@@ -20,6 +21,7 @@ from markitdoc.themes.theme_constants import (
     MINIMUM_CONTRAST,
     NAME_STYLE_AFTER,
     PADDING_MM,
+    PAGE_FIELDS,
     PLANNED_SECTIONS,
     PLANNED_STYLE_PROPERTIES,
     RADIUS_MM,
@@ -176,6 +178,37 @@ def image_findings(lines, end, folders):
     return found
 
 
+# warnings for fields no fields: section defines, found in the text of one line
+def field_findings(sheet, text, number, where=""):
+    return [warning(number, f"{where}unknown field '{{{found.group(2)}}}'", "define it under fields: or remove the braces")
+            for found in FIELD_TEXT.finditer(text)
+            if found.group(2) and found.group(2) not in sheet.fields and found.group(2) not in PAGE_FIELDS
+            and not (found.start() and (text[found.start() - 1].isalnum() or text[found.start() - 1] in "])*_`\\")) and not text.strip().startswith("{")]
+
+
+# problems with page masters and fields: unknown masters and number styles in +++ lines, unknown fields in the text and in headers and footers
+def page_findings(sheet, lines, end):
+    found, names, in_fence = [], sheet.master_names(), False
+    for name in names:
+        for template in (sheet.master(name).header, sheet.master(name).footer):
+            found += field_findings(sheet, template or "", 1, f"page master {name}: ")
+    for number, text in enumerate(lines, 1):
+        if text.strip().startswith(("```", "~~~")):
+            in_fence = not in_fence
+        if number <= end or in_fence or text.strip().startswith(("```", "~~~")):
+            continue
+        if switch := PAGE_SWITCH.match(text.strip()):
+            values = parse_attributes(switch.group(1)).values
+            if "page" in values and str(values["page"]) not in names:
+                close = get_close_matches(str(values["page"]), names, n=1)
+                found.append(warning(number, f"unknown page master '{values['page']}'", f"did you mean '{close[0]}'?" if close else "define it under pages:"))
+            if "numbers" in values and values["numbers"] != "restart":
+                found.append(warning(number, f"numbers '{values['numbers']}' is not restart", "use numbers=restart"))
+        else:
+            found += field_findings(sheet, text, number)
+    return found
+
+
 # language v2 problems in a document: style files, fonts, style names, raw combinations, contrast
 def style_findings(markdown, folders=()):
     lines = markdown.split("\n")
@@ -186,4 +219,4 @@ def style_findings(markdown, folders=()):
     found = layer_findings(sheet, paper, line_of(lines, r"^use\s*:"))
     if front is None:
         found.append(warning(1, "front matter is not valid YAML, so style sections are ignored", "check the indentation and quotes"))
-    return found + attribute_findings(sheet, paper, lines, end) + image_findings(lines, end, folders)
+    return found + attribute_findings(sheet, paper, lines, end) + page_findings(sheet, lines, end) + image_findings(lines, end, folders)

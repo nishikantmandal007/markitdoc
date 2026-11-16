@@ -8,6 +8,7 @@ from pathlib import Path
 from markitdoc.docx.render import DOCUMENT_PHOTO_RATIOS, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
+from markitdoc.markup.fields import field_values, with_fields
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
 from markitdoc.models.front_matter import front_matter_yaml, language_version
@@ -58,6 +59,9 @@ def written_in_devanagari(document):
 def render_laid_out_pdf(document, output_path, template, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
+    styles = stylesheet_for(document, markdown, theme)
+    if styles:
+        document = with_fields(document, field_values(styles, document.meta))
     wants_images = document.meta.get("images") in TRUE_WORDS
     if not document.meta.get("lang") and written_in_devanagari(document):
         document = Document({**document.meta, "lang": "hi"}, document.blocks)
@@ -76,7 +80,7 @@ def render_laid_out_pdf(document, output_path, template, markdown=""):
     if tightened:
         logger.info("Tightened line spacing on %d pages to fit: %s", len(tightened), tightened)
     with tempfile.TemporaryDirectory() as work_folder:
-        render_pdf(document, theme, output_path, Path(work_folder), images, credits, stylesheet_for(document, markdown, theme))
+        render_pdf(document, theme, output_path, Path(work_folder), images, credits, styles)
     logger.info("Rendered PDF: %d blocks, theme %s, %d images, %d bytes, %.1f s, %d pages shown as text",
                 len(document.blocks), theme.name, len(images), output_path.stat().st_size, time.perf_counter() - started, len(broken))
     return output_path
@@ -97,8 +101,11 @@ def render_laid_out_pptx(document, output_path, template, author):
 def render_laid_out_docx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
+    styles = stylesheet_for(document, markdown, theme)
+    if styles:
+        document = with_fields(document, field_values(styles, document.meta))
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
-    render_docx(document, theme, output_path, images, author, stylesheet_for(document, markdown, theme))
+    render_docx(document, theme, output_path, images, author, styles)
     logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)
     return output_path
