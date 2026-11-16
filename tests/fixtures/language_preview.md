@@ -1,5 +1,4 @@
 ---
-markitdoc: 2
 use: [fieldnote, nordwind]          # style files, applied in order (nordwind is a brand pack)
 palette: forest
 paper: a4

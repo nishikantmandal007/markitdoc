@@ -18,7 +18,7 @@ def pdf_pages(markdown, tmp_path):
 
 
 def paper(setting, body="Plain text."):
-    return f"---\nmarkitdoc: 2\npage: {{{setting}}}\n---\n\n# T\n\n{body}\n"
+    return f"---\npage: {{{setting}}}\n---\n\n# T\n\n{body}\n"
 
 
 def lines_of(page):
@@ -78,7 +78,7 @@ def test_should_replace_fields_in_text_heading_cover_slot_and_footer_but_not_cod
 
 
 def test_should_replace_a_field_in_a_heading(tmp_path):
-    page = pdf_pages("---\nmarkitdoc: 2\nfields: {client: Nordwind AG}\n---\n\n## Report for {client}\n\nText.\n", tmp_path)[0]
+    page = pdf_pages("---\nfields: {client: Nordwind AG}\n---\n\n## Report for {client}\n\nText.\n", tmp_path)[0]
 
     assert "Report for Nordwind AG" in page.get_text()
 
@@ -93,7 +93,7 @@ def test_should_fit_more_words_on_a_larger_paper_at_the_same_body_size(tmp_path)
 
 
 def test_should_centre_a_designed_page_on_a_larger_paper(tmp_path):
-    markdown = "---\nmarkitdoc: 2\npage: {paper: a3}\n---\n\n::: {.cover variant=light}\ntitle: Valley\nsubtitle: Short.\n:::\n"
+    markdown = "---\npage: {paper: a3}\n---\n\n::: {.cover variant=light}\ntitle: Valley\nsubtitle: Short.\n:::\n"
     page = pdf_pages(markdown, tmp_path)[0]
     span = next(span for span in lines_of(page) if span["text"].startswith("Valley"))
 
@@ -139,16 +139,15 @@ def test_should_warn_about_an_unknown_field_but_not_a_defined_one_or_one_in_code
     assert [finding.message for finding in findings if "field" in finding.message] == ["unknown field '{nobody}'"]
 
 
-def test_should_not_call_the_page_keys_planned_in_a_version_2_document():
-    assert not [finding for finding in check_document(REPORT) if "planned" in finding.message]
+def test_should_not_flag_the_page_keys_of_a_report():
+    assert not [finding for finding in check_document(REPORT) if "numbers" in finding.message or "page" in finding.message]
 
 
-BOX_STYLE = "---\nmarkitdoc: 2\nstyles:\n  note: {kind: box, bg: surface, padding: m}\n---\n\n# T\n\n::: {.note}\nInside the note.\n:::\n"
+BOX_STYLE = "---\nstyles:\n  note: {kind: box, bg: surface, padding: m}\n---\n\n# T\n\n::: {.note}\nInside the note.\n:::\n"
 
 
-def test_should_treat_a_top_level_named_box_as_flow_in_version_2_only():
+def test_should_treat_a_top_level_named_box_as_flow():
     assert {block.layout for block in parse_document(BOX_STYLE).blocks} == {"flow"}
-    assert any(block.layout.startswith("note") for block in parse_document(BOX_STYLE.replace("markitdoc: 2", "markitdoc: 1")).blocks)
 
 
 def test_should_draw_a_top_level_named_box_as_a_filled_rectangle_in_the_flow(tmp_path):
@@ -160,7 +159,7 @@ def test_should_draw_a_top_level_named_box_as_a_filled_rectangle_in_the_flow(tmp
 
 
 def test_should_shrink_a_designed_page_to_fit_smaller_paper(tmp_path):
-    markdown = "---\nmarkitdoc: 2\npage: {paper: a5}\n---\n\n::: {.cover variant=light}\ntitle: Valley\nsubtitle: Short.\n:::\n"
+    markdown = "---\npage: {paper: a5}\n---\n\n::: {.cover variant=light}\ntitle: Valley\nsubtitle: Short.\n:::\n"
     page = pdf_pages(markdown, tmp_path)[0]
     span = next(span for span in lines_of(page) if span["text"].startswith("Valley"))
 

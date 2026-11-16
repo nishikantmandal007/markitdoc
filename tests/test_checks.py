@@ -26,9 +26,11 @@ def test_should_report_unbalanced_fences_as_errors():
     assert check_document("::: box\n::: columns\n:::\n:::\n") == []
 
 
-def test_should_warn_about_a_language_version_other_than_one_or_two():
-    assert check_document("---\nmarkitdoc: 3\n---\n# T")[0].severity == "warning"
-    assert check_document("---\nmarkitdoc: 2\n---\n# T") == []
+def test_should_say_a_markitdoc_front_matter_key_is_not_needed():
+    finding = check_document("---\nmarkitdoc: 3\n---\n# T")[0]
+
+    assert (finding.line, finding.severity, finding.message) == (2, "info", "'markitdoc:' is not needed: every feature is always on")
+    assert check_document("# T") == []
 
 
 def test_should_never_raise_on_bad_input():
@@ -54,11 +56,11 @@ def test_should_print_findings_as_json(tmp_path, capsys):
         {"line": 1, "severity": "error", "message": "::: block is never closed", "fix": "add a closing ::: line"}]
 
 
-def test_should_name_planned_keys_instead_of_suggesting_another_key():
-    finding = check_document("::: box border=thin\n:::")[0]
+def test_should_suggest_the_closest_key_for_a_misspelt_one():
+    finding = check_document("::: box bordr=thin\n:::")[0]
 
-    assert finding.message == "'border' is planned for MarkitDoc language v2 and is ignored for now"
-    assert finding.fix == "remove it or keep it for a later version"
+    assert finding.message == "unknown attribute 'bordr'"
+    assert finding.fix == "did you mean 'border'?"
 
 
 def test_should_print_nothing_and_exit_zero_when_there_are_no_findings(tmp_path, capsys):

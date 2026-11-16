@@ -11,7 +11,6 @@ from markitdoc.themes.themes import theme_for
 
 THEME = theme_for({}, "default")
 FRONT = """---
-markitdoc: 2
 colors:
   brand: "#0F766E"
 fonts:
@@ -70,12 +69,6 @@ def test_should_apply_a_named_block_style_to_a_paragraph(tmp_path):
     assert run._r.getparent().pPr.get("algn") == "ctr"
 
 
-def test_should_leave_version_one_decks_unstyled(tmp_path):
-    run = run_with(deck_of("## Findings\n\nWater levels rose steadily.\n", tmp_path), "Water levels")
-
-    assert run.font.size != Pt(18) and run.font.bold is not True
-
-
 def test_should_draw_a_box_as_a_rounded_shape_with_fill_border_and_margins(tmp_path):
     deck = deck_of(FRONT + "## Facts\n\n::: box {.card}\nInside the box.\n:::\n", tmp_path)
     shape = next(shape for slide in deck.slides for shape in slide.shapes if shape.name == "Box")
@@ -114,7 +107,7 @@ def test_should_place_an_image_file_at_the_asked_width(tmp_path):
 
 def test_should_show_a_resolved_reference_and_citation_as_text(tmp_path):
     (tmp_path / "refs.yml").write_text("dewit2021: {author: [Marie de Wit], title: Floodplains, year: 2021}\n", encoding="utf-8")
-    markdown = ("---\nmarkitdoc: 2\nrefs: refs.yml\n---\n"
+    markdown = ("---\nrefs: refs.yml\n---\n"
                 + "## Evidence\n\nSee [@dewit2021] and [@chart1].\n\n```chart {#chart1 caption=\"Levels\"}\n"
                 '{"type": "bar", "labels": ["a", "b"], "datasets": [{"values": [1, 2]}]}\n```\n')
     text = " ".join(run.text for run in runs_of(deck_of(markdown, tmp_path)))
@@ -123,7 +116,7 @@ def test_should_show_a_resolved_reference_and_citation_as_text(tmp_path):
 
 
 def test_should_show_a_field_in_slide_text(tmp_path):
-    front = "---\nmarkitdoc: 2\nfields:\n  client: Nordwind\n---\n"
+    front = "---\nfields:\n  client: Nordwind\n---\n"
 
     assert "Nordwind" in " ".join(run.text for run in runs_of(deck_of(front + "## Intro\n\nPrepared for {client}.\n", tmp_path)))
 
@@ -143,7 +136,7 @@ def test_should_note_what_a_slide_ignores_in_check(tmp_path):
 
 
 def test_should_scale_a_print_sized_title_rule_to_the_slide_and_clamp_it_to_the_title_range(tmp_path):
-    front = "---\nmarkitdoc: 2\ntext: {size: 10pt}\nset:\n  h2: {size: 14.5pt}\n---\n"
+    front = "---\ntext: {size: 10pt}\nset:\n  h2: {size: 14.5pt}\n---\n"
     run = run_with(deck_of(front + "## Findings\n\nWater levels rose steadily.\n", tmp_path), "Findings")
 
     assert run.font.size == Pt(29)
@@ -153,7 +146,7 @@ def test_should_scale_a_print_sized_title_rule_to_the_slide_and_clamp_it_to_the_
 
 
 def test_should_size_a_scale_word_span_relative_to_the_slide_body(tmp_path):
-    front = "---\nmarkitdoc: 2\ntext: {size: 10pt}\n---\n"
+    front = "---\ntext: {size: 10pt}\n---\n"
     run = run_with(deck_of(front + "## Findings\n\nA [big]{size=l} word.\n", tmp_path), "big")
 
     assert run.font.size == Pt(25)

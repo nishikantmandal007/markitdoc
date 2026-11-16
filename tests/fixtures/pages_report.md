@@ -1,5 +1,4 @@
 ---
-markitdoc: 2
 fields: {client: Nordwind AG}
 date: 2025-03-04
 page: {paper: a5, margins: narrow}
