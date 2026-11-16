@@ -70,18 +70,22 @@ class PdfPages(FPDF):
         self.theme = theme
         fonts_folder = Path(theme.fonts["body"]).parent
         bold = theme.fonts.get("bold", theme.fonts["heading"])
-        self.add_font("Brand", "", str(theme.fonts["body"]))
-        self.add_font("Brand", "B", str(bold))
-        self.add_font("Brand", "I", str(theme.fonts["italic"]))
-        self.add_font("Brand", "BI", str(bold))
-        self.add_font("Head", "", str(theme.fonts["heading"]))
-        self.add_font("Head", "B", str(theme.fonts["heading"]))
-        self.add_font("Mono", "", str(fonts_folder / "JetBrainsMono-Regular.ttf"))
-        self.add_font("Devanagari", "", str(fonts_folder / "NotoSansDevanagari-Regular.ttf"))
-        self.add_font("Devanagari", "B", str(fonts_folder / "NotoSansDevanagari-Bold.ttf"))
-        self.add_font("Symbols", "", str(fonts_folder / "NotoSansSymbols2-Regular.ttf"))
-        self.add_font("Latin", "", str(fonts_folder / "Inter-Regular.ttf"))
-        self.add_font("Noto", "", str(fonts_folder / "NotoSans-Regular.ttf"))
+        faces = {
+            "Brand": (theme.fonts["body"], bold, theme.fonts["italic"], bold),
+            "Head": (theme.fonts["heading"], theme.fonts["heading"], theme.fonts["italic"], theme.fonts["heading"]),
+            "Mono": (fonts_folder / "JetBrainsMono-Regular.ttf", fonts_folder / "JetBrainsMono-Bold.ttf",
+                     fonts_folder / "JetBrainsMono-Regular.ttf", fonts_folder / "JetBrainsMono-Bold.ttf"),
+            "Devanagari": (fonts_folder / "NotoSansDevanagari-Regular.ttf", fonts_folder / "NotoSansDevanagari-Bold.ttf",
+                           fonts_folder / "NotoSansDevanagari-Regular.ttf", fonts_folder / "NotoSansDevanagari-Bold.ttf"),
+            "Symbols": (fonts_folder / "NotoSansSymbols2-Regular.ttf",) * 4,
+            "Latin": (fonts_folder / "Inter-Regular.ttf", fonts_folder / "Inter-Bold.ttf",
+                      fonts_folder / "Inter-Italic.ttf", fonts_folder / "Inter-BoldItalic.ttf"),
+            "Noto": (fonts_folder / "NotoSans-Regular.ttf", fonts_folder / "NotoSans-Bold.ttf",
+                     fonts_folder / "NotoSans-Italic.ttf", fonts_folder / "NotoSans-BoldItalic.ttf"),
+        }
+        for family, files in faces.items():
+            for style, path in zip(("", "B", "I", "BI"), files):
+                self.add_font(family, style, str(path))
         self.set_fallback_fonts(["Devanagari", "Symbols", "Latin", "Noto"], exact_match=False)
         self.photos, self.work_folder, self.photo_credit = "natural", None, None
         self.tightness = 1.0
