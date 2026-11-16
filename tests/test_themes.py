@@ -14,8 +14,20 @@ class TestLoadTheme:
         assert all(path.is_file() for path in theme.fonts.values())
         assert {"calm", "urgent", "optimistic", "analytical", "instructional", "strategic"} <= set(theme.moods)
 
-    def test_should_ship_exactly_the_two_neutral_themes(self):
-        assert available_themes() == ["editorial", "professional"]
+    def test_should_ship_the_two_neutral_themes_beside_registered_brands(self):
+        assert available_themes() == ["acme", "editorial", "professional"]
+
+    def test_should_keep_the_brand_colour_of_a_locked_theme_whatever_the_mood(self):
+        assert load_theme("acme", mood="urgent").colors["mood"] == load_theme("acme").colors["primary"]
+
+    def test_should_let_a_locked_brand_template_win_over_paper_and_tone(self):
+        assert theme_for({"tone": "warm"}, "acme").name == "acme"
+
+    def test_should_find_brand_files_next_to_the_theme_and_fonts_in_the_bundle(self):
+        theme = load_theme("acme")
+
+        assert theme.logo.name == "logo.png" and theme.logo.is_file() and theme.master.is_file()
+        assert all(path.is_file() for path in theme.fonts.values())
 
     def test_should_map_the_legacy_default_name_to_professional(self):
         assert load_theme("default").name == "professional"
