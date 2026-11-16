@@ -1,0 +1,245 @@
+{
+ "docx-brand": {
+  "images": 1,
+  "paragraphs": [
+   [
+    "Title",
+    "Quarterly Privacy Review"
+   ],
+   [
+    "Heading 2",
+    "Summary"
+   ],
+   [
+    "Normal",
+    "AI-Safe anonymised every uploaded file this quarter. The review covers detection, replacement and delivery."
+   ],
+   [
+    "Normal",
+    "Detection found names, emails and phone numbers."
+   ],
+   [
+    "Normal",
+    "Replacement kept the original layout."
+   ],
+   [
+    "Normal",
+    "Delivery passed the leak check."
+   ],
+   [
+    "Heading 2",
+    "Results"
+   ],
+   [
+    "Caption",
+    "Figure 1. Files by type"
+   ],
+   [
+    "Heading 2",
+    "Next steps"
+   ],
+   [
+    "Normal",
+    "Fix page breaks."
+   ],
+   [
+    "Normal",
+    "Add layouts."
+   ]
+  ],
+  "tables": [
+   [
+    [
+     "Area",
+     "Files",
+     "Status"
+    ],
+    [
+     "PDF",
+     "120",
+     "Done"
+    ],
+    [
+     "Word",
+     "45",
+     "Done"
+    ]
+   ],
+   [
+    [
+     "Note: Numbers are sample figures."
+    ]
+   ]
+  ]
+ },
+ "docx-default": {
+  "images": 1,
+  "paragraphs": [
+   [
+    "Title",
+    "Quarterly Privacy Review"
+   ],
+   [
+    "Heading 2",
+    "Summary"
+   ],
+   [
+    "Normal",
+    "AI-Safe anonymised every uploaded file this quarter. The review covers detection, replacement and delivery."
+   ],
+   [
+    "Normal",
+    "Detection found names, emails and phone numbers."
+   ],
+   [
+    "Normal",
+    "Replacement kept the original layout."
+   ],
+   [
+    "Normal",
+    "Delivery passed the leak check."
+   ],
+   [
+    "Heading 2",
+    "Results"
+   ],
+   [
+    "Caption",
+    "Figure 1. Files by type"
+   ],
+   [
+    "Heading 2",
+    "Next steps"
+   ],
+   [
+    "Normal",
+    "Fix page breaks."
+   ],
+   [
+    "Normal",
+    "Add layouts."
+   ]
+  ],
+  "tables": [
+   [
+    [
+     "Area",
+     "Files",
+     "Status"
+    ],
+    [
+     "PDF",
+     "120",
+     "Done"
+    ],
+    [
+     "Word",
+     "45",
+     "Done"
+    ]
+   ],
+   [
+    [
+     "Note: Numbers are sample figures."
+    ]
+   ]
+  ]
+ },
+ "pdf-brand": {
+  "images": [
+   1,
+   1
+  ],
+  "pages": 2,
+  "text": [
+   "Quarterly Privacy Review Summary AI-Safe anonymised every uploaded file this quarter. The review covers detection, replacement and delivery. • Detection found names, emails and phone numbers. • Replacement kept the original layout. • Delivery passed the leak check. Results Area Files Status PDF 120 Done Word 45 Done 1 / 2 acme.example | Acme Tools Ltd",
+   "Internal use only Acme Tools Next steps 1. Fix page breaks. 2. Add layouts. NOTE Numbers are sample figures. 2 / 2 acme.example | Acme Tools Ltd"
+  ]
+ },
+ "pdf-default": {
+  "images": [
+   1,
+   0
+  ],
+  "pages": 2,
+  "text": [
+   "Quarterly Privacy Review Summary AI-Safe anonymised every uploaded file this quarter. The review covers detection, replacement and delivery. • Detection found names, emails and phone numbers. • Replacement kept the original layout. • Delivery passed the leak check. Results Area Files Status PDF 120 Done Word 45 Done 1 / 2",
+   "QUARTERLY PRIVACY REVIEW Next steps 1. Fix page breaks. 2. Add layouts. NOTE Numbers are sample figures. 2 / 2"
+  ]
+ },
+ "pptx-brand": {
+  "pictures": [
+   1,
+   0,
+   0,
+   0,
+   0
+  ],
+  "slides": [
+   [
+    "Simple tools for serious work",
+    "AI-Safe",
+    "acme.example | Acme Tools Ltd",
+    "Internal use only"
+   ],
+   [
+    "AI-Safe",
+    "acme.example | Acme Tools Ltd",
+    "Internal use only",
+    "2",
+    "Private AI for regulated teams"
+   ],
+   [
+    "The problem",
+    "acme.example | Acme Tools Ltd",
+    "Internal use only",
+    "3",
+    "Personal data reaches public models Blocking AI costs productivity"
+   ],
+   [
+    "How it works",
+    "acme.example | Acme Tools Ltd",
+    "Internal use only",
+    "4",
+    "Detect personal data Replace it with realistic fakes Restore real values in the answer"
+   ],
+   [
+    "Results",
+    "acme.example | Acme Tools Ltd",
+    "Internal use only",
+    "5"
+   ]
+  ]
+ },
+ "pptx-default": {
+  "pictures": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "slides": [
+   [
+    "AI-Safe",
+    "Private AI for regulated teams"
+   ],
+   [
+    "The problem",
+    "AI-Safe",
+    "2",
+    "Personal data reaches public models Blocking AI costs productivity"
+   ],
+   [
+    "How it works",
+    "AI-Safe",
+    "3",
+    "Detect personal data Replace it with realistic fakes Restore real values in the answer"
+   ],
+   [
+    "Results",
+    "AI-Safe",
+    "4"
+   ]
+  ]
+ }
+}
