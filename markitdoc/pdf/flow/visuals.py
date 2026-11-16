@@ -5,12 +5,12 @@ import re
 from fpdf.enums import XPos, YPos
 from PIL import Image
 
-from markitdoc.markup.elements import chart_data, chart_sizes, settings_from
+from markitdoc.markup.elements import chart_data, CHART_SIZES, settings_from
 from markitdoc.pdf.flow.pages import FlowPages, body_size
 from markitdoc.pdf.flow.text import add_heading, add_list_item
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.charts import render_chart
-from markitdoc.visuals.diagrams import canvas_width, diagram_as_text, diagram_title, render_diagram, zoom
+from markitdoc.visuals.diagrams import CANVAS_WIDTH, diagram_as_text, diagram_title, render_diagram, ZOOM
 from markitdoc.visuals.infographics import render_infographic
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def add_picture(pdf: FlowPages, picture, width, height, description=""):
 def add_fence(pdf: FlowPages, language: str, content: str):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
     language = language.split("{")[0].strip()
-    width = (pdf.area) * chart_sizes.get(settings.get("size", "full"), 1.0)
+    width = (pdf.area) * CHART_SIZES.get(settings.get("size", "full"), 1.0)
     if language in ("", "text", "plain", "plaintext") and sum(content.count(mark) for mark in box_drawing) >= 6:
         add_text_art(pdf, content)
         return
@@ -112,14 +112,14 @@ def add_diagram(pdf: FlowPages, source: str):
             add_list_item(pdf, line, [{"ordered": False, "number": 1}])
         return
     with Image.open(path) as picture:
-        natural, ratio = picture.width / zoom * pdf.area / canvas_width, picture.height / picture.width
+        natural, ratio = picture.width / ZOOM * pdf.area / CANVAS_WIDTH, picture.height / picture.width
     direction = re.match(r"\s*(flowchart|graph)\s+(TB|TD|BT)\b", source)
     if direction and ratio > 1.4:
         taller = render_diagram(source[:direction.start(2)] + "LR" + source[direction.end(2):], pdf.theme)
         if taller:
             path = taller
             with Image.open(path) as picture:
-                natural, ratio = picture.width / zoom * pdf.area / canvas_width, picture.height / picture.width
+                natural, ratio = picture.width / ZOOM * pdf.area / CANVAS_WIDTH, picture.height / picture.width
     width = min(pdf.area, max(natural, pdf.area * 0.6))
     height = min(width * ratio, pdf.h * 0.4)
     width = height / ratio

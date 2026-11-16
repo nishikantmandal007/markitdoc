@@ -1,14 +1,14 @@
 from markitdoc.errors import UnsupportedFormatError
-from markitdoc.markup.elements import callout_kinds, chart_sizes, list_schemes, paragraph_alignments, span_colors, table_styles
-from markitdoc.models.catalogue import layouts
+from markitdoc.markup.elements import CALLOUT_KINDS, CHART_SIZES, LIST_SCHEMES, PARAGRAPH_ALIGNMENTS, SPAN_COLORS, TABLE_STYLES
+from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pptx.designed.titles import max_per_slide
 from markitdoc.pptx.render import drawers
 from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
-from markitdoc.visuals.diagrams import diagram_types
-from markitdoc.visuals.infographics import infographic_templates
+from markitdoc.visuals.diagrams import DIAGRAM_TYPES
+from markitdoc.visuals.infographics import INFOGRAPHIC_TEMPLATES
 
-layout_purposes = {
+LAYOUT_PURPOSES = {
     "cover": "first page of a report, proposal or guide: kicker (small label), title, subtitle",
     "summary": "executive summary: conclusion first; title, lead, 2-4 headline figures 'value — label', body",
     "divider": "opens a major part of a long document: number, title, lead, optional items 'section name' listing what the part covers",
@@ -25,7 +25,7 @@ layout_purposes = {
     "flow": "free markdown of any length: ## and ### headings, paragraphs, lists, tables, callouts, ```chart, ```mermaid and ```infographic; "
             "pages break automatically. Use it for analysis, evidence, tables, policies and anything long",
 }
-variant_meanings = {
+VARIANT_MEANINGS = {
     "cover": "light | dark | photo (full-bleed photo, needs images: true) | split (colour or photo strip on the left) | "
              "company (the brand's address and partner logos, brand templates only)",
     "divider": "light (default) | dark (use for at most one strong section break)",
@@ -38,7 +38,7 @@ variant_meanings = {
 }
 
 
-example_document = """---
+EXAMPLE_DOCUMENT = """---
 palette: forest
 paper: warm
 fonts: serif-heads
@@ -73,7 +73,7 @@ title: Five years in numbers
 title: The next five years
 body: The programme now moves upstream, where the same methods can protect three more towns.
 :::"""
-contract_infographics = ("sequence-steps-badge-card", "list-grid-badge-card", "list-pyramid-badge-card")
+CONTRACT_INFOGRAPHICS = ("sequence-steps-badge-card", "list-grid-badge-card", "list-pyramid-badge-card")
 
 
 # estimates how many words fit in a designed text box
@@ -98,17 +98,17 @@ def layout_rule(name, layout):
     if limits:
         words = " / ".join(f"~{max(1, round(limit / 6.2))}" for limit in limits)
         parts.append(f"{low}-{high} items of {words} words per part" if low != high else f"{low} items of {words} words per part")
-    if name in variant_meanings:
-        parts.append(f"variant: {variant_meanings[name]}")
+    if name in VARIANT_MEANINGS:
+        parts.append(f"variant: {VARIANT_MEANINGS[name]}")
     if layout.image_ratio:
         parts.append("image: photo query (only when images: true)")
-    return f"- {name}: {layout_purposes[name]}." + (f"\n    {'; '.join(parts)}" if parts else "")
+    return f"- {name}: {LAYOUT_PURPOSES[name]}." + (f"\n    {'; '.join(parts)}" if parts else "")
 
 
 # builds the PDF design instructions for document generation
 def pdf_contract() -> str:
-    infographics = "\n".join(f"  - {name} ({infographic_templates[name][0]}): {infographic_templates[name][1]}"
-                              for name in contract_infographics)
+    infographics = "\n".join(f"  - {name} ({INFOGRAPHIC_TEMPLATES[name][0]}): {INFOGRAPHIC_TEMPLATES[name][1]}"
+                              for name in CONTRACT_INFOGRAPHICS)
     palette_lines = "\n".join(f"  - {name}: {description}" for name, (_, _, description) in PALETTES.items())
     font_lines = "\n".join(f"  - {name}: {pair[4]}" for name, pair in FONT_PAIRS.items())
     return f"""PDF DESIGN GUIDE. Read it fully, then call generate_document once with the finished markdown.
@@ -123,7 +123,7 @@ palette: <name>        (choose the one whose world fits THIS subject; all are pr
 paper: {' | '.join(PAPERS)}   (white = crisp corporate; warm = soft cream, editorial and long reads)
 fonts: <pair>          (choose the typography that suits the reader; see Fonts)
 text_size: {' | '.join(TEXT_SIZES)}   (small = dense reference, regular = most documents, large = easy reading, letters)
-tables: {' | '.join(table_styles)}   (lined = clean rules, best for most; striped = long tables; boxed = dense reference grids)
+tables: {' | '.join(TABLE_STYLES)}   (lined = clean rules, best for most; striped = long tables; boxed = dense reference grids)
 images: true | false   (true ONLY when the user asks for pictures or photos; false is the normal default)
 photos: natural | duotone | mono   (with images: natural = true colour; duotone = tinted in the palette, unifies
                        mixed photos, editorial; mono = black and white, archival or sober)
@@ -160,7 +160,7 @@ Element settings in normal pages: a line '{{.lined}}', '{{.striped}}' or '{{.box
 that table; ```chart {{size=half}} makes a chart smaller (use only for a minor supporting chart; most charts are full width).
 
 LAYOUTS (word counts are guides; text is measured and gently shrunk to fit):
-{chr(10).join(layout_rule(name, layout) for name, layout in layouts.items())}
+{chr(10).join(layout_rule(name, layout) for name, layout in LAYOUTS.items())}
 
 PLANNING
 - Decide what the reader must take away, then choose each page from its content: headline numbers -> figures;
@@ -179,23 +179,23 @@ PLANNING
 
 MARKDOWN YOU CAN USE IN NORMAL PAGES (settings go on their own line DIRECTLY under the block they style)
 - Text: **bold**, *italic*, ~~strikethrough~~, [words]{{.underline}}, `code`, [link text](https://...) (clickable),
-  H~2~O and x^2^ (sub/superscript). Colour a few words with palette roles: {' '.join('[words]{.' + name + '}' for name in span_colors)}
+  H~2~O and x^2^ (sub/superscript). Colour a few words with palette roles: {' '.join('[words]{.' + name + '}' for name in SPAN_COLORS)}
   (danger/success for good and bad numbers; highlight = a marker-pen band behind the words; use sparingly).
 - Maths: inline $x^2 + y_i$ and display equations on their own lines between $$ and $$ (LaTeX syntax:
   \\frac, \\sqrt, \\sum, Greek letters). Money like $25 is never treated as maths.
-- Paragraph settings: {' '.join('{.' + name + '}' for name in [*paragraph_alignments, 'indent', 'lead'])}
+- Paragraph settings: {' '.join('{.' + name + '}' for name in [*PARAGRAPH_ALIGNMENTS, 'indent', 'lead'])}
   (lead = larger opening paragraph; indent = one step in; justify for long formal prose).
 - Lists: '-' bullets nest by indenting (markers change per level); '1.' numbers nest as 1 / a / i;
   '- [ ]' and '- [x]' make checkboxes. A style line on its own just BEFORE a numbered list sets its numbering:
-  {' '.join('{.' + name + '}' for name in list_schemes)} (legal = 1, 1.1, 1.1.1).
+  {' '.join('{.' + name + '}' for name in LIST_SCHEMES)} (legal = 1, 1.1, 1.1.1).
 - Headings and links: '## Risks {{#risks}}' gives a heading an id; '[see the risks](#risks)' links to it.
 - Containers inside normal pages: {', '.join(f"'::: {{.{name}}}'" for name in FLOW_CONTAINERS)} ... ':::'. box = shaded panel
   (add title="Key facts"), sidebar = narrow panel on the right, columns = two columns (split at ### headings).
 - Table captions: a line 'Table: what the table shows' just before the table (numbered automatically).
 - Definition list: a term on one line, then ': definition' on the next.
 - Footnotes: text[^1] then '[^1]: note' anywhere; notes print at the end of that section.
-- Tables: column alignment with |:---|:---:|---:|; a style line under the table: {' '.join('{.' + name + '}' for name in table_styles)}.
-- Charts: ```chart (sizes: {', '.join(chart_sizes)}); callouts: {', '.join("> **" + kind + ":**" for kind in callout_kinds)}.
+- Tables: column alignment with |:---|:---:|---:|; a style line under the table: {' '.join('{.' + name + '}' for name in TABLE_STYLES)}.
+- Charts: ```chart (sizes: {', '.join(CHART_SIZES)}); callouts: {', '.join("> **" + kind + ":**" for kind in CALLOUT_KINDS)}.
 - Figures (only with images: true): ![a concrete photographable subject](figure) on its own line; it is captioned
   "Figure N" with your text, which is also the photo search, so follow the image-query rules.
 
@@ -206,10 +206,10 @@ FLOW PAGES
 - Tables: header row, 2-7 columns, units in headers.
 - Never draw diagrams with text characters; use a ```mermaid diagram, a layout, a table or an infographic.
 - Example of a complete short report (structure only; real documents are longer):
-{example_document}
+{EXAMPLE_DOCUMENT}
 - Diagrams: a ```mermaid fence draws flows, sequences, states, structures and timelines in the document's colours
   and fonts. Use a diagram instead of drawing with text characters. The first line names the type, one of:
-  {', '.join(diagram_types)}. Keep labels short (2-4 words) and use at most about 12 nodes.
+  {', '.join(DIAGRAM_TYPES)}. Keep labels short (2-4 words) and use at most about 12 nodes.
   Use flowchart LR for a simple chain of steps; never draw a plain list as a diagram, write the list. Add a 'title <text>' line
   after the type line to give it a numbered caption. Example:
   ```mermaid
@@ -246,7 +246,7 @@ the PDF guide below defines the front matter, block syntax and markdown.
 
 # builds the slide design instructions for document generation
 def slides_contract() -> str:
-    slide_lines = "\n".join(f"- {name}: {layout_purposes[name]}" + (f" (up to {max_per_slide[name]} items per slide; more continue on the next)"
+    slide_lines = "\n".join(f"- {name}: {LAYOUT_PURPOSES[name]}" + (f" (up to {max_per_slide[name]} items per slide; more continue on the next)"
                                                                     if name in max_per_slide else "") for name in drawers)
     return f"""SLIDE DESIGN GUIDE (pptx). The same markdown as PDF, rendered as 16:9 slides. Read this part first; the PDF guide
 below defines the front matter, block syntax and markdown, and applies unless this part says otherwise.

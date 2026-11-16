@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 
 from markitdoc.docx.styles import cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
 from markitdoc.docx.writer import first_paragraph, landscape_section, plain, white, write_runs
-from markitdoc.markup.elements import column_alignments, rating_level, settings_from, signed_number, table_marks, totals_row
+from markitdoc.markup.elements import column_alignments, rating_level, settings_from, SIGNED_NUMBER, TABLE_MARKS, TOTALS_ROW
 from markitdoc.markup.inline import inline_runs, parser
 
 numeric_cell = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")
@@ -65,7 +65,7 @@ def add_table(writer, tokens, style):
     for row_index, row in enumerate(rows):
         header = row_index == 0
         last = row_index == len(rows) - 1
-        total = last and row_index > 1 and totals_row.match(row[0].content if row else "")
+        total = last and row_index > 1 and TOTALS_ROW.match(row[0].content if row else "")
         for column in range(columns):
             cell = table.cell(row_index, column)
             cell_margins(cell, 0.09, 0.18, 0.09)
@@ -87,12 +87,12 @@ def add_table(writer, tokens, style):
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 paragraph.add_run().add_picture(harvey_png(rating_level(text), writer.hex("mood")), width=Cm(0.42))
                 continue
-            mark = table_marks.get(text.lower()) if not header else None
+            mark = TABLE_MARKS.get(text.lower()) if not header else None
             if mark:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 plain(writer, paragraph, mark[0], 11, mark[1], bold=True)
                 continue
-            signed = signed_number.match(text) if not header else None
+            signed = SIGNED_NUMBER.match(text) if not header else None
             role = white if header else "mood" if column in highlighted else (
                 "success" if signed.group(1) == "+" else "danger") if signed else "ink" if column == 0 and columns > 2 else None
             write_runs(writer, paragraph, runs, size=8.5 if columns > 6 else 9.5 if columns > 4 else 10, role=role,

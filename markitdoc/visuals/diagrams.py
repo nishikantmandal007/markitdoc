@@ -14,23 +14,23 @@ from markitdoc.utils.constants import ASSETS_FOLDER, CACHE_FOLDER
 
 logger = logging.getLogger(__name__)
 
-mermaid_bundle = ASSETS_FOLDER / "vendor" / "mermaid-11.4.1.min.js"
-diagram_folder = CACHE_FOLDER / "diagrams"
-canvas_width, canvas_height, zoom = 800, 1100, 2
-directed_types = {"flowchart": ("TD", "LR", "TB", "RL"), "graph": ("TD", "LR")}
-plain_types = ("sequenceDiagram", "stateDiagram-v2", "classDiagram", "erDiagram", "timeline", "mindmap", "gantt", "pie")
-diagram_types = tuple(f"{kind} {direction}" for kind, directions in directed_types.items() for direction in directions) + plain_types
-listed_types = ("pie", "timeline", "gantt", "mindmap")
-setting_words = {"title", "dateFormat", "axisFormat", "tickInterval", "excludes", "todayMarker", "weekday", "direction", "classDef",
+MERMAID_BUNDLE = ASSETS_FOLDER / "vendor" / "mermaid-11.4.1.min.js"
+DIAGRAM_FOLDER = CACHE_FOLDER / "diagrams"
+CANVAS_WIDTH, CANVAS_HEIGHT, ZOOM = 800, 1100, 2
+DIRECTED_TYPES = {"flowchart": ("TD", "LR", "TB", "RL"), "graph": ("TD", "LR")}
+PLAIN_TYPES = ("sequenceDiagram", "stateDiagram-v2", "classDiagram", "erDiagram", "timeline", "mindmap", "gantt", "pie")
+DIAGRAM_TYPES = tuple(f"{kind} {direction}" for kind, directions in DIRECTED_TYPES.items() for direction in directions) + PLAIN_TYPES
+LISTED_TYPES = ("pie", "timeline", "gantt", "mindmap")
+SETTING_WORDS = {"title", "dateFormat", "axisFormat", "tickInterval", "excludes", "todayMarker", "weekday", "direction", "classDef",
                  "class", "style", "linkStyle", "click", "subgraph", "end", "participant", "actor", "section", "note", "Note", "loop",
                  "alt", "else", "opt", "par", "and", "rect", "critical", "break", "autonumber", "activate", "deactivate", "showData",
                  "state", "accTitle", "accTitle:", "accDescr", "accDescr:", "}"}
-spoken_types = ("sequenceDiagram", "stateDiagram-v2", "classDiagram", "erDiagram")
-node = re.compile(r'(\w+)\s*(?:\[\[|\[\(|\(\(|\(\[|\[/|\[\\|\{\{|\[|\(|\{)\s*"?(.*?)"?\s*(?:\]\]|\)\]|\)\)|\]\)|/\]|\\\]|\}\}|\]|\)|\})')
-labelled_link = re.compile(r"(?<![-=.])(--|==|-\.)(?![->.=])\s+([^|>]+?)\s+(-->|==>|\.->|---|-\.-)")
-arrow = re.compile(r"\s*((?:[}|]o|(?<=\s)o)?[<>|}{*=.\-]*(?:--|==|\.\.|-\.|->|-x|-\))[<>{}*=.\-)]*(?:\|[{|]|o[{|]|[ox](?=\s|$))?)"
+SPOKEN_TYPES = ("sequenceDiagram", "stateDiagram-v2", "classDiagram", "erDiagram")
+NODE = re.compile(r'(\w+)\s*(?:\[\[|\[\(|\(\(|\(\[|\[/|\[\\|\{\{|\[|\(|\{)\s*"?(.*?)"?\s*(?:\]\]|\)\]|\)\)|\]\)|/\]|\\\]|\}\}|\]|\)|\})')
+LABELLED_LINK = re.compile(r"(?<![-=.])(--|==|-\.)(?![->.=])\s+([^|>]+?)\s+(-->|==>|\.->|---|-\.-)")
+ARROW = re.compile(r"\s*((?:[}|]o|(?<=\s)o)?[<>|}{*=.\-]*(?:--|==|\.\.|-\.|->|-x|-\))[<>{}*=.\-)]*(?:\|[{|]|o[{|]|[ox](?=\s|$))?)"
                    r"\s*(?:\|([^|]*)\|)?\s*")
-page = """<!doctype html><html><head><meta charset="utf-8">
+PAGE = """<!doctype html><html><head><meta charset="utf-8">
 <style>@font-face{font-family:Brand;src:url(brand.ttf)}@font-face{font-family:Brand;font-weight:700;src:url(brand-bold.ttf)}
 html,body{margin:0;font-family:Brand}#diagram{width:%dpx;padding:16px;box-sizing:border-box}
 #diagram svg{max-height:%dpx}</style>
@@ -48,7 +48,7 @@ document.fonts.load("16px Brand").then(() => document.fonts.load("bold 16px Bran
   window.failed = true;
   window.rendered = true;
 });
-</script></body></html>""" % (canvas_width, canvas_height - 32)
+</script></body></html>""" % (CANVAS_WIDTH, CANVAS_HEIGHT - 32)
 
 
 # returns the first meaningful line of diagram source
@@ -62,13 +62,13 @@ def problems_in_diagram(source: str) -> list[str]:
     if not words:
         return ["the diagram is empty"]
     kind = words[0]
-    if kind in directed_types and len(words) > 1 and words[1] in directed_types[kind]:
+    if kind in DIRECTED_TYPES and len(words) > 1 and words[1] in DIRECTED_TYPES[kind]:
         return []
-    if kind in plain_types:
+    if kind in PLAIN_TYPES:
         return []
-    if kind in directed_types:
-        return [f"'{kind}' needs a direction on the first line: one of {', '.join(directed_types[kind])}, e.g. '{kind} LR'"]
-    return [f"first line must name the diagram type, one of: {', '.join(diagram_types)} (found '{first_line(source)[:40]}')"]
+    if kind in DIRECTED_TYPES:
+        return [f"'{kind}' needs a direction on the first line: one of {', '.join(DIRECTED_TYPES[kind])}, e.g. '{kind} LR'"]
+    return [f"first line must name the diagram type, one of: {', '.join(DIAGRAM_TYPES)} (found '{first_line(source)[:40]}')"]
 
 
 # builds Mermaid theme settings from the document palette
@@ -92,19 +92,19 @@ def render_diagram(source: str, theme) -> Path | None:
     if not endpoint or problems_in_diagram(source):
         return None
     configuration = json.dumps(settings(theme), sort_keys=True)
-    key = "|".join([source.strip(), theme.name, configuration, mermaid_bundle.name, Path(theme.fonts["body"]).name,
+    key = "|".join([source.strip(), theme.name, configuration, MERMAID_BUNDLE.name, Path(theme.fonts["body"]).name,
                     Path(theme.fonts["heading"]).name])
-    path = diagram_folder / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
+    path = DIAGRAM_FOLDER / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
     if path.exists():
         return path
     data = (f"window.source = {json.dumps(source.strip())}; window.settings = {configuration}; "
-            f"window.paper = '#{theme.colors['paper'].lstrip('#')}'; window.zoom = {zoom};")
-    files = [("files", ("index.html", page.encode(), "text/html")),
-             ("files", ("mermaid.js", mermaid_bundle.read_bytes(), "text/javascript")),
+            f"window.paper = '#{theme.colors['paper'].lstrip('#')}'; window.zoom = {ZOOM};")
+    files = [("files", ("index.html", PAGE.encode(), "text/html")),
+             ("files", ("mermaid.js", MERMAID_BUNDLE.read_bytes(), "text/javascript")),
              ("files", ("data.js", data.encode(), "text/javascript")),
              ("files", ("brand.ttf", Path(theme.fonts["body"]).read_bytes(), "font/ttf")),
              ("files", ("brand-bold.ttf", Path(theme.fonts["heading"]).read_bytes(), "font/ttf"))]
-    form = {"width": str(canvas_width * zoom), "height": str(canvas_height * zoom), "format": "png",
+    form = {"width": str(CANVAS_WIDTH * ZOOM), "height": str(CANVAS_HEIGHT * ZOOM), "format": "png",
             "waitForExpression": "window.rendered === true", "skipNetworkIdleEvent": "true"}
     try:
         response = requests.post(f"{endpoint.rstrip('/')}/forms/chromium/screenshot/html", files=files, data=form, timeout=60)
@@ -131,7 +131,7 @@ def render_diagram(source: str, theme) -> Path | None:
 
 # extracts readable labels from diagram nodes
 def node_labels(source: str) -> dict:
-    return {name: readable(label) for name, label in node.findall(source) if readable(label)}
+    return {name: readable(label) for name, label in NODE.findall(source) if readable(label)}
 
 
 # cleans diagram markup from a node label
@@ -146,7 +146,7 @@ def named(part: str, labels: dict, start: bool) -> str:
     part = part.strip()
     if part == "[*]":
         return "Start" if start else "End"
-    found = node.fullmatch(part)
+    found = NODE.fullmatch(part)
     if found:
         return readable(found.group(2)) or found.group(1)
     return labels.get(readable(part), readable(part).strip("[](){}"))
@@ -154,11 +154,11 @@ def named(part: str, labels: dict, start: bool) -> str:
 
 # converts diagram connections into readable labeled lines
 def edge_lines(line: str, labels: dict, kind: str) -> list[str]:
-    line = labelled_link.sub(lambda match: f"{match.group(3)}|{match.group(2)}|", line)
+    line = LABELLED_LINK.sub(lambda match: f"{match.group(3)}|{match.group(2)}|", line)
     note = ""
-    if kind in spoken_types:
+    if kind in SPOKEN_TYPES:
         line, _, note = line.partition(" : ") if " : " in line else line.partition(":")
-    pieces = arrow.split(line)
+    pieces = ARROW.split(line)
     names, links = pieces[::3], pieces[2::3]
     result = []
     for index, (source, target) in enumerate(zip(names, names[1:])):
@@ -171,18 +171,18 @@ def edge_lines(line: str, labels: dict, kind: str) -> list[str]:
 # converts diagram connections into readable text lines
 def diagram_as_text(source: str) -> list[str]:
     kind = first_line(source).split()[0] if first_line(source) else ""
-    labels = node_labels(source) if kind in directed_types else {}
+    labels = node_labels(source) if kind in DIRECTED_TYPES else {}
     labels.update({name: readable(label) for name, label in re.findall(r"(?:participant|actor)\s+(\w+)\s+as\s+(.+)", source)})
     lines, body = [], source.strip().splitlines()[1:]
     for raw in body:
         line = raw.strip()
-        if not line or line.startswith(("%%", "::")) or line.split()[0] in setting_words:
+        if not line or line.startswith(("%%", "::")) or line.split()[0] in SETTING_WORDS:
             continue
-        if arrow.search(line) and kind not in listed_types:
+        if ARROW.search(line) and kind not in LISTED_TYPES:
             lines += edge_lines(line, labels, kind)
-        elif kind in listed_types:
+        elif kind in LISTED_TYPES:
             left, _, right = line.partition(":")
-            found = node.fullmatch(left.strip())
+            found = NODE.fullmatch(left.strip())
             left = readable(found.group(2)) if found else readable(left)
             lines.append(f"{left}: {readable(right)}" if readable(right) else left)
     unique = []
@@ -219,5 +219,5 @@ def diagram_title(source: str) -> str:
     words = first_line(source).split()
     if not title and len(words) > 2 and words[0] == "pie" and words[1] == "title":
         title = " ".join(words[2:])
-    labels = list(node_labels(source).values()) if words and words[0] in (*directed_types, "mindmap") else []
+    labels = list(node_labels(source).values()) if words and words[0] in (*DIRECTED_TYPES, "mindmap") else []
     return title or (labels[0] if labels else (words[0] if words else "diagram"))

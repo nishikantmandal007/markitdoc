@@ -21,17 +21,17 @@ from markitdoc.docx.writer import (
     write_runs,
 )
 from markitdoc.markup.elements import (
-    callout_kinds,
+    CALLOUT_KINDS,
     chart_data,
     closing_index,
     element_settings,
     settings_from,
-    table_styles,
+    TABLE_STYLES,
     without_display_maths,
 )
-from markitdoc.markup.inline import Run, anchor, inline_runs, parser
+from markitdoc.markup.inline import Run, ANCHOR, inline_runs, parser
 from markitdoc.visuals.charts import render_chart
-from markitdoc.visuals.diagrams import chain_steps, diagram_as_text, diagram_title, render_diagram, zoom
+from markitdoc.visuals.diagrams import chain_steps, diagram_as_text, diagram_title, render_diagram, ZOOM
 from markitdoc.visuals.equations import equation_png_bytes, mathtext_ready
 from markitdoc.visuals.infographics import render_infographic
 
@@ -45,7 +45,7 @@ def render_markdown(writer, markdown):
     tokens = parser.parse(markdown)
     for position, token in enumerate(tokens):
         if token.type == "heading_open":
-            found = anchor.search(tokens[position + 1].content)
+            found = ANCHOR.search(tokens[position + 1].content)
             if found:
                 writer.targets.add(found.group(1))
     render_tokens(writer, tokens)
@@ -93,8 +93,8 @@ def render_tokens(writer, tokens):
         elif kind == "table_open":
             end = closing_index(tokens, index, "table_open", "table_close")
             settings = element_settings(tokens, end + 1)
-            add_table(writer, tokens[index:end], settings.get("class") if settings.get("class") in table_styles else "")
-            index = end + 1 + (3 if settings.get("class") in table_styles else 0)
+            add_table(writer, tokens[index:end], settings.get("class") if settings.get("class") in TABLE_STYLES else "")
+            index = end + 1 + (3 if settings.get("class") in TABLE_STYLES else 0)
             continue
         elif kind == "fence":
             add_fence(writer, token.info.strip(), token.content)
@@ -117,10 +117,10 @@ def render_tokens(writer, tokens):
 
 # draws a section heading and tracks its outline level
 def add_heading(writer, level, inline):
-    found = anchor.search(inline.content)
+    found = ANCHOR.search(inline.content)
     runs = inline_runs(inline, writer.targets)
     if found and runs:
-        runs[-1] = Run(anchor.sub("", runs[-1].text), runs[-1].bold, runs[-1].italic)
+        runs[-1] = Run(ANCHOR.sub("", runs[-1].text), runs[-1].bold, runs[-1].italic)
     if level == 1 and writer.skip_title and "".join(run.text for run in runs).strip() == writer.skip_title:
         writer.skip_title = ""
         return None
@@ -184,7 +184,7 @@ def add_quote(writer, tokens):
         return
     first = inline_runs(inlines[0], writer.targets)
     label = first[0].text.strip().rstrip(":") if first and first[0].bold else ""
-    if label in callout_kinds:
+    if label in CALLOUT_KINDS:
         runs_list = [inline_runs(token, writer.targets) for token in inlines]
         add_callout(writer, label, runs_list)
         return
@@ -319,7 +319,7 @@ def add_diagram(writer, content):
             plain(writer, paragraph, "→ " + line)
         return
     with Image.open(path) as picture:
-        natural = picture.width / zoom / 96 * 2.54
+        natural = picture.width / ZOOM / 96 * 2.54
     add_picture(writer, str(path), min(writer.width, max(natural, writer.width * 0.55)), f"Diagram: {title or 'diagram'}")
     if title:
         caption(writer, title)

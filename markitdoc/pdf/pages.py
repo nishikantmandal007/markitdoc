@@ -6,8 +6,8 @@ from fpdf.enums import MethodReturnValue
 from PIL import Image
 
 from markitdoc.markup.blocks import slot_pieces
-from markitdoc.markup.inline import inline_runs, parser, subscripts, superscripts
-from markitdoc.models.catalogue import Box, layouts, margin, page_height, page_width
+from markitdoc.markup.inline import inline_runs, parser, SUBSCRIPTS, SUPERSCRIPTS
+from markitdoc.models.catalogue import Box, LAYOUTS, MARGIN, PAGE_HEIGHT, PAGE_WIDTH
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import lifted
 
@@ -41,7 +41,7 @@ def runs_markup(runs) -> str:
     for run in merged(runs):
         text = escaped(run.text)
         if run.script:
-            text = text.translate(subscripts if run.script == "SUB" else superscripts)
+            text = text.translate(SUBSCRIPTS if run.script == "SUB" else SUPERSCRIPTS)
         markers = ("**" if run.bold else "") + ("__" if run.italic else "") + ("--" if run.underline else "") + ("~~" if run.strike else "")
         if markers and text.strip():
             core, lead, trail = text.strip(), text[:len(text) - len(text.lstrip())], text[len(text.rstrip()):]
@@ -110,7 +110,7 @@ class PdfPages(FPDF):
 
     # chooses the largest slot text size that fits its line limit
     def slot_size(self, block, slot):
-        box = layouts[block.layout].boxes[slot]
+        box = LAYOUTS[block.layout].boxes[slot]
         pieces = slot_pieces(block, slot)
         for scale in shrink_steps:
             size = round(box.size * scale, 1)
@@ -140,16 +140,16 @@ class PdfPages(FPDF):
         self.write_at(x, y, 150, text.upper(), 8.5, "B", rgb=lifted(self.theme.rgb("mood"), 0.55) if on_dark else self.theme.rgb("mood"))
 
     # draws the page footer rule, label, and page number
-    def folio(self, label, left=margin, right=page_width - margin, on_dark=False):
+    def folio(self, label, left=MARGIN, right=PAGE_WIDTH - MARGIN, on_dark=False):
         role_rgb = faint_white if on_dark else self.theme.rgb("muted")
         self.set_draw_color(*((70, 82, 120) if on_dark else self.theme.rgb("rule")))
         self.set_line_width(0.2)
-        self.line(left, page_height - 14, right, page_height - 14)
-        self.write_at(left, page_height - 11.5, 100, label.upper(), 7.5, "B", rgb=role_rgb)
-        self.write_at(right - 30, page_height - 11.5, 30, f"{self.page_no()} / {{nb}}", 7.5, "B", rgb=role_rgb, align="R")
+        self.line(left, PAGE_HEIGHT - 14, right, PAGE_HEIGHT - 14)
+        self.write_at(left, PAGE_HEIGHT - 11.5, 100, label.upper(), 7.5, "B", rgb=role_rgb)
+        self.write_at(right - 30, PAGE_HEIGHT - 11.5, 30, f"{self.page_no()} / {{nb}}", 7.5, "B", rgb=role_rgb, align="R")
 
     # draws a soft circular glow within the requested page area
-    def glow(self, center_x, center_y, size, rings=60, clip=(0, 0, page_width, page_height)):
+    def glow(self, center_x, center_y, size, rings=60, clip=(0, 0, PAGE_WIDTH, PAGE_HEIGHT)):
         with self.rect_clip(*clip):
             for ring in range(rings):
                 with self.local_context(fill_opacity=0.03):
@@ -169,11 +169,11 @@ class PdfPages(FPDF):
 
     # places partner logos across the bottom of the page
     def partner_strip(self, y, gap=6):
-        x = margin
+        x = MARGIN
         for path, height in self.theme.partners:
             with Image.open(path) as picture:
                 width = height * picture.width / picture.height
-            if x + width > page_width - margin:
+            if x + width > PAGE_WIDTH - MARGIN:
                 break
             self.image(str(path), x, y + (12 - height) / 2, h=height)
             x += width + gap

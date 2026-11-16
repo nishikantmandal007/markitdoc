@@ -27,7 +27,7 @@ def equation_svg(tex, color):
         plt.rcParams.update(previous)
 
 
-mathtext_equivalents = {r"\implies": r"\Rightarrow", r"\impliedby": r"\Leftarrow", r"\iff": r"\Leftrightarrow",
+MATHTEXT_EQUIVALENTS = {r"\implies": r"\Rightarrow", r"\impliedby": r"\Leftarrow", r"\iff": r"\Leftrightarrow",
                         r"\dfrac": r"\frac", r"\tfrac": r"\frac", r"\operatorname": r"\mathrm", r"\lvert": "|",
                         r"\rvert": "|", r"\lVert": r"\Vert", r"\rVert": r"\Vert", r"\le ": r"\leq ", r"\ge ": r"\geq "}
 
@@ -35,7 +35,7 @@ mathtext_equivalents = {r"\implies": r"\Rightarrow", r"\impliedby": r"\Leftarrow
 # rewrites common TeX commands for the math text renderer
 def mathtext_ready(tex):
     tex = " ".join(tex.split())
-    for command, equivalent in mathtext_equivalents.items():
+    for command, equivalent in MATHTEXT_EQUIVALENTS.items():
         tex = re.sub(re.escape(command) + r"(?![A-Za-z])", lambda _: equivalent, tex)
     return tex
 

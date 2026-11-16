@@ -8,10 +8,10 @@ from markitdoc.markup.elements import (
     column_alignments,
     element_settings,
     only_display_maths,
-    table_styles,
+    TABLE_STYLES,
     without_display_maths,
 )
-from markitdoc.markup.inline import anchor, parser, plain_text
+from markitdoc.markup.inline import ANCHOR, parser, plain_text
 from markitdoc.pptx.deck import Item
 from markitdoc.visuals.diagrams import chain_steps, diagram_title
 
@@ -113,7 +113,7 @@ class FlowReader:
 
     # starts a slide section or adds a subheading from a markdown heading
     def heading(self, tokens, index):
-        level, source = int(tokens[index].tag[1]), anchor.sub("", tokens[index + 1].content)
+        level, source = int(tokens[index].tag[1]), ANCHOR.sub("", tokens[index + 1].content)
         if level <= 2:
             self.sections.append(Section(plain_text(source), level, []))
         else:
@@ -180,7 +180,7 @@ class FlowReader:
         last = rows[-1] if len(rows) > 2 else ()
         if last and re.fullmatch(r"\{[^{}]*\}", last[0].strip()) and not any(cell.strip() for cell in last[1:]):
             settings, rows = {"class": last[0].strip("{} .").split()[0] if last[0].strip("{} .") else ""}, rows[:-1]
-        styled = settings.get("class") in table_styles
+        styled = settings.get("class") in TABLE_STYLES
         style = settings["class"] if styled else self.deck.table_style
         self.parts.append(Piece("table", Table(tuple(rows), tuple(column_alignments(tokens[index:end])), style), self.caption))
         self.caption = ""

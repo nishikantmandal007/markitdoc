@@ -48,7 +48,7 @@ from markitdoc.pptx.flow.visuals import (
     visual_fallback,
 )
 from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
-from markitdoc.utils.helpers import mono_font
+from markitdoc.utils.helpers import MONO_FONT
 
 opening_limit = 220
 
@@ -294,7 +294,7 @@ def draw_code(deck, titles, lead, piece):
             set_spacing(paragraph, size, code_leading, 0)
             run = paragraph.add_run()
             run.text = line
-            run.font.name, run.font.size, run.font.color.rgb = mono_font, Pt(size), deck.color("ink")
+            run.font.name, run.font.size, run.font.color.rgb = MONO_FONT, Pt(size), deck.color("ink")
 
 
 # renders a visual piece or falls back to readable slide text

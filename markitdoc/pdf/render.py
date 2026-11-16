@@ -6,8 +6,8 @@ from fpdf import ViewerPreferences
 from mdit_py_plugins.container import container_plugin
 
 from markitdoc.markup.blocks import as_flow, balanced, prepared
-from markitdoc.markup.inline import anchor, parser
-from markitdoc.models.catalogue import sectioned_layouts, trailing_headings
+from markitdoc.markup.inline import ANCHOR, parser
+from markitdoc.models.catalogue import SECTIONED_LAYOUTS, TRAILING_HEADINGS
 from markitdoc.models.document import Document
 from markitdoc.pdf.designed.openers import (
     draw_chapter,
@@ -62,7 +62,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
     pdf.photos = str(document.meta.get("photos", "natural")).lower()
     pdf.work_folder = work_folder
     pdf.targets = frozenset(match.group(1) for block in blocks for line in block.body.splitlines()
-                            if line.lstrip().startswith("#") and (match := anchor.search(line)))
+                            if line.lstrip().startswith("#") and (match := ANCHOR.search(line)))
     pdf.numbering = str(document.meta.get("numbering", "")).lower() == "decimal"
     pdf.header_text, pdf.footer_text, pdf.classification, pdf.watermark = (str(document.meta.get(key, "")).strip().strip("'\"")
                                                                             for key in ("header", "footer", "classification", "watermark"))
@@ -95,7 +95,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
             if not (wants_toc and index == toc_at) and (index == 0 or blocks[index - 1].layout != "flow"):
                 pdf.add_page()
             next_is_designed = index + 1 < len(blocks) and blocks[index + 1].layout != "flow"
-            body = trailing_headings.sub("", block.body.rstrip()) if next_is_designed else block.body
+            body = TRAILING_HEADINGS.sub("", block.body.rstrip()) if next_is_designed else block.body
             if not body.strip():
                 continue
             pdf.spacing = fitted_spacing(pdf, body) if next_is_designed else 1.0
@@ -106,7 +106,7 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
         pdf.set_auto_page_break(False)
         if not fresh_page:
             pdf.add_page()
-        if block.slots.get("title") and block.layout in sectioned_layouts:
+        if block.slots.get("title") and block.layout in SECTIONED_LAYOUTS:
             pdf.start_section(block.slots["title"].replace("**", "").replace("__", ""), level=0, strict=False)
         try:
             pdf.tightness = float(block.slots.get("tightness", 1.0))

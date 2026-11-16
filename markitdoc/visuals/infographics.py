@@ -13,10 +13,10 @@ from markitdoc.utils.constants import ASSETS_FOLDER, CACHE_FOLDER
 
 logger = logging.getLogger(__name__)
 
-antv_bundle = ASSETS_FOLDER / "vendor" / "antv-infographic-0.2.20.min.js"
-infographic_folder = CACHE_FOLDER / "infographics"
-canvas_width, canvas_height, zoom = 800, 460, 2
-infographic_templates = {
+ANTV_BUNDLE = ASSETS_FOLDER / "vendor" / "antv-infographic-0.2.20.min.js"
+INFOGRAPHIC_FOLDER = CACHE_FOLDER / "infographics"
+CANVAS_WIDTH, CANVAS_HEIGHT, ZOOM = 800, 460, 2
+INFOGRAPHIC_TEMPLATES = {
     "sequence-steps-badge-card": ("sequences", "numbered steps of a process, 3 to 6"),
     "list-row-simple-horizontal-arrow": ("lists", "a short flow of 3 to 5 stages"),
     "list-grid-badge-card": ("lists", "4 to 6 parallel ideas or features"),
@@ -27,7 +27,7 @@ infographic_templates = {
     "chart-column-simple": ("values", "3 to 8 values over time or categories; each item has label and value"),
     "chart-pie-donut-plain-text": ("values", "2 to 6 parts of a whole; each item has label and value"),
 }
-page = """<!doctype html><html><head><meta charset="utf-8">
+PAGE = """<!doctype html><html><head><meta charset="utf-8">
 <style>@font-face{font-family:Brand;src:url(brand.ttf)}@font-face{font-family:Brand;font-weight:700;src:url(brand-bold.ttf)}
 html{zoom:%d}html,body{margin:0;background:#fff;font-family:Brand}#chart{width:%dpx;height:%dpx}</style>
 <script src="antv.js"></script><script src="data.js"></script></head><body><div id="chart"></div><script>
@@ -37,14 +37,14 @@ document.fonts.load("16px Brand").then(() => document.fonts.load("bold 16px Bran
   new AntVInfographic.Infographic({container: "#chart", width: %d, height: %d, editable: false}).render(window.syntax);
   setTimeout(() => { window.rendered = true; }, 300);
 });
-</script></body></html>""" % (zoom, canvas_width, canvas_height, canvas_width, canvas_height)
+</script></body></html>""" % (ZOOM, CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 
 
 # adds a missing data-list key required by an infographic template
 def with_data_key(syntax: str) -> str:
     lines = syntax.strip().splitlines()
     first = lines[0].split() if lines else []
-    key = infographic_templates.get(first[1], ("",))[0] if len(first) == 2 else ""
+    key = INFOGRAPHIC_TEMPLATES.get(first[1], ("",))[0] if len(first) == 2 else ""
     if not key or any(line.strip() == key for line in lines):
         return syntax.strip()
     items = [index for index, line in enumerate(lines) if line.strip().startswith("- ")]
@@ -58,9 +58,9 @@ def with_data_key(syntax: str) -> str:
 def problems_in_infographic(syntax: str) -> list[str]:
     lines = [line for line in with_data_key(syntax).splitlines() if line.strip()]
     first = lines[0].split() if lines else []
-    if len(first) != 2 or first[0] != "infographic" or first[1] not in infographic_templates:
-        return [f"first line must be 'infographic <template>' with a template from {sorted(infographic_templates)}"]
-    data_key = infographic_templates[first[1]][0]
+    if len(first) != 2 or first[0] != "infographic" or first[1] not in INFOGRAPHIC_TEMPLATES:
+        return [f"first line must be 'infographic <template>' with a template from {sorted(INFOGRAPHIC_TEMPLATES)}"]
+    data_key = INFOGRAPHIC_TEMPLATES[first[1]][0]
     if not any(line.strip() == data_key for line in lines):
         return [f"template {first[1]} needs a '{data_key}' list under data"]
     values = [line.strip()[6:].replace(",", "").rstrip("%") for line in lines if line.strip().startswith("value ")]
@@ -85,16 +85,16 @@ def render_infographic(syntax: str, theme) -> Path | None:
     if not endpoint or problems_in_infographic(syntax):
         return None
     source = themed(syntax, theme)
-    key = "|".join([source, theme.name, antv_bundle.name, Path(theme.fonts["body"]).name, Path(theme.fonts["heading"]).name])
-    path = infographic_folder / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
+    key = "|".join([source, theme.name, ANTV_BUNDLE.name, Path(theme.fonts["body"]).name, Path(theme.fonts["heading"]).name])
+    path = INFOGRAPHIC_FOLDER / f"{hashlib.sha1(key.encode()).hexdigest()}.png"
     if path.exists():
         return path
-    files = [("files", ("index.html", page.encode(), "text/html")),
-             ("files", ("antv.js", antv_bundle.read_bytes(), "text/javascript")),
+    files = [("files", ("index.html", PAGE.encode(), "text/html")),
+             ("files", ("antv.js", ANTV_BUNDLE.read_bytes(), "text/javascript")),
              ("files", ("data.js", f"window.syntax = {json.dumps(source)}; window.paper = '#{theme.colors['paper'].lstrip('#')}';".encode(), "text/javascript")),
              ("files", ("brand.ttf", Path(theme.fonts["body"]).read_bytes(), "font/ttf")),
              ("files", ("brand-bold.ttf", Path(theme.fonts["heading"]).read_bytes(), "font/ttf"))]
-    form = {"width": str(canvas_width * zoom), "height": str(canvas_height * zoom), "format": "png",
+    form = {"width": str(CANVAS_WIDTH * ZOOM), "height": str(CANVAS_HEIGHT * ZOOM), "format": "png",
             "waitForExpression": "window.rendered === true", "skipNetworkIdleEvent": "true"}
     try:
         response = requests.post(f"{endpoint.rstrip('/')}/forms/chromium/screenshot/html", files=files, data=form, timeout=60)

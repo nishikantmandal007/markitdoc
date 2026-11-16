@@ -4,7 +4,7 @@ from functools import lru_cache
 import pyphen
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
-from markitdoc.markup.inline import superscript_digits
+from markitdoc.markup.inline import SUPERSCRIPT_DIGITS
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.utils.helpers import lifted
 
@@ -190,7 +190,7 @@ def hanging_note(pdf, number, text, width, scale):
 # assigns unplaced footnotes referenced by a paragraph to its page
 def place_page_notes(pdf, inline, note_texts, placed):
     references = [child.meta["id"] for child in inline.children or [] if child.type == "footnote_ref"]
-    fresh = [(str(reference + 1).translate(superscript_digits), note_texts[reference]) for reference in references
+    fresh = [(str(reference + 1).translate(SUPERSCRIPT_DIGITS), note_texts[reference]) for reference in references
              if reference in note_texts and reference not in placed]
     if not fresh:
         return []

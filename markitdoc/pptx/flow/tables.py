@@ -6,7 +6,7 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-from markitdoc.markup.elements import numeric_cell, rating_level, signed_number, table_marks
+from markitdoc.markup.elements import NUMERIC_CELL, rating_level, SIGNED_NUMBER, TABLE_MARKS
 from markitdoc.markup.inline import plain_text
 from markitdoc.pdf.flow.tables import column_widths
 from markitdoc.pptx.deck import (
@@ -80,7 +80,7 @@ def pack_rows(rows, heights, room):
 # chooses a declared or numeric alignment for a table column
 def cell_align(table, column):
     declared = table.aligns[column] if column < len(table.aligns) else None
-    numbers = all(numeric_cell.match(table_cells(row[column]).strip()) for row in table.rows[1:] if column < len(row) and row[column].strip())
+    numbers = all(NUMERIC_CELL.match(table_cells(row[column]).strip()) for row in table.rows[1:] if column < len(row) and row[column].strip())
     pick = declared or ("RIGHT" if numbers and len(table.rows) > 1 else "LEFT")
     return {"RIGHT": PP_ALIGN.RIGHT, "CENTER": PP_ALIGN.CENTER}.get(pick, PP_ALIGN.LEFT)
 
@@ -140,14 +140,14 @@ def style_cell(deck, cell, source, align, size, header, style, last, odd, first=
     if rating:
         cell.fill.background() if not highlight else None
         return
-    mark = table_marks.get(plain_text(source).strip().lower()) if not header else None
+    mark = TABLE_MARKS.get(plain_text(source).strip().lower()) if not header else None
     paragraph = cell.text_frame.paragraphs[0]
     paragraph.alignment = PP_ALIGN.CENTER if mark else align
     set_spacing(paragraph, size, 1.2, 0)
     if mark:
         add_runs(deck, paragraph, mark[0], size + 2, mark[1], bold=True)
         return
-    signed = signed_number.match(plain_text(source)) if not header else None
+    signed = SIGNED_NUMBER.match(plain_text(source)) if not header else None
     role = (white if header else "mood" if highlight else ("success" if signed.group(1) == "+" else "danger") if signed
             else "ink" if first else "body")
     add_runs(deck, paragraph, source, size, role, bold=header or highlight or first)

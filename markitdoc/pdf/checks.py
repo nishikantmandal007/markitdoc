@@ -2,7 +2,7 @@ import re
 from dataclasses import replace
 
 from markitdoc.markup.blocks import prepared, slot_pieces
-from markitdoc.models.catalogue import content_limit, layouts
+from markitdoc.models.catalogue import CONTENT_LIMIT, LAYOUTS
 from markitdoc.models.document import Document
 from markitdoc.pdf.pages import PdfPages, shrink_steps
 from markitdoc.pdf.photos import measuring_photo
@@ -29,10 +29,10 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
     found = []
     for index, block in enumerate(document.blocks):
         block = prepared(block)
-        layout = layouts.get(block.layout)
+        layout = LAYOUTS.get(block.layout)
         where = f"page {index + 1} ({block.layout})"
         if layout is None:
-            found.append((index, f"page {index + 1}: unknown layout '{block.layout}', use one of {sorted(layouts)}"))
+            found.append((index, f"page {index + 1}: unknown layout '{block.layout}', use one of {sorted(LAYOUTS)}"))
             continue
         if block.layout == "flow":
             if not block.body.strip():
@@ -78,7 +78,7 @@ def page_problems(document: Document, theme: Theme | None = None, with_images: b
             if end > limit + 1:
                 found.append((index, f"{where}: content runs {end - limit:.0f} mm past the page (shorten it)"))
             elif sparse is not None and photo is None and not (theme and theme.address) and (
-                    block.layout in ("quote", "closing") or (block.layout != "cover" and end < content_limit * 0.7)):
+                    block.layout in ("quote", "closing") or (block.layout != "cover" and end < CONTENT_LIMIT * 0.7)):
                 sparse.add(index)
             elif tightness < 1 and fitted is not None:
                 fitted[index] = tightness

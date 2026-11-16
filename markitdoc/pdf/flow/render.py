@@ -7,14 +7,14 @@ from markitdoc.markup.elements import (
     closing_index,
     column_alignments,
     element_settings,
-    list_schemes,
+    LIST_SCHEMES,
     only_display_maths,
-    paragraph_alignments,
+    PARAGRAPH_ALIGNMENTS,
     settings_from,
-    table_styles,
+    TABLE_STYLES,
     without_display_maths,
 )
-from markitdoc.markup.inline import anchor, inline_runs, parser
+from markitdoc.markup.inline import ANCHOR, inline_runs, parser
 from markitdoc.pdf.flow.pages import FlowPages, body_size, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
@@ -75,8 +75,8 @@ def render_tokens(pdf: FlowPages, tokens):
             continue
         if token.type == "heading_open":
             level = int(token.tag[1])
-            target = anchor.search(tokens[index + 1].content)
-            text = anchor.sub("", inline_markup(tokens[index + 1], pdf.targets))
+            target = ANCHOR.search(tokens[index + 1].content)
+            text = ANCHOR.sub("", inline_markup(tokens[index + 1], pdf.targets))
             add_heading(pdf, text, level, target.group(1) if target else None, opening_height(pdf, tokens, index + 3))
             index += 3
             continue
@@ -112,7 +112,7 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_equation(pdf, next(child.content for child in inline.children if child.type == "math_inline_double"))
             elif needs_runs(inline_runs(inline, pdf.targets)) and not list_stack:
                 place_notes(pdf, inline, note_texts, placed)
-                draw_runs(pdf, inline_runs(inline, pdf.targets), paragraph_alignments.get(style, "L"),
+                draw_runs(pdf, inline_runs(inline, pdf.targets), PARAGRAPH_ALIGNMENTS.get(style, "L"),
                           indent + (indent_step if "indent" in style else 0))
             elif text == page_break_marker:
                 if pdf.page_break_trigger - pdf.get_y() < pdf.eph * soft_break_share:
@@ -127,14 +127,14 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_list_item(pdf, text, list_stack, inline_runs(inline, pdf.targets))
             else:
                 place_notes(pdf, inline, note_texts, placed)
-                add_paragraph(pdf, text, paragraph_alignments.get(style, "L"), indent + (indent_step if "indent" in style else 0),
+                add_paragraph(pdf, text, PARAGRAPH_ALIGNMENTS.get(style, "L"), indent + (indent_step if "indent" in style else 0),
                               lead="lead" in style)
             for equation in equations:
                 add_equation(pdf, equation)
             index += 3
             continue
         if token.type in ("bullet_list_open", "ordered_list_open"):
-            scheme = pending if pending in list_schemes else (list_stack[-1]["scheme"] if list_stack and list_stack[-1]["scheme"] == "legal" else "")
+            scheme = pending if pending in LIST_SCHEMES else (list_stack[-1]["scheme"] if list_stack and list_stack[-1]["scheme"] == "legal" else "")
             list_stack.append({"ordered": token.type == "ordered_list_open", "number": int(token.attrs.get("start", 1) or 1),
                                "scheme": scheme})
             pending = ""
@@ -158,7 +158,7 @@ def render_tokens(pdf: FlowPages, tokens):
             end = closing_index(tokens, index, "table_open", "table_close")
             cell_roles = []
             rows, settings = table_rows(tokens[index:end], pdf.targets, cell_roles), element_settings(tokens, end + 1)
-            if settings.get("class") not in table_styles:
+            if settings.get("class") not in TABLE_STYLES:
                 settings = {}
             skip = 3 if settings else 0
             last = rows[-1] if len(rows) > 1 else []

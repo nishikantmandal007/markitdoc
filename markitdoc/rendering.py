@@ -8,7 +8,7 @@ from pathlib import Path
 from markitdoc.docx.render import document_photo_ratios, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
-from markitdoc.models.catalogue import layouts
+from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.document import Document, parse_document
 from markitdoc.pdf.checks import page_problems
 from markitdoc.pdf.render import render_pdf
@@ -26,7 +26,7 @@ TRUE_WORDS = ("true", "yes", "on", True)
 def images_for(document, require_images, ratio_of=None):
     if not require_images:
         return {}, ()
-    ratio_of = ratio_of or {name: layout.image_ratio for name, layout in layouts.items()}
+    ratio_of = ratio_of or {name: layout.image_ratio for name, layout in LAYOUTS.items()}
     wanted = {index: block.slots["image"] for index, block in enumerate(document.blocks)
               if block.slots.get("image") and ratio_of.get(block.layout)}
     ratios = {index: ratio_of[document.blocks[index].layout] for index in wanted}

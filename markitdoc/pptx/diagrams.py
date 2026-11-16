@@ -9,7 +9,7 @@ from pptx.util import Inches, Pt
 
 from markitdoc.markup.inline import plain_text
 from markitdoc.pptx.deck import add_rect, configure_frame, tint, white, write_text
-from markitdoc.visuals.diagrams import arrow, first_line, labelled_link, readable, setting_words
+from markitdoc.visuals.diagrams import ARROW, first_line, LABELLED_LINK, readable, SETTING_WORDS
 
 shape_marks = (("{{", "}}", MSO_SHAPE.HEXAGON), ("{", "}", MSO_SHAPE.DIAMOND), ("((", "))", MSO_SHAPE.OVAL), ("([", "])", MSO_SHAPE.ROUNDED_RECTANGLE),
                ("[(", ")]", MSO_SHAPE.CAN), ("[[", "]]", MSO_SHAPE.RECTANGLE), ("[", "]", MSO_SHAPE.ROUNDED_RECTANGLE),
@@ -35,10 +35,10 @@ def flow_graph(source):
     labels, shapes, edges = {}, {}, []
     for raw in source.strip().splitlines()[1:]:
         line = raw.strip().rstrip(";")
-        if not line or line.startswith("%%") or line.split()[0] in setting_words:
+        if not line or line.startswith("%%") or line.split()[0] in SETTING_WORDS:
             continue
-        line = labelled_link.sub(lambda match: f"{match.group(3)}|{match.group(2)}|", line)
-        pieces = arrow.split(line)
+        line = LABELLED_LINK.sub(lambda match: f"{match.group(3)}|{match.group(2)}|", line)
+        pieces = ARROW.split(line)
         names = [named_node(part, labels, shapes) for part in pieces[::3]]
         if None in names:
             return None

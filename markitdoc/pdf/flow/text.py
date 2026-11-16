@@ -4,8 +4,8 @@ from dataclasses import replace
 
 from fpdf.enums import MethodReturnValue, XPos, YPos
 
-from markitdoc.markup.elements import bullet_markers, callout_kinds, list_schemes, numbering_schemes
-from markitdoc.markup.inline import inline_maths, superscript_digits
+from markitdoc.markup.elements import BULLET_MARKERS, CALLOUT_KINDS, LIST_SCHEMES, NUMBERING_SCHEMES
+from markitdoc.markup.inline import inline_maths, SUPERSCRIPT_DIGITS
 from markitdoc.pdf.flow.pages import FlowPages, body_size, can_hyphenate, hanging_note, highlight_link, hyphenated
 from markitdoc.pdf.pages import escaped
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
@@ -76,7 +76,7 @@ def add_notes(pdf: FlowPages, notes):
     pdf.ln(2.5)
     pdf.set_text_color(*pdf.theme.rgb("muted"))
     for number, note in notes:
-        hanging_note(pdf, str(number).translate(superscript_digits), note, min(text_width, pdf.area), 0.82)
+        hanging_note(pdf, str(number).translate(SUPERSCRIPT_DIGITS), note, min(text_width, pdf.area), 0.82)
         pdf.ln(0.8)
 
 
@@ -162,10 +162,10 @@ def add_list_item(pdf: FlowPages, text: str, list_stack, runs=()):
         parents = [str(level["number"] - 1) for level in list_stack[:-1] if level["ordered"]]
         marker = ".".join([*parents, str(current["number"])])
     elif current["ordered"]:
-        scheme = list_schemes.get(current["scheme"]) or numbering_schemes[depth % 3]
+        scheme = LIST_SCHEMES.get(current["scheme"]) or NUMBERING_SCHEMES[depth % 3]
         marker = f"{scheme(current['number'])}."
     else:
-        marker = bullet_markers[depth % 3]
+        marker = BULLET_MARKERS[depth % 3]
     current["number"] += 1
     indent = 5 * len(list_stack)
     pdf.set_font("Brand", "B" if current["ordered"] else "", (body_size * pdf.scale))
@@ -190,7 +190,7 @@ def add_list_item(pdf: FlowPages, text: str, list_stack, runs=()):
 
 # draws a colored callout around the paragraph text
 def add_callout(pdf: FlowPages, text: str):
-    kind = next((name for name in callout_kinds if text.startswith(f"**{name}:**")), None)
+    kind = next((name for name in CALLOUT_KINDS if text.startswith(f"**{name}:**")), None)
     body = text.replace(f"**{kind}:**", "", 1).strip() if kind else text
     role = "danger" if kind == "Risk" else "mood"
     value, _, label = body.partition(" — ")

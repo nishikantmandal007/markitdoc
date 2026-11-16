@@ -3,7 +3,7 @@ import logging
 from fpdf.enums import TableCellFillMode
 from fpdf.fonts import FontFace
 
-from markitdoc.markup.elements import numeric_cell, table_styles, totals_row
+from markitdoc.markup.elements import NUMERIC_CELL, TABLE_STYLES, TOTALS_ROW
 from markitdoc.markup.inline import inline_runs
 from markitdoc.pdf.flow.pages import FlowPages, table_size, top_height
 from markitdoc.pdf.flow.text import add_paragraph
@@ -74,15 +74,15 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
     if pdf.pending_caption:
         caption, pdf.pending_caption = pdf.pending_caption, ""
         add_paragraph(pdf, caption, after=1.5)
-    numeric = [all(numeric_cell.match(row[column].strip()) for row in rows[1:] if column < len(row) and row[column].strip())
+    numeric = [all(NUMERIC_CELL.match(row[column].strip()) for row in rows[1:] if column < len(row) and row[column].strip())
                for column in range(len(rows[0]))]
-    labels = [len(rows) > 2 and all(len(row[column].strip()) <= 14 and len(row[column].split()) <= 2 and not numeric_cell.match(row[column].strip())
+    labels = [len(rows) > 2 and all(len(row[column].strip()) <= 14 and len(row[column].split()) <= 2 and not NUMERIC_CELL.match(row[column].strip())
                                     for row in rows[1:] if column < len(row) and row[column].strip())
               for column in range(len(rows[0]))]
     align = [(alignments[column] if column < len(alignments) and alignments[column] else None)
              or ("RIGHT" if is_number and len(rows) > 1 else "CENTER" if labels[column] and column > 0 else "LEFT")
              for column, is_number in enumerate(numeric)]
-    style = style if style in table_styles else pdf.table_style if pdf.table_style in table_styles else "lined"
+    style = style if style in TABLE_STYLES else pdf.table_style if pdf.table_style in TABLE_STYLES else "lined"
     boxed = style == "boxed"
     heading_style = FontFace(emphasis="BOLD", color=pdf.theme.rgb("ink"), fill_color=pdf.theme.rgb("surface") if boxed else None)
     pdf.set_font("Brand", "", size)
@@ -99,7 +99,7 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=()):
                        borders_layout="ALL" if boxed else "SINGLE_TOP_LINE") as table:
             for row_index, row in enumerate(rows):
                 cells = table.row()
-                total = row_index == len(rows) - 1 and row_index > 1 and totals_row.match(row[0] if row else "")
+                total = row_index == len(rows) - 1 and row_index > 1 and TOTALS_ROW.match(row[0] if row else "")
                 for column in range(len(rows[0])):
                     role = roles[row_index][column] if row_index < len(roles) and column < len(roles[row_index]) else ""
                     face = FontFace(color=pdf.theme.rgb(role) if role else None, emphasis="BOLD" if total else None) if role or total else None
