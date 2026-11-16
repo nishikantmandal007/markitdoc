@@ -2,6 +2,7 @@ import re
 from dataclasses import dataclass
 from difflib import get_close_matches
 
+from markitdoc.guide.support import support_findings
 from markitdoc.markup.latex import latex_findings
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, language_version
@@ -36,8 +37,9 @@ def unknown_keys(text, line, v2=False):
 
 
 # problems in a markdown document, never raising: unknown keys, unbalanced ::: fences, bad language version, and for
-# language v2 documents the style problems, with style files searched in folders
-def check_document(markdown, folders=()) -> list[Finding]:
+# language v2 documents the style problems, with style files searched in folders, and a note for each feature the output format
+# approximates or ignores
+def check_document(markdown, folders=(), output_format="pdf") -> list[Finding]:
     markdown = str(markdown or "")
     lines = markdown.split("\n")
     findings, open_blocks, in_fence, leaf = [], [], False, False
@@ -77,4 +79,5 @@ def check_document(markdown, folders=()) -> list[Finding]:
         findings += [Finding(*item) for item in style_findings(markdown, folders)]
         end = next((number for number, text in enumerate(lines[1:], 2) if text.strip() == "---"), 0) if lines[:1] == ["---"] else 0
         findings += [Finding(*item) for item in reference_findings(lines, end, meta, folders)] + [Finding(*item) for item in latex_findings(lines, end)]
+        findings += [Finding(*item) for item in support_findings(markdown, output_format)]
     return sorted(findings, key=lambda finding: finding.line)
