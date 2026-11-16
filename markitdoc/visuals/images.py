@@ -27,7 +27,7 @@ featured_filter = ' incategory:"Featured_pictures_on_Wikimedia_Commons"'
 quality_filter = ' incategory:"Quality_images"'
 image_folder = CACHE_FOLDER / "images"
 choices_file = image_folder / "choices.json"
-client_headers = {"User-Agent": "MayaDocumentImages/1.0 (https://example.com/docgen; docgen-demo@example.com) python-requests"}
+client_headers = {"User-Agent": "MarkitDoc/0.1 (https://pypi.org/project/markitdoc/) python-requests"}
 
 
 @dataclass(frozen=True)
