@@ -1,4 +1,5 @@
 from markitdoc.errors import UnsupportedFormatError
+from markitdoc.guide.language import core_card
 from markitdoc.markup.elements import CALLOUT_KINDS, CHART_SIZES, LIST_SCHEMES, PARAGRAPH_ALIGNMENTS, SPAN_COLORS, TABLE_STYLES
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.model_constants import FLOW_CONTAINERS
@@ -73,6 +74,7 @@ title: Five years in numbers
 title: The next five years
 body: The programme now moves upstream, where the same methods can protect three more towns.
 :::"""
+GUIDE_LEVELS = ("core", "full")
 CONTRACT_INFOGRAPHICS = ("sequence-steps-badge-card", "list-grid-badge-card", "list-pyramid-badge-card")
 
 
@@ -292,9 +294,12 @@ DESIGNED BLOCKS AS SLIDES
 {pdf_contract()}"""
 
 
-# the writing guide an AI model should read before producing markdown for output_format
-def guide(output_format="pdf"):
+# the writing guide an AI model should read before producing markdown for output_format: the language v2 core card, then
+# (level "full") the layout catalogue
+def guide(output_format="pdf", level="full"):
     writers = {"pdf": pdf_contract, "pptx": slides_contract, "docx": word_contract}
     if output_format not in writers:
         raise UnsupportedFormatError(f"No guide for {output_format!r}, expected one of {', '.join(writers)}")
-    return writers[output_format]()
+    if level not in GUIDE_LEVELS:
+        raise UnsupportedFormatError(f"No guide level {level!r}, expected one of {', '.join(GUIDE_LEVELS)}")
+    return core_card(output_format) if level == "core" else core_card(output_format) + "\n\n" + writers[output_format]()

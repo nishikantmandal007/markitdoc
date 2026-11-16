@@ -1,10 +1,13 @@
+import logging
 from dataclasses import replace
 
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Pt
 
+from markitdoc.markup.elements import image_size
 from markitdoc.markup.inline import literal, plain_text
 from markitdoc.models.document import Block
+from markitdoc.pptx.blocks import place_box, place_columns
 from markitdoc.pptx.cards import card_pairs, card_preset, draw_cards, draw_panel, draw_takeaway, figure_cards, panel_fits
 from markitdoc.pptx.deck import (
     BODY_HEIGHT,
@@ -48,8 +51,10 @@ from markitdoc.pptx.flow.visuals import (
     visual_fallback,
 )
 from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
+from markitdoc.themes.theme_constants import IMAGE_SIDES
 from markitdoc.utils.helpers import MONO_FONT
 
+logger = logging.getLogger(__name__)
 OPENING_LIMIT = 220
 
 
@@ -229,8 +234,53 @@ def draw_photo_slide(deck, titles, items, piece):
 
 # chooses the slide renderer for a visual content piece
 def draw_piece(deck, titles, lead, piece):
-    drawer = {"table": draw_table, "code": draw_code, "steps": draw_steps}.get(piece.kind, draw_visual)
+    drawer = {"table": draw_table, "code": draw_code, "steps": draw_steps, "box": draw_box, "columns": draw_columns,
+              "image": draw_file_image}.get(piece.kind, draw_visual)
     drawer(deck, titles, lead, piece)
+
+
+# draws a styled box on its own slide below any lead text that fits
+def draw_box(deck, titles, lead, piece):
+    room = lead_above(deck, titles, lead)
+    slide = deck.new_slide(next(titles))
+    top = BODY_TOP
+    if room:
+        top += write_items(deck, slide, lead, SIDE_MARGIN, top, TEXT_WIDTH, COMFORTABLE_SIZE) + 0.25
+    place_box(deck, slide, piece.data[0], piece.data[1], top, BODY_TOP + BODY_HEIGHT - top)
+
+
+# draws side-by-side columns on their own slide below any lead text that fits
+def draw_columns(deck, titles, lead, piece):
+    room = lead_above(deck, titles, lead)
+    slide = deck.new_slide(next(titles))
+    top = BODY_TOP
+    if room:
+        top += write_items(deck, slide, lead, SIDE_MARGIN, top, TEXT_WIDTH, COMFORTABLE_SIZE) + 0.25
+    weights, gap, *columns = piece.data
+    place_columns(deck, slide, weights, gap, columns, top, BODY_TOP + BODY_HEIGHT - top)
+
+
+# draws an image file at its asked width, beside the lead text when it asks for a side, with its caption
+def draw_file_image(deck, titles, lead, piece):
+    path, alt, width, side, caption = piece.data
+    natural = image_size(path)
+    if not natural:
+        logger.warning("Image file not found, its alt text is shown instead: %s", path)
+        draw_text_slides(deck, titles, list(lead) + [Item(literal(f"[{alt}]"), "paragraph")])
+        return
+    beside = side in IMAGE_SIDES and bool(lead)
+    asked = deck.styles.length(width, CONTENT_WIDTH * 25.4) / 25.4 if width else CONTENT_WIDTH / 2 if beside else natural[0] / 25.4
+    drawn = min(asked, CONTENT_WIDTH - SIDE_TEXT_WIDTH - 0.4 if beside else CONTENT_WIDTH)
+    room = 0.0 if beside else lead_above(deck, titles, lead)
+    slide = deck.new_slide(next(titles))
+    top = BODY_TOP
+    if beside:
+        left = SIDE_MARGIN if side == "left" else SIDE_MARGIN + CONTENT_WIDTH - drawn
+        write_column(deck, slide, lead, SIDE_MARGIN + (drawn + 0.4 if side == "left" else 0), top, CONTENT_WIDTH - drawn - 0.4, BODY_TOP + BODY_HEIGHT)
+    else:
+        left = SIDE_MARGIN + (CONTENT_WIDTH - drawn) / 2
+        top += write_items(deck, slide, lead, SIDE_MARGIN, top, TEXT_WIDTH, COMFORTABLE_SIZE) + 0.25 if room else 0
+    place_picture(deck, slide, path, (left, top, drawn, BODY_TOP + BODY_HEIGHT - top), alt, caption)
 
 
 # renders a process visual with any fitting lead text
@@ -355,6 +405,7 @@ def draw_sections(deck, sections, draw_designed):
         continued = not section.title and bool(deck.section_title)
         if section.title:
             deck.section_title = section.title
+            deck.title_look = deck.look("h1" if section.level == 1 else "h2")
         title = deck.section_title or deck.title or "Overview"
         if section.level == 1 and section.title:
             opening = take_opening(parts)

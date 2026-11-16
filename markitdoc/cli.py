@@ -5,14 +5,15 @@ from dataclasses import asdict
 from pathlib import Path
 
 from markitdoc.errors import MarkitDocError
-from markitdoc.guide.contract import guide
+from markitdoc.guide.contract import GUIDE_LEVELS, guide
+from markitdoc.guide.skill import write_skill
 from markitdoc.models.checks import check_document
 from markitdoc.options import Options
 from markitdoc.rendering import FORMATS, render
 from markitdoc.themes.explain import explain_line
 
 
-# command line: markitdoc render in.md -o out.pdf, markitdoc guide pptx, or markitdoc check in.md
+# command line: markitdoc render in.md -o out.pdf, markitdoc guide pptx, markitdoc check in.md or markitdoc skill -o folder
 def main(arguments=None):
     parser = argparse.ArgumentParser(prog="markitdoc", description="Markdown to PDF, PowerPoint and Word.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -25,15 +26,22 @@ def main(arguments=None):
     render_command.add_argument("--cache", type=Path, help="cache folder for images and diagrams")
     guide_command = commands.add_parser("guide", help="print the markdown guide for a format")
     guide_command.add_argument("format", nargs="?", default="pdf", choices=FORMATS)
+    guide_command.add_argument("--level", default="full", choices=GUIDE_LEVELS, help="core is the language card alone, full adds the layout catalogue")
+    skill_command = commands.add_parser("skill", help="write SKILL.md and its reference files")
+    skill_command.add_argument("-o", "--output", type=Path, default=Path("markitdoc-skill"), help="folder to write into")
     check_command = commands.add_parser("check", help="report problems in a markdown file without rendering it")
     check_command.add_argument("source", type=Path, help="markdown file")
     check_command.add_argument("--json", action="store_true", help="print the findings as JSON")
+    check_command.add_argument("--format", default="pdf", choices=FORMATS, help="output format the notes about unsupported features are for")
     explain_command = commands.add_parser("explain", help="show where each style property on a line came from")
     explain_command.add_argument("target", help="markdown file and line, such as report.md:41")
     options = parser.parse_args(arguments)
     try:
         if options.command == "guide":
-            print(guide(options.format))
+            print(guide(options.format, options.level))
+            return 0
+        if options.command == "skill":
+            print("\n".join(str(path) for path in write_skill(options.output)))
             return 0
         if options.command == "explain":
             path, _, line = options.target.rpartition(":")
@@ -42,7 +50,7 @@ def main(arguments=None):
             print("\n".join(explain_line(Path(path).read_text(encoding="utf-8"), int(line), (Path(path).parent,))))
             return 0
         if options.command == "check":
-            findings = check_document(options.source.read_text(encoding="utf-8"), (options.source.parent,))
+            findings = check_document(options.source.read_text(encoding="utf-8"), (options.source.parent,), options.format)
             lines = [f"line {finding.line}: {finding.severity}: {finding.message}" + (f" ({finding.fix})" if finding.fix else "")
                      for finding in findings]
             if options.json:

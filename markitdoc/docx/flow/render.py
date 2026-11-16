@@ -34,10 +34,11 @@ from markitdoc.markup.elements import (
     element_settings,
     image_size,
     settings_from,
+    top_level_blocks,
     without_display_maths,
     written_image,
 )
-from markitdoc.markup.inline import ANCHOR, Run, inline_runs, parser
+from markitdoc.markup.inline import ANCHOR, UNNUMBERED, Run, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.model_constants import PAGE_SWITCH
 from markitdoc.options import options_in_use
@@ -132,8 +133,11 @@ def render_tokens(writer, tokens):
 
 # draws a section heading and tracks its outline level
 def add_heading(writer, level, inline):
-    found = ANCHOR.search(inline.content)
+    unnumbered = UNNUMBERED.search(inline.content)
+    found = ANCHOR.search(UNNUMBERED.sub("", inline.content))
     runs = inline_runs(inline, writer.targets)
+    if unnumbered and runs:
+        runs[-1] = Run(UNNUMBERED.sub("", runs[-1].text), runs[-1].bold, runs[-1].italic)
     if found and runs:
         runs[-1] = Run(ANCHOR.sub("", runs[-1].text), runs[-1].bold, runs[-1].italic)
     if level == 1 and writer.skip_title and "".join(run.text for run in runs).strip() == writer.skip_title:
@@ -146,7 +150,7 @@ def add_heading(writer, level, inline):
         align_paragraph(paragraph, look)
         write_runs(writer, paragraph, runs, look=look)
         return paragraph
-    if writer.numbered and 2 <= level <= 4:
+    if writer.numbered and not unnumbered and 2 <= level <= 4:
         writer.headings[level - 1] += 1
         writer.headings[level:] = [0] * (4 - level)
         runs = [Run(".".join(str(number) for number in writer.headings[1:level]) + "   ")] + runs
@@ -229,6 +233,8 @@ def add_paragraph_token(writer, tokens, index, stack, pending):
             paragraph.paragraph_format.tab_stops.add_tab_stop(Cm(writer.width), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
             paragraph.paragraph_format.space_after = Pt(3)
         write_runs(writer, paragraph, runs, look=look)
+        if labelled in writer.numbers and writer.numbers[labelled].kind == "reference":
+            bookmark(writer, paragraph, labelled)
     for number, equation in enumerate(equations):
         add_equation(writer, equation, labelled if number == 0 else "")
     return ""
@@ -351,18 +357,6 @@ def drop_empty_first(cell):
     first = cell.paragraphs[0]
     if not first.text and len(cell.paragraphs) > 1 and not first._p.xpath(".//w:drawing"):
         first._p.getparent().remove(first._p)
-
-
-# groups tokens into top-level markdown blocks
-def top_level_blocks(tokens, nested=False):
-    blocks, current = [], []
-    top = min((token.level for token in tokens), default=0) if nested else 0
-    for token in tokens:
-        current.append(token)
-        if token.level == top and (token.type.endswith("_close") or token.type in ("fence", "math_block", "hr", "code_block")):
-            blocks.append(current)
-            current = []
-    return blocks + ([current] if current else [])
 
 
 # renders a code fence as text, chart, diagram, or code

@@ -90,11 +90,11 @@ def stamp_metadata(deck, user_email, title):
 
 
 # renders a document as a PowerPoint presentation
-def render_pptx(document: Document, theme: Theme, output_path: Path, images=None, user_email=""):
+def render_pptx(document: Document, theme: Theme, output_path: Path, images=None, user_email="", styles=None, numbering=None):
     started = time.perf_counter()
     blocks = balanced([prepared(block) for block in document.blocks], theme)
     with tempfile.TemporaryDirectory() as work_folder:
-        deck = Deck(theme, document.meta, Path(work_folder), images or {})
+        deck = Deck(theme, document.meta, Path(work_folder), images or {}, styles, numbering)
         deck.title = plain_text(deck_title(blocks, document.meta))
         first = 0
         if deck.branded:

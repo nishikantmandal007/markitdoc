@@ -92,8 +92,10 @@ ENGINE_DEFAULTS = {
     "h3": {"font": "heading", "size": "12pt", "weight": "bold"},
     "h4": {"size": "10.5pt", "weight": "bold"},
 }
-BUILTIN_CLASSES = ("left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
+BUILTIN_CLASSES = ("unnumbered", "left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
                    "roman", "upper-roman", "legal", "underline", "highlight", "accent", "second", "muted", "danger", "success",
                    "callout", "aside")
 PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "hyphenate", "repeat", "caption",
                             "indent", "orientation")
+STYLE_FILE_KEYS = ("markitdoc", "use", "page", "pages", "text", "set", "styles", "colors", "fonts", "fields", "allow", "refs")
+STYLE_SELECTORS = ("h1", "h2", "h3", "h4", "paragraph", "list", "table", "quote", "code", "figure", "caption", "footnote", "link", "box")

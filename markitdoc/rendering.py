@@ -106,11 +106,13 @@ def draw_pdf(document, output_path, theme, styles, numbering, found):
 def render_laid_out_pptx(document, output_path, template, author, markdown=""):
     started = time.perf_counter()
     theme = theme_for(document.meta, template)
-    if stylesheet_for(document, markdown, theme):
-        document, numbering = number_document(document, None, inject=False)
+    styles = stylesheet_for(document, markdown, theme)
+    numbering = None
+    if styles:
+        document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles, inject=False)
         document = resolve_document(document, numbering, "pptx")
     images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, SLIDE_PHOTO_RATIOS)
-    render_pptx(document, theme, output_path, images, author)
+    render_pptx(document, theme, output_path, images, author, styles, numbering)
     logger.info("Rendered PPTX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)
     return output_path
