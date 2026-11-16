@@ -55,6 +55,7 @@ class FlowPages(PdfPages):
         self.pending_caption, self.current_section, self.classification, self.watermark = "", "", "", ""
         self.scale = 1.0
         self.flow_pages = set()
+        self.page_ends, self.page_starts, self.floating = [], [], None
         self.set_auto_page_break(True, margin=22)
         self.set_margins(MARGIN, 20, MARGIN)
 
@@ -77,11 +78,15 @@ class FlowPages(PdfPages):
 
     # adds a page and resets portrait tracking when needed
     def add_page(self, *args, **kwargs):
+        for hook in self.page_ends:
+            hook(self.get_y())
         super().add_page(*args, **kwargs)
         if self.auto_page_break and self.decorate:
             self.set_auto_page_break(True, margin=22)
         if self.w < self.h:
             self.back_to_portrait = False
+        for hook in self.page_starts:
+            hook()
 
     # returns the usable horizontal width inside the page margins
     @property

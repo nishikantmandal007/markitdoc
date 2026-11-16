@@ -14,12 +14,15 @@ from markitdoc.markup.elements import (
     only_display_maths,
     settings_from,
     without_display_maths,
+    written_image,
 )
 from markitdoc.markup.inline import ANCHOR, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.pdf.flow.boxes import add_picture, draw_frame, end_float, float_check, page_extents
 from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
+    TEXT_WIDTH,
     add_callout,
     add_equation,
     add_figure,
@@ -32,6 +35,7 @@ from markitdoc.pdf.flow.text import (
 )
 from markitdoc.pdf.flow.visuals import SHORT_CODE_LINES, add_fence
 from markitdoc.pdf.pages import escaped, inline_markup
+from markitdoc.themes.theme_constants import BORDER_SIDES, STYLE_PROPERTIES
 from markitdoc.utils.helpers import lifted
 
 logger = logging.getLogger(__name__)
@@ -59,6 +63,7 @@ def render_tokens(pdf: FlowPages, tokens):
                 note_texts[token.meta["id"]] = " ".join(inline_markup(t, pdf.targets) for t in tokens[position:end] if t.type == "inline")
     while index < len(tokens):
         token = tokens[index]
+        float_check(pdf, token)
         if pdf.back_to_portrait and token.level == 0 and token.type.endswith("_open"):
             pdf.back_to_portrait = False
             pdf.add_page(orientation="P")
@@ -113,7 +118,14 @@ def render_tokens(pdf: FlowPages, tokens):
                 add_paragraph(pdf, caption, after=1.5)
                 index += 3
                 continue
-            if picture is not None:
+            written = written_image(inline.content) if picture is not None and pdf.styles else None
+            framed = look is not None and picture is None and look.borders
+            if framed:
+                pdf.ln(1.5)
+                frame_top, frame_page = pdf.get_y(), pdf.page_no()
+            if written:
+                add_picture(pdf, written)
+            elif picture is not None:
                 add_figure(pdf, picture.content or str(picture.attrs.get("alt", "")))
             elif only_display_maths(inline):
                 add_equation(pdf, next(child.content for child in inline.children if child.type == "math_inline_double"))
@@ -138,6 +150,8 @@ def render_tokens(pdf: FlowPages, tokens):
                 place_notes(pdf, inline, note_texts, placed)
                 add_paragraph(pdf, text, align, indent + (INDENT_STEP if "indent" in style else 0), lead="lead" in style,
                               following=opening_height(pdf, tokens, index + 3) if text.endswith(":") else 0, look=look)
+            if framed and pdf.page_no() == frame_page:
+                draw_frame(pdf, pdf.l_margin, min(TEXT_WIDTH, pdf.area), frame_top - 1.5, pdf.get_y() - 1.5, replace(look, fill=None))
             for equation in equations:
                 add_equation(pdf, equation)
             index += 3
@@ -185,6 +199,8 @@ def render_tokens(pdf: FlowPages, tokens):
             pdf.line(pdf.l_margin, pdf.get_y() + 2, pdf.w - pdf.r_margin, pdf.get_y() + 2)
             pdf.ln(5)
         index += 1
+    if pdf.floating:
+        end_float(pdf, True)
     remaining = [(number, note) for number, note in enumerate(notes, 1) if number - 1 not in placed]
     if remaining:
         add_notes(pdf, remaining)
@@ -212,10 +228,16 @@ def fitted_spacing(pdf: FlowPages, markdown: str):
 
 # renders a columns or box container in flowing PDF content
 def add_container(pdf: FlowPages, kind: str, info: str, inner):
+    attributes = parse_attributes(info)
     if kind == "columns":
-        add_columns(pdf, inner)
+        weights, gap = pdf.styles.columns(attributes.values) if pdf.styles else ((1, 1), 8)
+        add_columns(pdf, inner, gap, weights)
         return
     title = (re.search(r'title="([^"]*)"', info) or re.search(r"title=(\S+)", info) or [None, ""])[1].rstrip("}")
+    look = pdf.look("box", attributes.classes, attributes.values) if kind == "box" else None
+    if look and look.boxed():
+        add_styled_box(pdf, look, title, inner)
+        return
     full, pad = pdf.area, 5
     width = full if kind == "box" else full * 0.5
     left = pdf.l_margin + full - width
@@ -250,11 +272,53 @@ def add_container(pdf: FlowPages, kind: str, info: str, inner):
     pdf.set_xy(margins[0], max(pdf.get_y(), top + height if pdf.get_y() >= top else pdf.get_y()) + 4)
 
 
+# renders a box with its own border, padding, fill and radius, drawing one frame for each page the box covers
+def add_styled_box(pdf: FlowPages, look, title, inner):
+    margins, left, pad = (pdf.l_margin, pdf.r_margin), pdf.l_margin, look.padding or 0
+    width = min(pdf.area, pdf.styles.length(look.width, pdf.area) or pdf.area) if look.width else pdf.area
+    inset = {side: pad + (look.borders[side][0] if side in look.borders else 0) for side in BORDER_SIDES}
+    context = {key: found for key, found in look.props.items() if key in STYLE_PROPERTIES}
+
+    def fill(target):
+        before = target.narrow, target.context
+        target.narrow, target.context = True, context
+        target.set_left_margin(left + inset["left"])
+        target.set_right_margin(target.w - left - width + inset["right"])
+        target.set_xy(target.l_margin, target.get_y() + inset["top"])
+        if title:
+            target.set_font("Head", "B", BODY_SIZE * target.scale)
+            target.set_text_color(*target.theme.rgb("ink"))
+            target.multi_cell(target.area, BODY_SIZE * target.scale * 0.55, escaped(title), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            target.ln(1.5)
+        render_tokens(target, inner)
+        target.set_y(target.get_y() + inset["bottom"])
+        target.narrow, target.context = before
+
+    extents, height, overflowed = page_extents(pdf, fill)
+    if overflowed and height < pdf.eph * 0.8:
+        pdf.add_page()
+        extents = page_extents(pdf, fill)[0]
+    pending = iter(range(1, len(extents)))
+
+    def next_frame():
+        if (index := next(pending, None)) is not None:
+            draw_frame(pdf, left, width, *extents[index], look, False, index == len(extents) - 1)
+
+    draw_frame(pdf, left, width, *extents[0], look, True, len(extents) == 1)
+    pdf.page_starts.append(next_frame)
+    fill(pdf)
+    pdf.page_starts.remove(next_frame)
+    pdf.set_left_margin(margins[0])
+    pdf.set_right_margin(margins[1])
+    pdf.set_xy(margins[0], pdf.get_y() + 3)
+
+
 # divides container content into two groups using headings or top-level blocks
-def column_groups(inner):
+def column_groups(inner, nested=False):
     starts = [position for position, token in enumerate(inner) if token.type == "heading_open"]
     if len(starts) < 2:
-        blocks = [position for position, token in enumerate(inner) if token.level == 0 and token.type.endswith("_open")]
+        top = min((token.level for token in inner), default=0) if nested else 0
+        blocks = [position for position, token in enumerate(inner) if token.level == top and token.type.endswith("_open")]
         middle = blocks[len(blocks) // 2] if len(blocks) > 1 else len(inner)
         return [inner[:middle], inner[middle:]]
     half = starts[len(starts) // 2]
@@ -262,15 +326,15 @@ def column_groups(inner):
 
 
 # adds columns to the PDF
-def add_columns(pdf: FlowPages, inner, gutter=8):
+def add_columns(pdf: FlowPages, inner, gutter=8, weights=(1, 1)):
     margins, full = (pdf.l_margin, pdf.r_margin), pdf.area
-    width = (full - gutter) / 2
-    groups = column_groups(inner)
+    widths = [(full - gutter) * weight / sum(weights) for weight in weights]
+    groups = column_groups(inner, bool(pdf.styles))
 
     def draw(target, group, column, top):
         target.narrow = True
-        target.set_left_margin(margins[0] + column * (width + gutter))
-        target.set_right_margin(target.w - target.l_margin - width)
+        target.set_left_margin(margins[0] + sum(widths[:column]) + column * gutter)
+        target.set_right_margin(target.w - target.l_margin - widths[column])
         target.set_xy(target.l_margin, top)
         render_tokens(target, group)
         target.narrow = False
