@@ -1,0 +1,99 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Delta map.png",
+    "index": 1,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 1600,
+      "height": 2400,
+      "mime": "image/jpeg",
+      "sha1": "shaMix1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Map of the delta"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Maps"
+     }
+    ]
+   },
+   "1": {
+    "title": "File:Delta diagram chart.jpg",
+    "index": 2,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/2.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/2.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaMix2",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Diagram of the delta"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Diagrams"
+     }
+    ]
+   },
+   "2": {
+    "title": "File:Delta at dusk.jpg",
+    "index": 3,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/3.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/3.jpg",
+      "width": 1800,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaMix3",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Delta at dusk"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Deltas"
+     }
+    ]
+   }
+  }
+ }
+}

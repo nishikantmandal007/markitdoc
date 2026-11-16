@@ -1,0 +1,76 @@
+{
+ "query": {
+  "pages": {
+   "0": {
+    "title": "File:Heron sculpture in reeds.jpg",
+    "index": 1,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/1.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/1.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaArt1",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "Glass sculpture of herons in reeds"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Sculptures"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Glass art"
+     }
+    ]
+   },
+   "1": {
+    "title": "File:Grey heron in reeds.jpg",
+    "index": 2,
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/x/2.jpg",
+      "thumburl": "https://upload.wikimedia.org/t/2.jpg",
+      "width": 2400,
+      "height": 1600,
+      "mime": "image/jpeg",
+      "sha1": "shaArt2",
+      "extmetadata": {
+       "LicenseShortName": {
+        "value": "CC BY 4.0"
+       },
+       "Artist": {
+        "value": "Jane Doe"
+       },
+       "ImageDescription": {
+        "value": "A grey heron standing in reeds"
+       }
+      }
+     }
+    ],
+    "categories": [
+     {
+      "ns": 14,
+      "title": "Category:Ardea cinerea"
+     },
+     {
+      "ns": 14,
+      "title": "Category:Reeds"
+     }
+    ]
+   }
+  }
+ }
+}
