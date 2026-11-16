@@ -41,3 +41,39 @@ FONT_PAIRS = {
 TEXT_SIZES = {"small": 0.93, "regular": 1.0, "large": 1.1}
 TONES = {"formal": ("professional", "navy"), "warm": ("editorial", "terracotta"), "urgent": ("professional", "crimson"),
          "technical": ("professional", "ocean"), "celebratory": ("editorial", "forest"), "neutral": ("professional", "graphite")}
+
+STYLE_FILE_SUFFIX = ".style.yml"
+PLANNED_SECTIONS = ("page", "pages", "fields", "allow", "refs")
+STYLE_PROPERTIES = ("font", "size", "color", "weight", "italic", "align", "caps", "tracking")
+STYLE_ONLY_PROPERTIES = ("kind", "based-on")
+SCALE_WORDS = {"xs": 0.8, "s": 0.9, "m": 1.0, "l": 1.25, "xl": 1.6, "xxl": 2.0}
+STYLE_ALIGNS = {"left": "L", "center": "C", "right": "R", "justify": "J"}
+STYLE_COLOR_ROLES = {"ink": "ink", "body": "body", "muted": "muted", "accent": "mood", "second": "second", "surface": "surface",
+                     "success": "success", "danger": "danger"}
+FONT_WORDS = {"heading": "Head", "body": "Brand", "mono": "Mono"}
+TRACKING_POINTS = {"tight": -0.2, "normal": 0.0, "wide": 0.6}
+SMALL_CAPS_SCALE = 0.8
+BODY_POINTS = 10.0
+MAX_BASED_ON = 3
+NAME_STYLE_AFTER = 3
+SIZE_POINTS = re.compile(r"^(\d+(?:\.\d+)?)\s*pt$")
+HEX_STYLE_COLOR = re.compile(r"^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$")
+BUNDLED_FONTS = {
+    "inter": ("Inter-Regular.ttf", "Inter-Bold.ttf", "Inter-Italic.ttf", "Inter-BoldItalic.ttf"),
+    "pt serif": ("PTSerif-Regular.ttf", "PTSerif-Bold.ttf", "PTSerif-Italic.ttf", "PTSerif-Bold.ttf"),
+    "ibm plex sans": ("IBMPlexSans-Regular.ttf", "IBMPlexSans-Bold.ttf", "IBMPlexSans-Italic.ttf", "IBMPlexSans-Bold.ttf"),
+    "jetbrains mono": ("JetBrainsMono-Regular.ttf", "JetBrainsMono-Bold.ttf", "JetBrainsMono-Regular.ttf", "JetBrainsMono-Bold.ttf"),
+    "noto sans": ("NotoSans-Regular.ttf", "NotoSans-Bold.ttf", "NotoSans-Italic.ttf", "NotoSans-BoldItalic.ttf"),
+}
+ENGINE_DEFAULTS = {
+    "text": {"font": "body", "size": "10pt", "color": "body"},
+    "h1": {"font": "heading", "size": "24pt", "weight": "bold"},
+    "h2": {"font": "heading", "size": "14.5pt", "weight": "bold"},
+    "h3": {"font": "heading", "size": "12pt", "weight": "bold"},
+    "h4": {"size": "10.5pt", "weight": "bold"},
+}
+BUILTIN_CLASSES = ("left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
+                   "roman", "upper-roman", "legal", "underline", "highlight", "accent", "second", "muted", "danger", "success",
+                   "callout", "aside")
+PLANNED_STYLE_PROPERTIES = ("space-before", "space-after", "keep-with-next", "numbering", "hyphenate", "repeat", "caption", "border",
+                            "padding", "radius", "bg", "dropcap", "indent", "orientation", "lang")

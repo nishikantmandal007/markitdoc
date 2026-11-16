@@ -9,6 +9,7 @@ class Options:
     gotenberg_url: str | None = None
     cache_folder: Path | None = None
     user_agent: str | None = None
+    style_folders: tuple = ()
 
 
 options_context = ContextVar("markitdoc_options", default=Options())
