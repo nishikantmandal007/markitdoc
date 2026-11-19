@@ -5,7 +5,6 @@ from functools import lru_cache
 from fontTools.ttLib import TTFont
 from fpdf import FPDF
 from fpdf.enums import MethodReturnValue
-from PIL import Image
 
 from markitdoc.markup.blocks import slot_pieces
 from markitdoc.markup.inline import SUBSCRIPTS, SUPERSCRIPTS, inline_runs, parser
@@ -14,11 +13,13 @@ from markitdoc.themes.theme_constants import FONT_WORDS
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.constants import ASSETS_FOLDER
 from markitdoc.utils.helpers import lifted
+from markitdoc.visuals.logos import logo_box, logo_ratio, logo_row
 
 WHITE, SOFT_WHITE, FAINT_WHITE = (255, 255, 255), (226, 230, 240), (190, 198, 216)
 SHRINK_STEPS = (1, 0.95, 0.9, 0.85)
 HEADING_POINT = 12
 FALLBACK_FAMILIES = ("Devanagari", "Symbols", "Latin", "Noto")
+BRAND_LOGO_WIDTH, BRAND_LOGO_HEIGHT, PARTNER_STRIP_HEIGHT = 40, 10, 12
 
 
 # reads the code points a font file can draw, once per process
@@ -232,19 +233,16 @@ class PdfPages(FPDF):
     def brand_mark(self, x, y, on_dark):
         if not self.theme.logo:
             return
-        self.image(str(self.theme.logo), x, y, h=10)
-        self.write_at(x + 13, y + 1.2, 120, self.theme.brand, 11, "B", rgb=WHITE if on_dark else self.theme.rgb("ink"))
+        width, height = logo_box(self.theme.logo, BRAND_LOGO_WIDTH, BRAND_LOGO_HEIGHT)
+        self.image(str(self.theme.logo), x, y + (BRAND_LOGO_HEIGHT - height) / 2, w=width, h=height)
+        text_x = x + width + 3
+        self.write_at(text_x, y + 1.2, 120, self.theme.brand, 11, "B", rgb=WHITE if on_dark else self.theme.rgb("ink"))
         if self.theme.tagline:
-            self.write_at(x + 13, y + 6.4, 120, self.theme.tagline, 7, "B",
+            self.write_at(text_x, y + 6.4, 120, self.theme.tagline, 7, "B",
                           rgb=lifted(self.theme.rgb("mood"), 0.55) if on_dark else self.theme.rgb("primary"))
 
     # places partner logos across the bottom of the page
     def partner_strip(self, y, gap=6):
-        x = MARGIN
-        for path, height in self.theme.partners:
-            with Image.open(path) as picture:
-                width = height * picture.width / picture.height
-            if x + width > PAGE_WIDTH - MARGIN:
-                break
-            self.image(str(path), x, y + (12 - height) / 2, h=height)
-            x += width + gap
+        places = logo_row([logo_ratio(path) for path in self.theme.partners], PAGE_WIDTH - 2 * MARGIN, PARTNER_STRIP_HEIGHT, gap)
+        for path, (x, top, width, height) in zip(self.theme.partners, places):
+            self.image(str(path), MARGIN + x, y + top, w=width, h=height)

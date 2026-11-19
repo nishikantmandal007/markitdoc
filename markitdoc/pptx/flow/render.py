@@ -409,7 +409,9 @@ def draw_sections(deck, sections, draw_designed):
             deck.section_title = section.title
             deck.title_look = deck.look("h1" if section.level == 1 else "h2")
         title = deck.section_title or deck.title or "Overview"
-        if section.level == 1 and section.title:
+        if section.level == 1 and section.title and deck.title_on_cover and plain_text(section.title) == deck.title:
+            deck.title_on_cover = False
+        elif section.level == 1 and section.title:
             opening = take_opening(parts)
             layout = "cover" if deck.slide_count == 0 else "divider"
             slots = {"title": literal(section.title), **({"subtitle" if layout == "cover" else "lead": opening} if opening else {})}

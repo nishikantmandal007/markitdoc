@@ -9,6 +9,7 @@ from markitdoc.markup.fields import replace_fields
 from markitdoc.markup.inline import SUPERSCRIPT_DIGITS
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.utils.helpers import lifted
+from markitdoc.visuals.logos import logo_box
 
 BODY_SIZE, TABLE_SIZE = 10, 9
 LINE_RATIO = 1.4
@@ -21,6 +22,8 @@ ROMAN_DIGITS = ((1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (
                 (5, "v"), (4, "iv"), (1, "i"))
 LABEL_STYLES = {"arabic": "D", "roman": "r", "Roman": "R", "alpha": "a"}
 DESIGNED_PAPER_MM = (210, 297)
+
+HEADER_LOGO_WIDTH, HEADER_LOGO_HEIGHT = 30, 6
 
 
 # a page number as text in a numbering style: arabic, roman, Roman, alpha, or none for no number
@@ -211,8 +214,11 @@ class FlowPages(PdfPages):
         self.set_text_color(*self.theme.rgb("muted"))
         self.set_xy(left, top - 11)
         self.cell(110, 5, self.fields(self.header_text) or self.theme.header_note or self.document_title.upper()[:80])
+        self.set_font("Brand", "B", 7.5)
+        brand_width = self.get_string_width(self.theme.brand) + 2 if self.theme.brand else 0
         if self.theme.logo:
-            self.image(str(self.theme.logo), self.w - right - 45, top - 12, h=6)
+            width, height = logo_box(self.theme.logo, HEADER_LOGO_WIDTH, HEADER_LOGO_HEIGHT)
+            self.image(str(self.theme.logo), self.w - right - brand_width - width, top - 12 + (HEADER_LOGO_HEIGHT - height) / 2, w=width, h=height)
         if self.theme.brand:
             self.set_font("Brand", "B", 7.5)
             self.set_text_color(*self.theme.rgb("ink"))

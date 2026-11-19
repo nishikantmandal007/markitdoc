@@ -29,17 +29,21 @@ from markitdoc.pptx.deck import (
 from markitdoc.pptx.designed.titles import draw_group, fit_text, plan_group
 from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, send_to_back, side_title
 from markitdoc.utils.helpers import lifted, long_date
+from markitdoc.visuals.logos import logo_box, logo_ratio, logo_row
 
 COVER_SIZES, DIVIDER_SIZES = (48, 44, 40, 36, 32, 28), (44, 40, 36, 32, 28)
 QUOTE_SIZES = (36, 32, 28, 26, 24, 22, 20)
 PHOTO_FADES = ((0, 0.25, 0.35, 0.0), (0.4, 0.8, 0.0, 0.85), (0.8, 1.0, 0.85, 0.92))
 
+COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT = 2.4, 0.6
+PARTNER_ROW_HEIGHT, PARTNER_GAP = 0.6, 0.3
+
 
 # draws a designed cover slide from the block content
 def draw_cover(deck, block, image):
     slots = block.slots
-    photo = image is not None and slots.get("variant") != "light"
-    dark = photo or slots.get("variant") != "light"
+    photo = image is not None and slots.get("variant") not in ("light", "company")
+    dark = photo or slots.get("variant") not in ("light", "company")
     slide = deck.new_slide(slots["title"], "night" if dark else "paper", False, standard=False)
     group = plan_group(deck, slots.get("kicker", ""), slots["title"], slots.get("subtitle", ""), COVER_SIZES, 11.2)
     if photo:
@@ -58,6 +62,20 @@ def draw_cover(deck, block, image):
     write_text(deck, slide, literal(long_date(deck.meta.get("date", ""))), SIDE_MARGIN, 6.7, 6, 14, SOFT_WHITE if dark else "muted", name="Date")
     write_text(deck, slide, literal(deck.theme.brand or ""), SLIDE_WIDTH - SIDE_MARGIN - 6, 6.7, 6, 14, SOFT_WHITE if dark else "muted",
                align=PP_ALIGN.RIGHT, name="Brand")
+    if deck.theme.logo:
+        width, height = logo_box(deck.theme.logo, COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT)
+        add_image(slide, str(deck.theme.logo), SIDE_MARGIN, 0.45, width, height, deck.theme.brand or "Logo", "Logo")
+    if slots.get("variant") == "company":
+        company_details(deck, slide)
+
+
+# the brand's address on one line and its partner logos in rows above the cover rule, for any number of either
+def company_details(deck, slide):
+    if deck.theme.address:
+        write_text(deck, slide, literal("  ·  ".join(deck.theme.address)), SIDE_MARGIN, 6.05, CONTENT_WIDTH, 12, "muted", name="Address")
+    places = logo_row([logo_ratio(path) for path in deck.theme.partners], CONTENT_WIDTH, PARTNER_ROW_HEIGHT, PARTNER_GAP)
+    for path, (x, top, width, height) in zip(deck.theme.partners, places):
+        add_image(slide, str(path), SIDE_MARGIN + x, 5.3 + top, width, height, "Partner logo", "Partner logo")
 
 
 # draws a section divider slide with its title and optional photo

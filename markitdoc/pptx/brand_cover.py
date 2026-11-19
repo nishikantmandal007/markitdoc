@@ -3,7 +3,9 @@ from pptx.util import Inches
 
 from markitdoc.markup.inline import literal
 from markitdoc.pptx.deck import BODY_SIZES, SIDE_MARGIN, SLIDE_WIDTH, draw_footer, key_sentences, title_fit, write_text
+from markitdoc.pptx.photos import add_image
 from markitdoc.utils.helpers import long_date
+from markitdoc.visuals.logos import logo_box
 
 COVER_TITLE_SIZES = (40, 36, 32, 28)
 COVER_WIDTH = SLIDE_WIDTH - 2 * SIDE_MARGIN
@@ -40,10 +42,14 @@ def draw_brand_cover(deck, block):
     slide = deck.presentation.slides[0]
     deck.slide = slide
     tagline = shape_with_text(slide, deck.theme.tagline) if deck.theme.tagline else None
-    logo = next(shape for shape in slide.shapes if shape.shape_type == 13 and shape.width == shape.height)
+    logo = next((shape for shape in slide.shapes if shape.shape_type == 13 and shape.width == shape.height), None)
     remove_sample_text(slide, deck.theme.sample_texts)
-    logo.left, logo.top = Inches((SLIDE_WIDTH - COVER_LOGO_SIZE) / 2), Inches(COVER_LOGO_TOP)
-    logo.width = logo.height = Inches(COVER_LOGO_SIZE)
+    if logo is not None:
+        logo.left, logo.top = Inches((SLIDE_WIDTH - COVER_LOGO_SIZE) / 2), Inches(COVER_LOGO_TOP)
+        logo.width = logo.height = Inches(COVER_LOGO_SIZE)
+    elif deck.theme.logo:
+        width, height = logo_box(deck.theme.logo, COVER_LOGO_SIZE * 3, COVER_LOGO_SIZE)
+        add_image(slide, str(deck.theme.logo), (SLIDE_WIDTH - width) / 2, COVER_LOGO_TOP, width, height, deck.theme.brand or "Logo", "Logo")
     title = slots.get("title") or deck.title
     kicker = slots.get("kicker", "")
     subtitle = slots.get("subtitle", "")
