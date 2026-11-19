@@ -44,6 +44,7 @@ def test_should_fit_a_tall_image_on_the_pdf_page(tmp_path):
     with fitz.open(output) as pdf:
         bottoms = [(rect.y1, page.rect.height) for page in pdf for info in page.get_images() for rect in page.get_image_rects(info[0])]
         assert bottoms and all(bottom <= height - 15 for bottom, height in bottoms)
+        assert pdf[0].get_images(), "a page with room left takes the image instead of leaving it empty"
 
 
 def test_should_size_a_word_picture_by_height(tmp_path):

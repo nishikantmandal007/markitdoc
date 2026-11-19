@@ -85,3 +85,9 @@ def test_should_tell_a_model_what_each_registered_brand_offers():
                        "{.closing variant=company} show the address and partner logos.")
     assert "acme" in markitdoc.registered_brands() and "professional" not in markitdoc.registered_brands()
     assert summary in markitdoc.guide("pdf", "writing") and summary in markitdoc.guide("pptx", "writing")
+
+
+def test_should_match_master_text_whatever_its_punctuation():
+    from markitdoc.pptx.brand_cover import letters_of
+
+    assert letters_of("Compliant Data, Boundless Potential") == letters_of("Compliant  Data Boundless Potential")

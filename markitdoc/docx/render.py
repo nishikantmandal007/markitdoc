@@ -44,7 +44,7 @@ SECTION_LEVEL = {"divider": 1, "chapter": 1, "summary": 1, "closing": 1}
 DOCUMENT_PHOTO_RATIOS = {"cover": 16 / 9, "chapter": 16 / 9, "feature": 16 / 9}
 
 COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT = 5.0, 1.8
-PARTNER_ROW_HEIGHT, PARTNER_GAP = 1.2, 0.6
+PARTNER_ROW_HEIGHT, PARTNER_GAP, PARTNER_ROW_SHARE = 1.2, 0.6, 0.7
 
 
 # converts inline source text into styled runs
@@ -118,8 +118,9 @@ def draw_cover(writer, block, image):
     meta = writer.body.add_paragraph()
     meta.paragraph_format.space_before = Pt(10)
     date = long_date(writer.meta.get("date", ""))
-    plain(writer, meta, "  ·  ".join(part for part in (date, writer.theme.brand or "") if part), 10, "muted")
-    if slots.get("variant") == "company":
+    company = slots.get("variant") == "company"
+    plain(writer, meta, "  ·  ".join(part for part in (date, "" if company else writer.theme.brand or "") if part), 10, "muted")
+    if company:
         company_details(writer)
     page_break(writer)
 
@@ -128,7 +129,7 @@ def draw_cover(writer, block, image):
 def company_details(writer):
     for line in writer.theme.address:
         plain(writer, writer.body.add_paragraph(), line, 9, "muted")
-    places = logo_row([logo_ratio(path) for path in writer.theme.partners], writer.width, PARTNER_ROW_HEIGHT, PARTNER_GAP)
+    places = logo_row([logo_ratio(path) for path in writer.theme.partners], writer.width * PARTNER_ROW_SHARE, PARTNER_ROW_HEIGHT, PARTNER_GAP)
     paragraph = None
     for path, (x, _, width, height) in zip(writer.theme.partners, places):
         if paragraph is None or x == 0:

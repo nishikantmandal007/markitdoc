@@ -19,6 +19,7 @@ BLOCK_TOKENS = ("fence", "hr", "code_block", "math_block")
 PLACEHOLDER_SHARE = 0.5
 PLACEHOLDER_WIDTH = 0.6
 CAPTION_ROOM = 14
+SHRINK_ONTO_PAGE = 0.4
 CAPTION_SCALE = 0.85
 
 
@@ -99,6 +100,14 @@ def rounded_png(path, radius, width):
     return data
 
 
+# the height in mm of an image caption wrapped to the image width, nothing without a caption
+def caption_room(pdf, caption, width):
+    if not caption:
+        return 0
+    lines = pdf.multi_cell(width, BODY_SIZE * pdf.scale * 0.45, escaped(caption), markdown=True, dry_run=True, output=MethodReturnValue.LINES)
+    return len(lines) * BODY_SIZE * pdf.scale * 0.45 + 1.5
+
+
 # draws an image written with a file path, floated to a side or centred, with its caption; a missing file shows a framed placeholder
 def add_picture(pdf: FlowPages, found):
     alt, source, written = found.group(1), found.group(2), found.group(3) or ""
@@ -108,7 +117,8 @@ def add_picture(pdf: FlowPages, found):
     path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")))
     natural = image_size(path)
     caption = str(attributes.values.get("caption", ""))
-    room = pdf.h - pdf.t_margin - pdf.b_margin - (CAPTION_ROOM if caption or attributes.id else 0)
+    reserve = CAPTION_ROOM if caption or attributes.id else 0
+    room = pdf.h - pdf.t_margin - pdf.b_margin - reserve
     asked = pdf.styles.length(look.width, pdf.area) if look.width else None
     asked_height = pdf.styles.length(attributes.values["height"], room) if "height" in attributes.values else None
     if natural:
@@ -120,8 +130,11 @@ def add_picture(pdf: FlowPages, found):
         caption = caption_of(replace(target, text=caption))
     side = str(attributes.values.get("side", "")).lower()
     pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * CAPTION_SCALE)
-    caption_height = len(pdf.multi_cell(width, BODY_SIZE * pdf.scale * 0.45, escaped(caption), markdown=True, dry_run=True,
-                                        output=MethodReturnValue.LINES)) * BODY_SIZE * pdf.scale * 0.45 + 1.5 if caption else 0
+    caption_height = caption_room(pdf, caption, width)
+    left_on_page = pdf.h - pdf.b_margin - pdf.get_y() - caption_height - 2
+    if natural and pdf.will_page_break(height + caption_height + 2) and left_on_page >= room * SHRINK_ONTO_PAGE:
+        width, height = fitted_size(natural, width, None, pdf.area, left_on_page - caption_height)
+        caption_height = caption_room(pdf, caption, width)
     if pdf.will_page_break(height + caption_height + 2):
         pdf.add_page()
     pdf.mark_target(attributes.id)

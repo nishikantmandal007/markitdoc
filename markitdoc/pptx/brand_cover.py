@@ -1,3 +1,5 @@
+import re
+
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches
 
@@ -15,7 +17,13 @@ COVER_GAP, TAGLINE_HEIGHT, SUBTITLE_CAP = 0.22, 0.35, 20
 
 # finds the first slide shape whose text starts with a value
 def shape_with_text(slide, start):
-    return next((shape for shape in slide.shapes if shape.has_text_frame and shape.text_frame.text.strip().startswith(start)), None)
+    wanted = letters_of(start)
+    return next((shape for shape in slide.shapes if shape.has_text_frame and letters_of(shape.text_frame.text).startswith(wanted)), None)
+
+
+# the letters and digits of a text in lower case, so punctuation and spacing differences between a theme file and a master match
+def letters_of(text):
+    return re.sub(r"\W+", "", text).lower()
 
 
 # removes template shapes that contain sample text
