@@ -56,6 +56,11 @@ markitdoc guide pptx                         # the markdown guide for slides
 `markitdoc.guide("pdf" | "pptx" | "docx")` returns the full markdown guide for a format: layouts, slots and their word
 limits, charts, diagrams and front-matter settings. Give it to the model as instructions, then render what it writes.
 
+To keep the model's context small, load it in parts: `guide(format, "writing")` (about 4k characters) before every
+document, then `"layouts"`, `"styles"` or `"charts"` only when the document needs designed pages, custom styling or
+visuals. Run `markitdoc.check_document(markdown, output_format=format)` before rendering and send any `error` findings
+back to the model to fix.
+
 ### The language
 
 MarkitDoc is a typesetting language shared by PDF, Word and PowerPoint: named styles, rules by element, boxes, columns, images,
@@ -91,8 +96,12 @@ markitdoc.register_brand("brand/")                  # brand/acme.yml, brand/logo
 markitdoc.render(markdown, "pdf", "out.pdf", template="acme")
 ```
 
-A theme file with `locked: true` keeps its own colours and fonts whatever the markdown asks for. Word headers and covers
-that a theme file cannot describe are drawn by hooks: `register_brand(folder, docx_chrome=..., docx_cover=...)`.
+A theme file with `locked: true` keeps its own colours and fonts whatever the markdown asks for. A brand can list any
+number of partner logos (`partners: [a.png, b.png]`) or none: logos are trimmed of empty margins, given the same visual
+weight and wrapped onto more rows when they do not fit. `::: {.cover variant=company}` shows the address and partner
+logos in every format. Markdown picks a brand with `template: acme` in its front matter, and the writing guide lists each
+registered brand with what it offers (`markitdoc.brand_summary("acme")`), so a model can choose when to use it. Word
+headers and covers that a theme file cannot describe are drawn by hooks: `register_brand(folder, docx_chrome=..., docx_cover=...)`.
 
 ### Offline by default
 

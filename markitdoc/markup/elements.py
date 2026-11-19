@@ -1,19 +1,24 @@
 import copy
 import math
 import re
+import tempfile
+import zlib
 from pathlib import Path
 
 from PIL import Image
 
 from markitdoc.markup.inline import plain_text
 from markitdoc.models.attributes import parse_attributes
+from markitdoc.options import options_in_use
 from markitdoc.themes.theme_constants import IMAGE_SUFFIXES
 from markitdoc.visuals.charts import parse_chart_fence
+from markitdoc.visuals.photo_fit import interest_box
 
 NUMERIC_CELL = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
 CALLOUT_KINDS = ("Note", "Action", "Risk", "Key figure")
 TABLE_STYLES = ("lined", "striped", "boxed")
 IMAGE_WRITTEN = re.compile(r"!\[([^\]]*)\]\(([^)\s]*)\)(?:\{([^{}]*)\})?")
+PICTURE_RATIO = re.compile(r"^(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)$")
 CHART_SIZES = {"full": 1.0, "wide": 1.0, "half": 0.75}
 TOTALS_ROW = re.compile(r"^\W*(grand total|totals?|sum|gesamt|summe|insgesamt|total général)\b", re.I)
 PARAGRAPH_ALIGNMENTS = {"center": "C", "right": "R", "justify": "J"}
@@ -147,6 +152,34 @@ def rating_level(source):
 def written_image(text):
     found = IMAGE_WRITTEN.search(text)
     return found if found and "://" not in found.group(2) and Path(found.group(2)).suffix.lower() in IMAGE_SUFFIXES else None
+
+
+# the width-to-height ratio written as 16:9, None when the text is not one
+def picture_ratio(text):
+    found = PICTURE_RATIO.match(str(text or "").strip())
+    return float(found.group(1)) / float(found.group(2)) if found and float(found.group(1)) and float(found.group(2)) else None
+
+
+# the image cropped to ratio around its most detailed part, saved once in the cache folder; the image itself without a ratio
+def cropped_picture(path, ratio):
+    path = Path(path)
+    if not ratio or not image_size(path):
+        return path
+    key = f"{path.resolve()}|{path.stat().st_mtime_ns}|{ratio:.4f}".encode()
+    target = Path(options_in_use().cache_folder or tempfile.gettempdir()) / "markitdoc-crops" / f"{path.stem}-{zlib.crc32(key):08x}.png"
+    if not target.is_file():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(path) as picture:
+            picture.crop(interest_box(picture.convert("RGB"), ratio)).save(target)
+    return target
+
+
+# the drawn size of an image of natural (width, height) asked for a width, a height or both, kept in proportion and shrunk to the room
+def fitted_size(natural, width, height, room_width, room_height):
+    ratio = natural[0] / natural[1]
+    drawn = min(width, height * ratio) if width and height else width or (height * ratio if height else natural[0])
+    drawn = min(drawn, room_width, room_height * ratio)
+    return drawn, drawn / ratio
 
 
 # the natural size in mm at 96 dpi of an image file, None when it is missing or unreadable

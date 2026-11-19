@@ -37,10 +37,14 @@ from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import creation_date, long_date
 from markitdoc.visuals.gantt import gantt_plan, unit_name
+from markitdoc.visuals.logos import logo_box, logo_ratio, logo_row
 
 logger = logging.getLogger(__name__)
 SECTION_LEVEL = {"divider": 1, "chapter": 1, "summary": 1, "closing": 1}
 DOCUMENT_PHOTO_RATIOS = {"cover": 16 / 9, "chapter": 16 / 9, "feature": 16 / 9}
+
+COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT = 5.0, 1.8
+PARTNER_ROW_HEIGHT, PARTNER_GAP, PARTNER_ROW_SHARE = 1.2, 0.6, 0.7
 
 
 # converts inline source text into styled runs
@@ -94,7 +98,8 @@ def draw_cover(writer, block, image):
         draw_brand_cover(writer, slots)
         return
     if writer.theme.logo:
-        add_picture(writer, str(writer.theme.logo), 3.2, writer.theme.brand or "Logo").alignment = WD_ALIGN_PARAGRAPH.LEFT
+        width, height = logo_box(writer.theme.logo, COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT)
+        add_picture(writer, str(writer.theme.logo), width, writer.theme.brand or "Logo", height).alignment = WD_ALIGN_PARAGRAPH.LEFT
     if image:
         photo(writer, image[0], writer.width, writer.width / (16 / 9), slots.get("image", "Photograph"))
     else:
@@ -113,8 +118,26 @@ def draw_cover(writer, block, image):
     meta = writer.body.add_paragraph()
     meta.paragraph_format.space_before = Pt(10)
     date = long_date(writer.meta.get("date", ""))
-    plain(writer, meta, "  ·  ".join(part for part in (date, writer.theme.brand or "") if part), 10, "muted")
+    company = slots.get("variant") == "company"
+    plain(writer, meta, "  ·  ".join(part for part in (date, "" if company else writer.theme.brand or "") if part), 10, "muted")
+    if company:
+        company_details(writer)
     page_break(writer)
+
+
+# the brand's address lines and its partner logos in rows, for any number of either
+def company_details(writer):
+    for line in writer.theme.address:
+        plain(writer, writer.body.add_paragraph(), line, 9, "muted")
+    places = logo_row([logo_ratio(path) for path in writer.theme.partners], writer.width * PARTNER_ROW_SHARE, PARTNER_ROW_HEIGHT, PARTNER_GAP)
+    paragraph = None
+    for path, (x, _, width, height) in zip(writer.theme.partners, places):
+        if paragraph is None or x == 0:
+            paragraph = writer.body.add_paragraph()
+            paragraph.paragraph_format.space_before = Pt(8)
+        else:
+            paragraph.add_run("    ")
+        paragraph.add_run().add_picture(str(path), width=Cm(width), height=Cm(height))
 
 
 # draws the Word cover with the configured brand hook

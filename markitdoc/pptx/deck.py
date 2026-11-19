@@ -96,6 +96,7 @@ class Deck:
         self.title, self.section_title, self.slide, self.notes, self.footnotes = "", "", None, [], []
         self.measured = {}
         self.photo_side, self.card_turn, self.last_cards = "right", 0, ""
+        self.title_on_cover = False
         self.branded = theme.master is not None
         if self.branded:
             self.drop_slides_after(1)

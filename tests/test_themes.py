@@ -26,7 +26,7 @@ class TestLoadTheme:
     def test_should_find_brand_files_next_to_the_theme_and_fonts_in_the_bundle(self):
         theme = load_theme("acme")
 
-        assert theme.logo.name == "logo.png" and theme.logo.is_file() and theme.master.is_file()
+        assert theme.logo.name.startswith("logo-") and theme.logo.is_file() and theme.master.is_file()
         assert all(path.is_file() for path in theme.fonts.values())
 
     def test_should_map_the_legacy_default_name_to_professional(self):

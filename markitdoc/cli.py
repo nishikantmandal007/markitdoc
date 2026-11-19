@@ -26,7 +26,7 @@ def main(arguments=None):
     render_command.add_argument("--cache", type=Path, help="cache folder for images and diagrams")
     guide_command = commands.add_parser("guide", help="print the markdown guide for a format")
     guide_command.add_argument("format", nargs="?", default="pdf", choices=FORMATS)
-    guide_command.add_argument("--level", default="full", choices=GUIDE_LEVELS, help="core is the language card alone, full adds the layout catalogue")
+    guide_command.add_argument("--level", default="full", choices=GUIDE_LEVELS, help="writing is read before every document; layouts, styles and charts on demand; core is the language card; full is all of it")
     skill_command = commands.add_parser("skill", help="write SKILL.md and its reference files")
     skill_command.add_argument("-o", "--output", type=Path, default=Path("markitdoc-skill"), help="folder to write into")
     check_command = commands.add_parser("check", help="report problems in a markdown file without rendering it")

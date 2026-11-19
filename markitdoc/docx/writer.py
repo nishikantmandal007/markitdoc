@@ -27,11 +27,13 @@ from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
 from markitdoc.utils.helpers import MONO_FONT, lifted, long_date, office_font
+from markitdoc.visuals.logos import logo_box
 from markitdoc.visuals.photo_fit import fitted_image
 
 WHITE = (255, 255, 255)
 NUMBER_FORMATS = {"arabic": "decimal", "roman": "lowerRoman", "Roman": "upperRoman", "alpha": "lowerLetter", "none": "none"}
 BULLET_MARKS = ("•", "–", "◦")
+HEADER_LOGO_WIDTH, HEADER_LOGO_HEIGHT = 3.0, 0.6
 WORD_ALIGNS = {"L": WD_ALIGN_PARAGRAPH.LEFT, "C": WD_ALIGN_PARAGRAPH.CENTER, "R": WD_ALIGN_PARAGRAPH.RIGHT, "J": WD_ALIGN_PARAGRAPH.JUSTIFY}
 LIST_FORMATS = {"decimal": "decimal", "alpha": "lowerLetter", "upper-alpha": "upperLetter", "roman": "lowerRoman", "upper-roman": "upperRoman",
                 "legal": "decimal"}
@@ -332,6 +334,10 @@ def setup_chrome(writer, cover):
     section.different_first_page_header_footer = cover
     header = section.header.paragraphs[0]
     header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    if writer.theme.logo:
+        width, height = logo_box(writer.theme.logo, HEADER_LOGO_WIDTH, HEADER_LOGO_HEIGHT)
+        header.add_run().add_picture(str(writer.theme.logo), width=Cm(width), height=Cm(height))
+        header.add_run("   ")
     page_fields(writer, header, str(writer.meta.get("header", "")).strip().strip("'\"") or writer.title)
     border_bottom(header, writer.hex("rule"), 4, 4)
     footer = section.footer.paragraphs[0]

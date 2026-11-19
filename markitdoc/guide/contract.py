@@ -1,11 +1,13 @@
 from markitdoc.errors import UnsupportedFormatError
 from markitdoc.guide.language import core_card
+from markitdoc.guide.support import support_table
 from markitdoc.markup.elements import CALLOUT_KINDS, CHART_SIZES, LIST_SCHEMES, PARAGRAPH_ALIGNMENTS, SPAN_COLORS, TABLE_STYLES
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pptx.designed.titles import MAX_PER_SLIDE
 from markitdoc.pptx.render import DRAWERS
-from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
+from markitdoc.themes.brands import brand_summary, registered_brands
+from markitdoc.themes.theme_constants import DEFAULT_PALETTE, FONT_PAIRS, PALETTES, PAPERS, STYLE_SELECTORS, TEXT_SIZES
 from markitdoc.visuals.diagrams import DIAGRAM_TYPES
 from markitdoc.visuals.infographics import INFOGRAPHIC_TEMPLATES
 
@@ -74,7 +76,19 @@ title: Five years in numbers
 title: The next five years
 body: The programme now moves upstream, where the same methods can protect three more towns.
 :::"""
-GUIDE_LEVELS = ("core", "full")
+GUIDE_LEVELS = ("core", "full", "writing", "layouts", "styles", "charts")
+CHART_TYPES = ("bar", "horizontal_bar", "stacked_bar", "line", "pie", "donut", "waterfall")
+STYLE_EXAMPLE = """page: {paper: a4, margins: wide}
+pages:
+  default: {header: "{section} | | {client}", footer: " | {page} of {pages} | "}
+  wide:    {orientation: landscape}
+fonts: {display: "Playfair Display", serif: "PT Serif"}
+text:  {font: serif, size: 10.5pt, align: justify}
+set:
+  h2: {font: display, color: accent, numbering: "1"}
+  paragraph.first: {dropcap: 2}
+styles:
+  pull: {kind: block, based-on: quote, size: l, align: center, border: top}"""
 CONTRACT_INFOGRAPHICS = ("sequence-steps-badge-card", "list-grid-badge-card", "list-pyramid-badge-card")
 
 
@@ -107,201 +121,265 @@ def layout_rule(name, layout):
     return f"- {name}: {LAYOUT_PURPOSES[name]}." + (f"\n    {'; '.join(parts)}" if parts else "")
 
 
-# builds the PDF design instructions for document generation
-def pdf_contract() -> str:
-    infographics = "\n".join(f"  - {name} ({INFOGRAPHIC_TEMPLATES[name][0]}): {INFOGRAPHIC_TEMPLATES[name][1]}"
-                              for name in CONTRACT_INFOGRAPHICS)
-    palette_lines = "\n".join(f"  - {name}: {description}" for name, (_, _, description) in PALETTES.items())
-    font_lines = "\n".join(f"  - {name}: {pair[4]}" for name, pair in FONT_PAIRS.items())
-    return f"""PDF DESIGN GUIDE. Read it fully, then call generate_document once with the finished markdown.
-You are the editor and the designer: decide what the reader needs and shape the pages for it. The engine is
-deterministic: it measures every page, gently shrinks or tightens text to fit, and turns a page that still does not
-fit into plain text, so the document always renders. You choose content, structure and style; the engine guarantees
-fit, contrast and typography.
+# the layouts reference: every designed layout with its purpose, slots and limits
+def layouts_text():
+    return ("# Layouts\n\nDesigned pages and slides. Each is a fenced block; text between blocks flows as normal pages:\n"
+            "::: {.<layout> variant=<name> image=\"<photo query>\"}\n<slot>: <value on ONE line; separate paragraphs inside a slot with ' || '>\n"
+            "<part> — <part>      (one item per line)\n:::\n\n") + "\n".join(
+        layout_rule(name, layout) for name, layout in LAYOUTS.items() if name in LAYOUT_PURPOSES) + "\n"
 
-Front matter:
----
-palette: <name>        (choose the one whose world fits THIS subject; all are professional, there is no default)
-paper: {' | '.join(PAPERS)}   (white = crisp corporate; warm = soft cream, editorial and long reads)
-fonts: <pair>          (choose the typography that suits the reader; see Fonts)
-text_size: {' | '.join(TEXT_SIZES)}   (small = dense reference, regular = most documents, large = easy reading, letters)
-tables: {' | '.join(TABLE_STYLES)}   (lined = clean rules, best for most; striped = long tables; boxed = dense reference grids)
-images: true | false   (true ONLY when the user asks for pictures or photos; false is the normal default)
-photos: natural | duotone | mono   (with images: natural = true colour; duotone = tinted in the palette, unifies
-                       mixed photos, editorial; mono = black and white, archival or sober)
-toc: true | false      (true for documents longer than about 8 pages)
-numbering: decimal     (optional: numbers ## and ### headings as 1, 1.1 - for technical, legal and policy documents)
-header: <text>         (optional running header; fields {{title}} {{section}} {{date}} {{page}} {{pages}};
-                       {{section}} is the current ## section, good for long reports)
-footer: <text>         (optional footer, same fields, e.g. "{{title}} · {{date}}")
-author: <name>         (optional; the document's author in the file properties)
-classification: <text> (optional label printed at the top of every page, e.g. Confidential, Internal, Draft)
-watermark: <text>      (optional faint diagonal word on every page, e.g. Draft or Sample; only when asked)
-date: YYYY-MM-DD       (optional; the document date used by {{date}})
-lang: en | de | fr | es  (document language; sets hyphenation and the language screen readers use)
-notes: section | page  (footnotes at the end of each section (default) or at the bottom of the page they are cited on;
-                        page suits legal, academic and policy documents)
----
-Palettes (one accent colour used sparingly, mostly neutral pages):
-{palette_lines}
-Fonts (curated pairs that always work together; a brand template keeps its own):
-{font_lines}
-A brand look is chosen with the template argument, never in the markdown.
 
-Most documents are mainly normal pages (flow): headings, paragraphs, lists, tables, charts and callouts that fill
-every page, like a well-set consultancy report. Designed pages are a few strong moments, not the structure.
-Without images: a light cover, then flow, with at most one figures or summary page and about one other designed page
-per 6 pages; write steps, findings, comparisons and dates as numbered lists, tables or a diagram inside flow, not as
-process, keypoints, comparison or timeline pages. A designed page with too little content is printed as normal text.
-Designed pages are fenced blocks; text between them flows as normal pages:
-::: {{.<layout> variant=<name> image="<photo query>"}}
-<slot>: <value on ONE line; separate paragraphs inside a slot with ' || '>
-<part> — <part>      (one item per line)
-:::
-Element settings in normal pages: a line '{{.lined}}', '{{.striped}}' or '{{.boxed}}' directly after a table styles
-that table; ```chart {{size=half}} makes a chart smaller (use only for a minor supporting chart; most charts are full width).
+# the styles reference: palettes, fonts, papers, selectors, an example style file and the support table
+def styles_text():
+    palettes = "\n".join(f"- {name}: {description}" for name, (_, _, description) in PALETTES.items())
+    fonts = "\n".join(f"- {name}: {pair[4]}" for name, pair in FONT_PAIRS.items())
+    return f"""# Styles
 
-LAYOUTS (word counts are guides; text is measured and gently shrunk to fit):
-{chr(10).join(layout_rule(name, layout) for name, layout in LAYOUTS.items())}
+Front matter settings: palette, paper ({' | '.join(PAPERS)}), fonts, text_size ({' | '.join(TEXT_SIZES)}), tables ({' | '.join(TABLE_STYLES)}).
 
-PLANNING
-- Decide what the reader must take away, then choose each page from its content: headline numbers -> figures;
-  findings or recommendations -> keypoints; argument or story -> chapter; options or before/after -> comparison;
-  SWOT, risks or quadrants -> matrix; steps -> process; dates -> timeline; one striking statement -> quote;
-  evidence, tables, charts and long text -> flow. Use only what the content needs; there is no fixed sequence.
-- A designed page must be full; never the same designed layout twice in a row. Quote and closing pages only
-  with images: true; otherwise end with a normal ## section.
-- Length: a designed page is one page; a flow page holds about 450 words. Hit the length the user asked for.
-- Chapter body: use two substantial paragraphs, one per column (roughly 80-100 words each); text is measured, so use
-  the page-fit check rather than adding filler when the content is shorter.
-- Facts: never invent specific dates, years or figures; use what the user gave, well-known history, or clearly
+## Palettes
+{palettes}
+
+## Font pairs
+{fonts}
+
+## Selectors
+{' '.join(STYLE_SELECTORS)}; sub-parts table.header, paragraph.first. List styles on a block before a list: {' '.join('{.' + name + '}' for name in LIST_SCHEMES)}.
+
+## A style file
+```yaml
+{STYLE_EXAMPLE}
+```
+
+## Support by format
+{support_table()}
+"""
+
+
+# the charts reference: chart JSON, callouts, diagram types and infographic templates
+def charts_text():
+    templates = "\n".join(f"- {name} ({kind}): {use}" for name, (kind, use) in INFOGRAPHIC_TEMPLATES.items())
+    return f"""# Charts, diagrams and infographics
+
+## Charts
+A ```chart fence holds JSON with type ({' | '.join(CHART_TYPES)}), title, labels and datasets [{{label, values}}], one value per label.
+Sizes: {', '.join(CHART_SIZES)} (```chart {{size=half}}). Give a chart {{#id caption="..."}} to number it and cite it as [@id].
+Callouts: {', '.join('> **' + kind + ':**' for kind in CALLOUT_KINDS)}.
+
+## Diagrams
+A ```mermaid fence. The first line names the type, one of: {', '.join(DIAGRAM_TYPES)}. Keep labels short and use about 12 nodes at most.
+
+## Infographics
+A ```infographic fence: 'infographic <template>', then 'data' with a title and the template's list. Templates:
+{templates}
+"""
+
+
+WRITING_HEADS = {
+    "pdf": "PDF WRITING GUIDE.",
+    "pptx": "SLIDE WRITING GUIDE (pptx).",
+    "docx": "WORD WRITING GUIDE (docx).",
+}
+STRUCTURES = {
+    "pdf": """STRUCTURE
+- Open a report with a cover block, then write normal markdown; pages break by themselves (about 450 words a page):
+  ::: {.cover}
+  kicker: Annual review
+  title: Restoring the River Valley
+  subtitle: One sentence on what the document covers.
+  :::
+  A letter or memo has no cover: start with '# Title' or the letter itself.
+- ## for sections, ### for subsections; never bold text as a heading. Hit the length the user asked for.
+- toc: true in the front matter for documents longer than about 8 pages; numbering: decimal numbers headings
+  1, 1.1 for technical, legal and policy documents.
+- Write steps, findings, comparisons and dates as numbered lists, tables or a diagram. Other designed pages (summary,
+  figures, timeline, chapter and more) are optional strong moments, about one per 6 pages: read the layouts part first.""",
+    "pptx": """HOW A DECK READS (16:9 slides)
+- Open with a cover block, then every ## heading starts a slide:
+  ::: {.cover}
+  kicker: Board update
+  title: Restoring the River Valley
+  subtitle: One sentence on what the deck covers.
+  :::
+- Write each ## as an action title: one sentence with the takeaway, at most about 12 words ('Enterprise drove 67% of
+  growth', not 'Revenue overview'). Reading only the titles must tell the story.
+- One message per slide, with ONE kind of evidence under its heading: 2-4 bullets written '- **Label** — explanation'
+  (they become cards; a short paragraph before them becomes a statement panel), up to 6 short bullets, one table of
+  at most 5 columns, one chart or one diagram. Layouts vary by themselves: write content, not layout.
+- Bullets of at most about 15 words; longer text is shortened on the slide and kept in the speaker notes.
+- A typical deck is 8-15 slides: cover, evidence slides, and a last slide with the decision or next step. For a
+  headline-numbers slide, a timeline, a comparison or photo slides, read the layouts part first.
+- In a table, cells written High, Medium, Low or None become Harvey balls (for ratings, not numbers).
+- Sample figures: say once that they are samples, never in every bullet.""",
+    "docx": """STRUCTURE (an editable Word file: real headings, editable tables, numbered lists, footnotes, page numbers)
+- Open a report with a cover block (it becomes a title page), then write normal markdown:
+  ::: {.cover}
+  kicker: Annual review
+  title: Restoring the River Valley
+  subtitle: One sentence on what the document covers.
+  :::
+  A letter or memo has no cover: start with '# Title' or the letter itself.
+- ## for sections, ### for subsections; the contents page lists them. Never bold text as a heading.
+- A page holds about 450 words (less with tables and charts): a 10-page document is about 3,500-4,000 words.
+  Do not pad; cut before you pass the page count the user asked for.
+- toc: true in the front matter for documents longer than about 8 pages; numbering: decimal numbers headings
+  1, 1.1 for technical, legal and policy documents. +++ on its own line starts a major part on a new page.
+- Charts, diagrams and equations become pictures with numbered captions; tables stay editable. In a table, cells
+  written High, Medium, Low or None become Harvey balls.
+- Write steps, findings, comparisons and dates as numbered lists or tables. Designed blocks (summary, figures,
+  timeline and more) become sections in the flow: read the layouts part first.""",
+}
+WRITING_MARKDOWN = """- Facts: never invent specific dates, years or figures; use what the user gave, well-known history, or clearly
   labelled sample figures.
-- images: true -> add 'image: <query>' to the cover and to 1-3 chapter or feature pages: 2-4 English words naming a
-  concrete, photographable subject an encyclopedia photo archive holds (a landmark, object, vehicle, machine, place,
-  historic event). Be specific: subject + setting + light, like "reed marsh at sunrise", "heron in reeds", "stone
-  bridge in fog", never abstract words like "growth" or "teamwork". Never moods, lifestyle scenes, people's or
-  company names, user data or document content.
-- When changing an existing document, return the full markdown with only the requested change.
 
-MARKDOWN YOU CAN USE IN NORMAL PAGES (settings go on their own line DIRECTLY under the block they style)
-- Text: **bold**, *italic*, ~~strikethrough~~, [words]{{.underline}}, `code`, [link text](https://...) (clickable),
-  H~2~O and x^2^ (sub/superscript). Colour a few words with palette roles: {' '.join('[words]{.' + name + '}' for name in SPAN_COLORS)}
-  (danger/success for good and bad numbers; highlight = a marker-pen band behind the words; use sparingly).
-- Maths: inline $x^2 + y_i$ and display equations on their own lines between $$ and $$ (LaTeX syntax:
-  \\frac, \\sqrt, \\sum, Greek letters). Money like $25 is never treated as maths.
-- Paragraph settings: {' '.join('{.' + name + '}' for name in [*PARAGRAPH_ALIGNMENTS, 'indent', 'lead'])}
-  (lead = larger opening paragraph; indent = one step in; justify for long formal prose).
-- Lists: '-' bullets nest by indenting (markers change per level); '1.' numbers nest as 1 / a / i;
-  '- [ ]' and '- [x]' make checkboxes. A style line on its own just BEFORE a numbered list sets its numbering:
-  {' '.join('{.' + name + '}' for name in LIST_SCHEMES)} (legal = 1, 1.1, 1.1.1).
-- Headings and links: '## Risks {{#risks}}' gives a heading an id; '[see the risks](#risks)' links to it.
-- Containers inside normal pages: {', '.join(f"'::: {{.{name}}}'" for name in FLOW_CONTAINERS)} ... ':::'. box = shaded panel
-  (add title="Key facts"), sidebar = narrow panel on the right, columns = two columns (split at ### headings).
-- Table captions: a line 'Table: what the table shows' just before the table (numbered automatically).
-- Definition list: a term on one line, then ': definition' on the next.
-- Footnotes: text[^1] then '[^1]: note' anywhere; notes print at the end of that section.
-- Tables: column alignment with |:---|:---:|---:|; a style line under the table: {' '.join('{.' + name + '}' for name in TABLE_STYLES)}.
-- Charts: ```chart (sizes: {', '.join(CHART_SIZES)}); callouts: {', '.join("> **" + kind + ":**" for kind in CALLOUT_KINDS)}.
-- Figures (only with images: true): ![a concrete photographable subject](figure) on its own line; it is captioned
-  "Figure N" with your text, which is also the photo search, so follow the image-query rules.
-
-FLOW PAGES
+MARKDOWN
+- Text: **bold**, *italic*, `code`, [link](https://...); footnote text[^1] with '[^1]: note' on its own line.
+  Colour a few words, sparingly: [words]{.accent} [words]{.danger} [words]{.success} [words]{.muted}.
+- Lists: '-' bullets and '1.' numbers, nested by indenting; '- [ ]' and '- [x]' make checkboxes.
+- Tables: a header row, at most 7 columns (5 on slides), units in the headers; a line 'Table: what it shows'
+  just before the table numbers it.
 - Callouts: '> **Note:** ...', '> **Action:** ...', '> **Risk:** ...', '> **Key figure:** 42% — what it means'.
-- Charts: ```chart with JSON keys type (bar | horizontal_bar | stacked_bar | line | pie | donut | waterfall), title, labels,
-  datasets [{{label, values}}], one value per label.
-- Tables: header row, 2-7 columns, units in headers.
-- Never draw diagrams with text characters; use a ```mermaid diagram, a layout, a table or an infographic.
-- Example of a complete short report (structure only; real documents are longer):
-{EXAMPLE_DOCUMENT}
-- Diagrams: a ```mermaid fence draws flows, sequences, states, structures and timelines in the document's colours
-  and fonts. Use a diagram instead of drawing with text characters. The first line names the type, one of:
-  {', '.join(DIAGRAM_TYPES)}. Keep labels short (2-4 words) and use at most about 12 nodes.
-  Use flowchart LR for a simple chain of steps; never draw a plain list as a diagram, write the list. Add a 'title <text>' line
-  after the type line to give it a numbered caption. Example:
+- Shaded panel: '::: {.box title="Key facts"}' ... ':::'.
+- Images: ![what it shows](file.png){width=1/2} sizes an image by width, {height=60mm} by height, both together fit it in
+  that box, {ratio=16:9} crops it to that shape; an image always shrinks to fit the page.
+- Maths: $x^2$ inline, display equations between $$ lines (LaTeX). Money like $25 is never maths.
+- Chart:
+  ```chart
+  {"type": "bar", "title": "Wetland area (ha)", "labels": ["2021", "2025"], "datasets": [{"label": "Area", "values": [120, 410]}]}
+  ```
+  type: bar | horizontal_bar | stacked_bar | line | pie | donut | waterfall. Values are plain numbers (no %, units
+  or commas), exactly one per label, or the chart is left out.
+- Never draw diagrams with text characters. Diagrams (```mermaid), infographics and chart options: charts part."""
+CHOOSING_LAYOUTS = """CHOOSING DESIGNED PAGES
+- From the content: headline numbers -> figures; findings or recommendations -> keypoints; argument or story -> chapter;
+  options or before/after -> comparison; SWOT, risks or quadrants -> matrix; steps -> process; dates -> timeline;
+  one striking statement -> quote. Use only what the content needs; there is no fixed sequence.
+- A designed page must be full; never the same layout twice in a row; about one per 6 pages. A page with too little
+  content is printed as normal text. Quote and closing pages only with images: true.
+- Chapter body: two substantial paragraphs, one per column (roughly 80-100 words each).
+
+PHOTOS (only with images: true)
+- photos: natural | duotone | mono (natural = true colour; duotone = tinted in the palette, unifies mixed photos;
+  mono = black and white, archival or sober).
+- Add 'image: <query>' to the cover and to 1-3 chapter or feature pages: 2-4 English words naming a concrete,
+  photographable subject an encyclopedia photo archive holds (a landmark, object, vehicle, machine, place, historic
+  event). Be specific: subject + setting + light, like "reed marsh at sunrise" or "stone bridge in fog", never abstract
+  words like "growth", moods, people's or company names, user data or document content.
+- In normal pages, ![a concrete photographable subject](figure) on its own line becomes a captioned "Figure N"; its
+  text is also the photo search."""
+SLIDE_EXTRAS = """SLIDE VISUALS
+- A timeline whose entries are date ranges ('Q1 2026 – Q3 2026', 'Jan – Apr 2027') becomes a Gantt chart; use one unit
+  (quarters, months or years) for every entry. A figure whose value is a percentage gets a progress ring.
+- Photos (only with images: true): cover, divider, quote and closing blocks with image="<query>" fill the whole slide
+  under a dark overlay; chapter and feature blocks with image="<query>" become split slides. In a ## section,
+  ![<query>](figure) with a short paragraph makes a split slide, alone under a heading a full-screen photo, two or three
+  in a row a photo grid. Write each query as the subject's encyclopedia name, proper name first ('Apollo 11 launch').
+  Use photos on about a third of the slides at most."""
+WORD_EXTRAS = """IN WORD
+The document flows; there are no fixed pages. Designed blocks become sections: cover becomes a title page; figures and
+summary become a row of key numbers; keypoints and process become numbered blocks; timeline becomes a dated table (or a
+Gantt chart when entries are date ranges); comparison and matrix become tables; quote and closing become a pull quote
+and a final section."""
+CHART_EXTRAS = """- Waterfall: a bridge from one total to another, e.g. last year's profit, each driver up or down, this year's profit:
+  ```chart
+  {"type": "waterfall", "labels": ["2025 profit", "New customers", "Hosting"], "values": [12, 6.5, -3.4], "total": "2026 profit"}
+  ```
+  The first value is the starting total; the rest are changes (negative for decreases); "total" adds the end bar.
+- Diagrams: keep labels short (2-4 words) and use at most about 12 nodes; flowchart LR for a simple chain of steps;
+  never draw a plain list as a diagram. A 'title <text>' line after the type line gives it a numbered caption:
   ```mermaid
   flowchart LR
     title Approval path
-    A[Request] --> B{{Approved?}}
+    A[Request] --> B{Approved?}
     B -->|Yes| C[Deliver]
     B -->|No| D[Revise]
   ```
-- Infographics (use sparingly): ```infographic fence, first line 'infographic <template>', then 'data' with title
-  and the template's list: '- label <text>' with an indented 'desc <text>'. Templates:
-{infographics}"""
+- Infographics, used sparingly: after 'data' and the title, the template's list is '- label <text>' with an indented
+  'desc <text>'."""
 
 
-# builds the Word document instructions for document generation
-def word_contract() -> str:
-    return f"""WORD DOCUMENT GUIDE (docx). The same markdown as PDF, rendered as an editable Word document: real headings,
-an automatic contents page (toc: true), styled tables, numbered lists, footnotes and page numbers. Read this part first;
-the PDF guide below defines the front matter, block syntax and markdown.
-- The document flows; there are no fixed pages. Designed blocks become sections inside it: cover becomes a title page;
-  figures and summary become a row of key numbers; keypoints and process become numbered blocks; timeline becomes a
-  dated table (or a Gantt chart when entries are date ranges); comparison and matrix become tables; quote and closing
-  become a pull quote and a final section.
-- Length: a Word page holds about 450 words of body text (less with tables and charts). Hit the page count the user
-  asked for: a 10-page document is about 3,500-4,000 words in total. Do not pad; cut before you exceed it.
-- Use +++ only to start a major part on a new page (it moves the next heading to a new page; never stack two).
-- Use ## for sections and ### for subsections; the contents page lists them. Never use bold text as a heading.
-- Charts, diagrams, photos and equations are placed as pictures with numbered captions; tables stay editable.
-- Comparison tables with High / Medium / Low / None (or Full / Partial) become Harvey balls; a chart with
-  "type": "waterfall" draws a bridge from one total to another.
-
-{pdf_contract()}"""
+# the front matter every document can set, with the palette and font names the renderer knows
+def front_matter_rules():
+    palettes = "; ".join(f"{name} ({description.split(': ', 1)[-1]})" for name, (_, _, description) in PALETTES.items())
+    fonts = "; ".join(f"{name} ({pair[4]})" for name, pair in FONT_PAIRS.items())
+    return f"""FRONT MATTER (every key is optional; leave one out to get its default)
+---
+palette: <name>          ({DEFAULT_PALETTE} when left out)
+paper: {' | '.join(PAPERS)}      (warm = soft cream, editorial and long reads)
+fonts: <pair>
+images: true             (ONLY when the user asks for photos; then read the layouts part)
+---
+Palettes, by subject: {palettes}.
+Fonts: {fonts}.
+Headers, footers, watermark, text size, table styles and custom styles: styles part.{brands_rule()}"""
 
 
-# builds the slide design instructions for document generation
-def slides_contract() -> str:
+# the brands an application registered, so a model can choose one only when the user asks for it or the document has it
+def brands_rule():
+    brands = registered_brands()
+    if not brands:
+        return ""
+    lines = "\n".join(f"- {brand_summary(name)}" for name in brands)
+    return (f"\nBrands, used only when the user asks for one or the current document has it (the brand sets colours and fonts):\n"
+            f"{lines}")
+
+
+# the part a model reads before every document: front matter, structure for the format and the everyday markdown
+def writing_part(output_format):
+    head = (f"{WRITING_HEADS[output_format]} Read it before every document, then submit the finished markdown once. You choose "
+            "content and structure; the engine guarantees fit, contrast and typography, and prints a designed page that does not "
+            "fit as normal text.")
+    return "\n\n".join((head, front_matter_rules(), STRUCTURES[output_format] + "\n" + WRITING_MARKDOWN))
+
+
+# the part for designed pages and photos: block syntax, how to choose, every layout and a complete example
+def layouts_part(output_format):
+    extras = {"pptx": SLIDE_EXTRAS + "\n\n" + slide_blocks(), "docx": WORD_EXTRAS}.get(output_format, "")
+    return "\n\n".join(part for part in (layouts_text(), CHOOSING_LAYOUTS, extras, "Example:\n" + EXAMPLE_DOCUMENT) if part)
+
+
+# the settings and markdown an ordinary document rarely needs, then the style language
+def style_settings():
+    return f"""{styles_text()}
+## More front matter
+text_size: {' | '.join(TEXT_SIZES)}; tables: {' | '.join(TABLE_STYLES)} (a line '{{.lined}}', '{{.striped}}' or '{{.boxed}}' directly
+under a table styles that table); header and footer text with the fields {{title}} {{section}} {{date}} {{page}} {{pages}};
+author; classification (a label on every page, e.g. Confidential); watermark (a faint diagonal word, only when asked);
+date: YYYY-MM-DD; lang: en | de | fr | es; notes: section | page (footnotes at the end of each section or on their page).
+
+## More markdown
+- ~~strikethrough~~, [words]{{.underline}}, H~2~O and x^2^; colours {' '.join('[words]{.' + name + '}' for name in SPAN_COLORS)}.
+- Paragraph settings on their own line under the paragraph: {' '.join('{.' + name + '}' for name in [*PARAGRAPH_ALIGNMENTS, 'indent', 'lead'])}.
+- A style line just before a numbered list sets its numbering: {' '.join('{.' + name + '}' for name in LIST_SCHEMES)} (legal = 1, 1.1, 1.1.1).
+- '## Risks {{#risks}}' gives a heading an id; '[see the risks](#risks)' links to it.
+- Containers: {', '.join(f"'::: {{.{name}}}'" for name in FLOW_CONTAINERS)}: box = shaded panel, sidebar = narrow panel on the
+  right, columns = two columns split at ### headings.
+- Definition list: a term on one line, then ': definition' on the next. Column alignment with |:---|:---:|---:|.
+- LaTeX in $...$ and $$ blocks: \\frac, \\sqrt, \\sum, Greek letters.
+"""
+
+
+# how each designed block becomes a slide
+def slide_blocks():
     slide_lines = "\n".join(f"- {name}: {LAYOUT_PURPOSES[name]}" + (f" (up to {MAX_PER_SLIDE[name]} items per slide; more continue on the next)"
                                                                     if name in MAX_PER_SLIDE else "") for name in DRAWERS)
-    return f"""SLIDE DESIGN GUIDE (pptx). The same markdown as PDF, rendered as 16:9 slides. Read this part first; the PDF guide
-below defines the front matter, block syntax and markdown, and applies unless this part says otherwise.
-
-HOW A DECK READS
-- Every ## heading starts a slide. Write it as an action title: one sentence that states the takeaway, at most about
-  12 words ('Enterprise drove 67% of growth', not 'Revenue overview'). Reading only the titles must tell the story.
-- One message per slide. Under a heading put ONE kind of evidence: 2-4 bullets written '- **Label** — explanation'
-  (they become a row of cards), up to 6 short bullets, one table, one chart, one diagram or one figure.
-- Slides show short text. Write bullets of at most about 15 words; longer prose is shortened on the slide and kept
-  in full in the speaker notes, so put talk-track detail in plain paragraphs only when the speaker needs it.
-- A typical deck is 8-15 slides: a cover first, then a figures or summary slide, the evidence slides, and a closing
-  slide with the decision or next step. Use designed blocks for the strong moments; most slides are ## sections.
-- Tables: at most 5 columns; long tables continue on the next slide with the header repeated. Charts: one per slide.
-- Sample figures: say once that figures are samples (in the lead or a footnote), never inside every card or bullet.
-- Data visuals, used only when the content has that shape of data:
-  - waterfall: a bridge from one total to another, e.g. last year's profit, each driver up or down, this year's profit.
-    ```chart {{"type": "waterfall", "labels": ["2025 profit", "New customers", "Hosting"], "values": [12, 6.5, -3.4], "total": "2026 profit"}}```
-    The first value is the starting total; the rest are changes (negative for decreases); "total" adds the end bar.
-  - ratings in a comparison table: write High, Medium, Low, None (or Full, Partial) in a column and every cell becomes a
-    Harvey ball (a filled circle showing the level). Use it for qualitative comparisons, not for numbers.
-  - roadmap: a timeline whose entries are date ranges ('Q1 2026 – Q3 2026', 'Jan – Apr 2027', '2026 – 2028') becomes a
-    Gantt chart with bars on a time axis. Use one unit (quarters, months or years) for every entry.
-  - a figure whose value is a percentage ('82%') gets a progress ring showing that share. Only real percentages.
-- Bullets written '- **Label** — explanation' become cards; a short paragraph before them becomes a statement panel.
-  Consecutive slides vary their layout automatically, so write content, not layout.
-- Photos (only with images: true). Each photo becomes a full-bleed or half-bleed slide, never a small framed picture:
-  - cover, divider, quote and closing blocks with image="<query>" fill the whole slide with the photo under a dark
-    overlay, with white text on top. Use them for the opening, each major part, a key quotation and the ending.
-  - chapter and feature blocks with image="<query>" become split slides: the photo fills one half edge to edge and
-    the title and text sit on the other half. Sides alternate through the deck.
-  - in a ## section, ![<query>](figure) with a short paragraph makes a split slide; ![<query>](figure) alone under a
-    heading makes a full-screen photo with the title on it; two or three figures in a row make a photo grid.
-  - Write each query as the subject's encyclopedia name, the way a photo of it would be titled: 'Apollo 11 launch',
-    'Chiswick House', 'Royal Crescent Bath'. Put the proper name first. A photo is shown only when its title matches.
-  - Use photos on about a third of the slides at most; the rest carry the evidence (figures, cards, charts, tables).
-
-DESIGNED BLOCKS AS SLIDES
-{slide_lines}
-
-{pdf_contract()}"""
+    return f"DESIGNED BLOCKS AS SLIDES\n{slide_lines}"
 
 
-# the writing guide an AI model should read before producing markdown for output_format: the language core card, then
-# (level "full") the layout catalogue
+# the guide for output_format at one level: core is the language card, writing is read before every document, layouts,
+# styles and charts are loaded when a document needs them, and full is all of it
 def guide(output_format="pdf", level="full"):
-    writers = {"pdf": pdf_contract, "pptx": slides_contract, "docx": word_contract}
-    if output_format not in writers:
-        raise UnsupportedFormatError(f"No guide for {output_format!r}, expected one of {', '.join(writers)}")
-    if level not in GUIDE_LEVELS:
+    if output_format not in WRITING_HEADS:
+        raise UnsupportedFormatError(f"No guide for {output_format!r}, expected one of {', '.join(WRITING_HEADS)}")
+    parts = {
+        "core": lambda: core_card(output_format),
+        "writing": lambda: writing_part(output_format),
+        "layouts": lambda: layouts_part(output_format),
+        "styles": lambda: style_settings() + "\n" + core_card(output_format),
+        "charts": lambda: charts_text() + CHART_EXTRAS,
+        "full": lambda: "\n\n".join((core_card(output_format), writing_part(output_format), layouts_part(output_format),
+                                     style_settings(), charts_text() + CHART_EXTRAS)),
+    }
+    if level not in parts:
         raise UnsupportedFormatError(f"No guide level {level!r}, expected one of {', '.join(GUIDE_LEVELS)}")
-    return core_card(output_format) if level == "core" else core_card(output_format) + "\n\n" + writers[output_format]()
+    return parts[level]()

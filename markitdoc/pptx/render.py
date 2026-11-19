@@ -100,6 +100,7 @@ def render_pptx(document: Document, theme: Theme, output_path: Path, images=None
         if deck.branded:
             cover = blocks[0] if blocks[0].layout == "cover" and drawable(blocks[0]) else None
             draw_brand_cover(deck, cover)
+            deck.title_on_cover = cover is None
             first = 1 if cover else 0
         for index, block in enumerate(blocks[first:], first):
             draw_block(deck, index, block)

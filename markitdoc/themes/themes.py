@@ -24,6 +24,7 @@ from markitdoc.themes.theme_constants import (
     TONES,
 )
 from markitdoc.utils.constants import ASSETS_FOLDER
+from markitdoc.visuals.logos import trimmed_logo
 
 logger = logging.getLogger(__name__)
 
@@ -156,8 +157,8 @@ def read_theme(name):
     logo = theme_asset(folder, data["logo"]) if data.get("logo") else None
     if logo and not logo.is_file():
         missing.append(str(logo))
-    partners = tuple((theme_asset(folder, entry["file"]), float(entry["height"])) for entry in data.get("partners") or [])
-    missing += [str(path) for path, _ in partners if not path.is_file()]
+    partners = tuple(theme_asset(folder, entry["file"] if isinstance(entry, dict) else entry) for entry in data.get("partners") or [])
+    missing += [str(path) for path in partners if not path.is_file()]
     master = theme_asset(folder, data["master"]) if data.get("master") else None
     if master and not master.is_file():
         missing.append(str(master))
@@ -165,6 +166,8 @@ def read_theme(name):
         raise ThemeError(f"Theme {name} points to missing files: {missing}")
     if data.get("cover") not in COVER_STYLES:
         raise ThemeError(f"Theme {name} has unknown cover style {data.get('cover')}")
+    logo = trimmed_logo(logo) if logo else None
+    partners = tuple(trimmed_logo(path) for path in partners)
     return Theme(name=name, brand=data.get("brand") or "", tagline=data.get("tagline") or "", logo=logo,
                  cover=data["cover"], fonts=fonts,
                  colors={**colors, "mood": colors["primary"], "second": colors["accent"], "glow": colors["primary"]}, moods=moods,
