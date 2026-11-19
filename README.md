@@ -96,8 +96,12 @@ markitdoc.register_brand("brand/")                  # brand/acme.yml, brand/logo
 markitdoc.render(markdown, "pdf", "out.pdf", template="acme")
 ```
 
-A theme file with `locked: true` keeps its own colours and fonts whatever the markdown asks for. Word headers and covers
-that a theme file cannot describe are drawn by hooks: `register_brand(folder, docx_chrome=..., docx_cover=...)`.
+A theme file with `locked: true` keeps its own colours and fonts whatever the markdown asks for. A brand can list any
+number of partner logos (`partners: [a.png, b.png]`) or none: logos are trimmed of empty margins, given the same visual
+weight and wrapped onto more rows when they do not fit. `::: {.cover variant=company}` shows the address and partner
+logos in every format. Markdown picks a brand with `template: acme` in its front matter, and the writing guide lists each
+registered brand with what it offers (`markitdoc.brand_summary("acme")`), so a model can choose when to use it. Word
+headers and covers that a theme file cannot describe are drawn by hooks: `register_brand(folder, docx_chrome=..., docx_cover=...)`.
 
 ### Offline by default
 

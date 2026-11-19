@@ -6,6 +6,7 @@ from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pptx.designed.titles import MAX_PER_SLIDE
 from markitdoc.pptx.render import DRAWERS
+from markitdoc.themes.brands import brand_summary, registered_brands
 from markitdoc.themes.theme_constants import DEFAULT_PALETTE, FONT_PAIRS, PALETTES, PAPERS, STYLE_SELECTORS, TEXT_SIZES
 from markitdoc.visuals.diagrams import DIAGRAM_TYPES
 from markitdoc.visuals.infographics import INFOGRAPHIC_TEMPLATES
@@ -310,8 +311,17 @@ images: true             (ONLY when the user asks for photos; then read the layo
 ---
 Palettes, by subject: {palettes}.
 Fonts: {fonts}.
-Headers, footers, watermark, text size, table styles and custom styles: styles part. A brand look: 'template: <brand>',
-only when the application names that brand."""
+Headers, footers, watermark, text size, table styles and custom styles: styles part.{brands_rule()}"""
+
+
+# the brands an application registered, so a model can choose one only when the user asks for it or the document has it
+def brands_rule():
+    brands = registered_brands()
+    if not brands:
+        return ""
+    lines = "\n".join(f"- {brand_summary(name)}" for name in brands)
+    return (f"\nBrands, used only when the user asks for one or the current document has it (the brand sets colours and fonts):\n"
+            f"{lines}")
 
 
 # the part a model reads before every document: front matter, structure for the format and the everyday markdown
