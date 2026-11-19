@@ -21,7 +21,7 @@ def test_should_keep_the_core_card_short_and_name_every_top_level_key():
 
 
 def test_should_put_the_core_card_before_the_catalogue_and_let_the_level_pick_it_alone():
-    assert markitdoc.guide("pptx").startswith("MARKITDOC LANGUAGE") and "SLIDE DESIGN GUIDE" in markitdoc.guide("pptx")
+    assert markitdoc.guide("pptx").startswith("MARKITDOC LANGUAGE") and "SLIDE WRITING GUIDE" in markitdoc.guide("pptx")
     assert markitdoc.guide("pdf", level="core") == core_card("pdf") and "LAYOUTS" not in markitdoc.guide("pdf", level="core")
     assert all("markitdoc " not in markitdoc.guide(name) and "generate_document" not in markitdoc.guide(name) for name in markitdoc.FORMATS)
     with pytest.raises(markitdoc.UnsupportedFormatError):
