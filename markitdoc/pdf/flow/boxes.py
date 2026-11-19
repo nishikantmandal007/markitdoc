@@ -5,7 +5,7 @@ from pathlib import Path
 from fpdf.enums import MethodReturnValue, XPos, YPos
 from PIL import Image, ImageDraw
 
-from markitdoc.markup.elements import image_size
+from markitdoc.markup.elements import cropped_picture, fitted_size, image_size, picture_ratio
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.references import caption_of
 from markitdoc.options import options_in_use
@@ -18,6 +18,7 @@ FLOAT_WRAPS = ("paragraph_open", "bullet_list_open", "ordered_list_open")
 BLOCK_TOKENS = ("fence", "hr", "code_block", "math_block")
 PLACEHOLDER_SHARE = 0.5
 PLACEHOLDER_WIDTH = 0.6
+CAPTION_ROOM = 14
 CAPTION_SCALE = 0.85
 
 
@@ -104,12 +105,17 @@ def add_picture(pdf: FlowPages, found):
     attributes = parse_attributes(written)
     look = pdf.styles.look("figure", attributes.classes, attributes.values, context=pdf.context)
     folders = options_in_use().style_folders
-    path = (Path(folders[0]) if folders else Path()) / source
+    path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")))
     natural = image_size(path)
-    asked = pdf.styles.length(look.width, pdf.area) if look.width else None
-    width = min(asked or (natural[0] if natural else pdf.area * PLACEHOLDER_WIDTH), pdf.area)
-    height = width * natural[1] / natural[0] if natural else width * PLACEHOLDER_SHARE
     caption = str(attributes.values.get("caption", ""))
+    room = pdf.h - pdf.t_margin - pdf.b_margin - (CAPTION_ROOM if caption or attributes.id else 0)
+    asked = pdf.styles.length(look.width, pdf.area) if look.width else None
+    asked_height = pdf.styles.length(attributes.values["height"], room) if "height" in attributes.values else None
+    if natural:
+        width, height = fitted_size(natural, asked, asked_height, pdf.area, room)
+    else:
+        width = min(asked or pdf.area * PLACEHOLDER_WIDTH, pdf.area)
+        height = width * PLACEHOLDER_SHARE
     if target := pdf.numbers.get(attributes.id):
         caption = caption_of(replace(target, text=caption))
     side = str(attributes.values.get("side", "")).lower()

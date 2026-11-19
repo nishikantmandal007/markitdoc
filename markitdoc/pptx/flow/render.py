@@ -4,7 +4,7 @@ from dataclasses import replace
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Pt
 
-from markitdoc.markup.elements import image_size
+from markitdoc.markup.elements import fitted_size, image_size
 from markitdoc.markup.inline import literal, plain_text
 from markitdoc.models.document import Block
 from markitdoc.pptx.blocks import place_box, place_columns
@@ -262,15 +262,17 @@ def draw_columns(deck, titles, lead, piece):
 
 # draws an image file at its asked width, beside the lead text when it asks for a side, with its caption
 def draw_file_image(deck, titles, lead, piece):
-    path, alt, width, side, caption = piece.data
+    path, alt, width, height, side, caption = piece.data
     natural = image_size(path)
     if not natural:
         logger.warning("Image file not found, its alt text is shown instead: %s", path)
         draw_text_slides(deck, titles, list(lead) + [Item(literal(f"[{alt}]"), "paragraph")])
         return
     beside = side in IMAGE_SIDES and bool(lead)
-    asked = deck.styles.length(width, CONTENT_WIDTH * 25.4) / 25.4 if width else CONTENT_WIDTH / 2 if beside else natural[0] / 25.4
-    drawn = min(asked, CONTENT_WIDTH - SIDE_TEXT_WIDTH - 0.4 if beside else CONTENT_WIDTH)
+    asked = deck.styles.length(width, CONTENT_WIDTH * 25.4) / 25.4 if width else CONTENT_WIDTH / 2 if beside and not height else None
+    asked_height = deck.styles.length(height, BODY_HEIGHT * 25.4) / 25.4 if height else None
+    room = CONTENT_WIDTH - SIDE_TEXT_WIDTH - 0.4 if beside else CONTENT_WIDTH
+    drawn = fitted_size((natural[0] / 25.4, natural[1] / 25.4), asked, asked_height, room, BODY_HEIGHT)[0]
     room = 0.0 if beside else lead_above(deck, titles, lead)
     slide = deck.new_slide(next(titles))
     top = BODY_TOP

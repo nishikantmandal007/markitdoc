@@ -31,8 +31,11 @@ from markitdoc.markup.elements import (
     TABLE_STYLES,
     chart_data,
     closing_index,
+    cropped_picture,
     element_settings,
+    fitted_size,
     image_size,
+    picture_ratio,
     settings_from,
     top_level_blocks,
     without_display_maths,
@@ -335,11 +338,15 @@ def add_file_picture(writer, found):
     attributes = parse_attributes(written)
     look = writer.look("figure", attributes.classes, attributes.values)
     folders = options_in_use().style_folders
-    path = (Path(folders[0]) if folders else Path()) / source
+    path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")))
     natural = image_size(path)
     if natural:
+        section = writer.document.sections[-1]
+        room = section.page_height.cm - section.top_margin.cm - section.bottom_margin.cm - 1.5
         asked = writer.styles.length(look.width, writer.width * 10) / 10 if look.width else None
-        picture = add_picture(writer, str(path), min(asked or natural[0] / 10, writer.width), alt)
+        asked_height = writer.styles.length(attributes.values["height"], room * 10) / 10 if "height" in attributes.values else None
+        width, height = fitted_size((natural[0] / 10, natural[1] / 10), asked, asked_height, writer.width, room)
+        picture = add_picture(writer, str(path), width, alt, height)
     else:
         logger.warning("Image file not found, its alt text is shown instead: %s", source)
         paragraph = writer.body.add_paragraph()

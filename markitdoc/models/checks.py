@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from difflib import get_close_matches
 
 from markitdoc.guide.support import support_findings
-from markitdoc.markup.elements import chart_data
+from markitdoc.markup.elements import IMAGE_WRITTEN, chart_data, picture_ratio
 from markitdoc.markup.latex import latex_findings
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, front_matter_yaml
@@ -93,6 +93,17 @@ def broken_visuals(lines):
     return findings
 
 
+# an error for each image whose ratio is not a shape like 16:9, so its crop would be skipped
+def bad_picture_ratios(lines):
+    findings = []
+    for number, text in enumerate(lines, 1):
+        for found in IMAGE_WRITTEN.finditer(text):
+            ratio = parse_attributes(found.group(3) or "").values.get("ratio")
+            if ratio is not None and picture_ratio(ratio) is None:
+                findings.append(Finding(number, "error", f"image ratio '{ratio}' is not a shape", "write it as width:height, e.g. 16:9, 4:3, 1:1 or 3:2"))
+    return findings
+
+
 # problems in a markdown document, never raising: unknown keys, unbalanced ::: fences, the style problems, with style files
 # searched in folders, and a note for each feature the output format approximates or ignores
 def check_document(markdown, folders=(), output_format="pdf") -> list[Finding]:
@@ -133,5 +144,5 @@ def check_document(markdown, folders=(), output_format="pdf") -> list[Finding]:
     end = next((number for number, text in enumerate(lines[1:], 2) if text.strip() == "---"), 0) if lines[:1] == ["---"] else 0
     findings += [Finding(*item) for item in reference_findings(lines, end, meta, folders)] + [Finding(*item) for item in latex_findings(lines, end)]
     findings += [Finding(*item) for item in support_findings(markdown, output_format)]
-    findings += unknown_names(meta, front_matter_yaml(markdown) or {}, lines, end) + broken_visuals(lines)
+    findings += unknown_names(meta, front_matter_yaml(markdown) or {}, lines, end) + broken_visuals(lines) + bad_picture_ratios(lines)
     return sorted(findings, key=lambda finding: finding.line)

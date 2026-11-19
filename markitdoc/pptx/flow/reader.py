@@ -8,8 +8,10 @@ from markitdoc.markup.elements import (
     chart_data,
     closing_index,
     column_alignments,
+    cropped_picture,
     element_settings,
     only_display_maths,
+    picture_ratio,
     top_level_blocks,
     without_display_maths,
     written_image,
@@ -199,7 +201,8 @@ class FlowReader:
         target = self.deck.numbers.get(attributes.id)
         caption = caption_of(target) if target else str(attributes.values.get("caption", ""))
         look = self.deck.look("figure", attributes.classes, attributes.values)
-        data = (str((Path(folders[0]) if folders else Path()) / found.group(2)), found.group(1) or found.group(2), look.width,
+        path = cropped_picture((Path(folders[0]) if folders else Path()) / found.group(2), picture_ratio(attributes.values.get("ratio")))
+        data = (str(path), found.group(1) or found.group(2), look.width, attributes.values.get("height"),
                 str(attributes.values.get("side", "")).lower(), caption)
         return Piece("image", data)
 
