@@ -1,7 +1,6 @@
 import re
 from dataclasses import replace
 from functools import lru_cache
-from pathlib import Path
 
 from fontTools.ttLib import TTFont
 from fpdf import FPDF
@@ -13,6 +12,7 @@ from markitdoc.markup.inline import SUBSCRIPTS, SUPERSCRIPTS, inline_runs, parse
 from markitdoc.models.catalogue import LAYOUTS, MARGIN, PAGE_HEIGHT, PAGE_WIDTH, Box
 from markitdoc.themes.theme_constants import FONT_WORDS
 from markitdoc.themes.themes import Theme
+from markitdoc.utils.constants import ASSETS_FOLDER
 from markitdoc.utils.helpers import lifted
 
 WHITE, SOFT_WHITE, FAINT_WHITE = (255, 255, 255), (226, 230, 240), (190, 198, 216)
@@ -83,7 +83,7 @@ class PdfPages(FPDF):
     def __init__(self, theme: Theme, text=None, donor=None):
         super().__init__(format="A4")
         self.theme = theme
-        fonts_folder = Path(theme.fonts["body"]).parent
+        fonts_folder = ASSETS_FOLDER / "fonts"
         bold = theme.fonts.get("bold", theme.fonts["heading"])
         faces = {
             "Brand": (theme.fonts["body"], bold, theme.fonts["italic"], bold),
