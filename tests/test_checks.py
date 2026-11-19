@@ -69,3 +69,20 @@ def test_should_print_nothing_and_exit_zero_when_there_are_no_findings(tmp_path,
 
     assert main(["check", str(source)]) == 0
     assert capsys.readouterr().out == ""
+
+
+def test_should_report_front_matter_names_the_renderer_would_silently_ignore():
+    findings = check_document("---\npalette: oceans\nfonts: helvetica\npaper: a4\n---\n# Report\n")
+
+    assert [(finding.line, finding.severity, finding.message) for finding in findings] == [
+        (2, "error", "unknown palette 'oceans'"), (3, "error", "unknown fonts 'helvetica'")]
+    assert findings[0].fix == "did you mean 'ocean'?"
+    assert check_document('---\nfonts: {display: "PT Serif"}\npalette: forest\n---\n# Report\n') == []
+
+
+def test_should_report_charts_that_would_be_left_out():
+    chart = '```chart {{size=half}}\n{{"type": "bar", "labels": ["a", "b"], "datasets": [{{"values": {values}}}]}}\n```\n'
+
+    assert check_document("# Report\n\n" + chart.format(values="[5, 3]")) == []
+    for values in ('["5%", 3]', "[5]", "[5, 3, 1]"):
+        assert [finding.severity for finding in check_document("# Report\n\n" + chart.format(values=values))] == ["error"]
