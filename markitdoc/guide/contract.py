@@ -1,11 +1,12 @@
 from markitdoc.errors import UnsupportedFormatError
 from markitdoc.guide.language import core_card
+from markitdoc.guide.support import support_table
 from markitdoc.markup.elements import CALLOUT_KINDS, CHART_SIZES, LIST_SCHEMES, PARAGRAPH_ALIGNMENTS, SPAN_COLORS, TABLE_STYLES
 from markitdoc.models.catalogue import LAYOUTS
 from markitdoc.models.model_constants import FLOW_CONTAINERS
 from markitdoc.pptx.designed.titles import MAX_PER_SLIDE
 from markitdoc.pptx.render import DRAWERS
-from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, TEXT_SIZES
+from markitdoc.themes.theme_constants import FONT_PAIRS, PALETTES, PAPERS, STYLE_SELECTORS, TEXT_SIZES
 from markitdoc.visuals.diagrams import DIAGRAM_TYPES
 from markitdoc.visuals.infographics import INFOGRAPHIC_TEMPLATES
 
@@ -74,7 +75,19 @@ title: Five years in numbers
 title: The next five years
 body: The programme now moves upstream, where the same methods can protect three more towns.
 :::"""
-GUIDE_LEVELS = ("core", "full")
+GUIDE_LEVELS = ("core", "full", "writing", "layouts", "styles", "charts")
+CHART_TYPES = ("bar", "horizontal_bar", "stacked_bar", "line", "pie", "donut", "waterfall")
+STYLE_EXAMPLE = """page: {paper: a4, margins: wide}
+pages:
+  default: {header: "{section} | | {client}", footer: " | {page} of {pages} | "}
+  wide:    {orientation: landscape}
+fonts: {display: "Playfair Display", serif: "PT Serif"}
+text:  {font: serif, size: 10.5pt, align: justify}
+set:
+  h2: {font: display, color: accent, numbering: "1"}
+  paragraph.first: {dropcap: 2}
+styles:
+  pull: {kind: block, based-on: quote, size: l, align: center, border: top}"""
 CONTRACT_INFOGRAPHICS = ("sequence-steps-badge-card", "list-grid-badge-card", "list-pyramid-badge-card")
 
 
@@ -107,13 +120,68 @@ def layout_rule(name, layout):
     return f"- {name}: {LAYOUT_PURPOSES[name]}." + (f"\n    {'; '.join(parts)}" if parts else "")
 
 
+# the layouts reference: every designed layout with its purpose, slots and limits
+def layouts_text():
+    return "# Layouts\n\nDesigned pages and slides. Each is a fenced block; text between blocks flows as normal pages.\n\n" + "\n".join(
+        layout_rule(name, layout) for name, layout in LAYOUTS.items() if name in LAYOUT_PURPOSES) + "\n"
+
+
+# the styles reference: palettes, fonts, papers, selectors, an example style file and the support table
+def styles_text():
+    palettes = "\n".join(f"- {name}: {description}" for name, (_, _, description) in PALETTES.items())
+    fonts = "\n".join(f"- {name}: {pair[4]}" for name, pair in FONT_PAIRS.items())
+    return f"""# Styles
+
+Front matter settings: palette, paper ({' | '.join(PAPERS)}), fonts, text_size ({' | '.join(TEXT_SIZES)}), tables ({' | '.join(TABLE_STYLES)}).
+
+## Palettes
+{palettes}
+
+## Font pairs
+{fonts}
+
+## Selectors
+{' '.join(STYLE_SELECTORS)}; sub-parts table.header, paragraph.first. List styles on a block before a list: {' '.join('{.' + name + '}' for name in LIST_SCHEMES)}.
+
+## A style file
+```yaml
+{STYLE_EXAMPLE}
+```
+
+## Support by format
+{support_table()}
+"""
+
+
+# the charts reference: chart JSON, callouts, diagram types and infographic templates
+def charts_text():
+    templates = "\n".join(f"- {name} ({kind}): {use}" for name, (kind, use) in INFOGRAPHIC_TEMPLATES.items())
+    return f"""# Charts, diagrams and infographics
+
+## Charts
+A ```chart fence holds JSON with type ({' | '.join(CHART_TYPES)}), title, labels and datasets [{{label, values}}], one value per label.
+Sizes: {', '.join(CHART_SIZES)} (```chart {{size=half}}). Give a chart {{#id caption="..."}} to number it and cite it as [@id].
+Callouts: {', '.join('> **' + kind + ':**' for kind in CALLOUT_KINDS)}.
+
+## Diagrams
+A ```mermaid fence. The first line names the type, one of: {', '.join(DIAGRAM_TYPES)}. Keep labels short and use about 12 nodes at most.
+
+## Infographics
+A ```infographic fence: 'infographic <template>', then 'data' with a title and the template's list. Templates:
+{templates}
+"""
+
+
 # builds the PDF design instructions for document generation
-def pdf_contract() -> str:
-    infographics = "\n".join(f"  - {name} ({INFOGRAPHIC_TEMPLATES[name][0]}): {INFOGRAPHIC_TEMPLATES[name][1]}"
-                              for name in CONTRACT_INFOGRAPHICS)
+def pdf_contract(complete=True) -> str:
     palette_lines = "\n".join(f"  - {name}: {description}" for name, (_, _, description) in PALETTES.items())
     font_lines = "\n".join(f"  - {name}: {pair[4]}" for name, pair in FONT_PAIRS.items())
-    return f"""PDF DESIGN GUIDE. Read it fully, then call generate_document once with the finished markdown.
+    palettes_and_fonts = (f"Palettes (one accent colour used sparingly, mostly neutral pages):\n{palette_lines}\n"
+                          f"Fonts (curated pairs that always work together; a brand template keeps its own):\n{font_lines}\n")
+    layout_catalogue = ("LAYOUTS (word counts are guides; text is measured and gently shrunk to fit):\n"
+                        + "\n".join(layout_rule(name, layout) for name, layout in LAYOUTS.items()) + "\n")
+    visuals = pdf_visuals()
+    return f"""PDF DESIGN GUIDE. Read it fully, then submit the finished markdown once.
 You are the editor and the designer: decide what the reader needs and shape the pages for it. The engine is
 deterministic: it measures every page, gently shrinks or tightens text to fit, and turns a page that still does not
 fit into plain text, so the document always renders. You choose content, structure and style; the engine guarantees
@@ -142,11 +210,7 @@ lang: en | de | fr | es  (document language; sets hyphenation and the language s
 notes: section | page  (footnotes at the end of each section (default) or at the bottom of the page they are cited on;
                         page suits legal, academic and policy documents)
 ---
-Palettes (one accent colour used sparingly, mostly neutral pages):
-{palette_lines}
-Fonts (curated pairs that always work together; a brand template keeps its own):
-{font_lines}
-A brand look is chosen with the template argument, never in the markdown.
+{palettes_and_fonts if complete else "Palettes and font pairs: read the styles part of this guide." + chr(10)}A brand look is chosen with 'template: <brand>' in the front matter, only when the application names that brand; never invent one.
 
 Most documents are mainly normal pages (flow): headings, paragraphs, lists, tables, charts and callouts that fill
 every page, like a well-set consultancy report. Designed pages are a few strong moments, not the structure.
@@ -161,9 +225,7 @@ Designed pages are fenced blocks; text between them flows as normal pages:
 Element settings in normal pages: a line '{{.lined}}', '{{.striped}}' or '{{.boxed}}' directly after a table styles
 that table; ```chart {{size=half}} makes a chart smaller (use only for a minor supporting chart; most charts are full width).
 
-LAYOUTS (word counts are guides; text is measured and gently shrunk to fit):
-{chr(10).join(layout_rule(name, layout) for name, layout in LAYOUTS.items())}
-
+{layout_catalogue if complete else "Designed layouts, their slots and word limits: read the layouts part of this guide." + chr(10)}
 PLANNING
 - Decide what the reader must take away, then choose each page from its content: headline numbers -> figures;
   findings or recommendations -> keypoints; argument or story -> chapter; options or before/after -> comparison;
@@ -211,7 +273,14 @@ FLOW PAGES
   datasets [{{label, values}}], one value per label.
 - Tables: header row, 2-7 columns, units in headers.
 - Never draw diagrams with text characters; use a ```mermaid diagram, a layout, a table or an infographic.
-- Example of a complete short report (structure only; real documents are longer):
+{visuals if complete else "- Diagrams, infographics and a complete example: read the charts and layouts parts of this guide."}"""
+
+
+# the PDF guide sections that the writing part leaves out: an example, diagrams and infographics
+def pdf_visuals():
+    infographics = "\n".join(f"  - {name} ({INFOGRAPHIC_TEMPLATES[name][0]}): {INFOGRAPHIC_TEMPLATES[name][1]}"
+                              for name in CONTRACT_INFOGRAPHICS)
+    return f"""- Example of a complete short report (structure only; real documents are longer):
 {EXAMPLE_DOCUMENT}
 - Diagrams: a ```mermaid fence draws flows, sequences, states, structures and timelines in the document's colours
   and fonts. Use a diagram instead of drawing with text characters. The first line names the type, one of:
@@ -231,7 +300,7 @@ FLOW PAGES
 
 
 # builds the Word document instructions for document generation
-def word_contract() -> str:
+def word_contract(complete=True) -> str:
     return f"""WORD DOCUMENT GUIDE (docx). The same markdown as PDF, rendered as an editable Word document: real headings,
 an automatic contents page (toc: true), styled tables, numbered lists, footnotes and page numbers. Read this part first;
 the PDF guide below defines the front matter, block syntax and markdown.
@@ -247,13 +316,11 @@ the PDF guide below defines the front matter, block syntax and markdown.
 - Comparison tables with High / Medium / Low / None (or Full / Partial) become Harvey balls; a chart with
   "type": "waterfall" draws a bridge from one total to another.
 
-{pdf_contract()}"""
+{pdf_contract(complete)}"""
 
 
 # builds the slide design instructions for document generation
-def slides_contract() -> str:
-    slide_lines = "\n".join(f"- {name}: {LAYOUT_PURPOSES[name]}" + (f" (up to {MAX_PER_SLIDE[name]} items per slide; more continue on the next)"
-                                                                    if name in MAX_PER_SLIDE else "") for name in DRAWERS)
+def slides_contract(complete=True) -> str:
     return f"""SLIDE DESIGN GUIDE (pptx). The same markdown as PDF, rendered as 16:9 slides. Read this part first; the PDF guide
 below defines the front matter, block syntax and markdown, and applies unless this part says otherwise.
 
@@ -290,18 +357,36 @@ HOW A DECK READS
     'Chiswick House', 'Royal Crescent Bath'. Put the proper name first. A photo is shown only when its title matches.
   - Use photos on about a third of the slides at most; the rest carry the evidence (figures, cards, charts, tables).
 
-DESIGNED BLOCKS AS SLIDES
-{slide_lines}
+{slide_blocks() if complete else ""}{pdf_contract(complete)}"""
 
-{pdf_contract()}"""
+
+# how each designed block becomes a slide
+def slide_blocks():
+    slide_lines = "\n".join(f"- {name}: {LAYOUT_PURPOSES[name]}" + (f" (up to {MAX_PER_SLIDE[name]} items per slide; more continue on the next)"
+                                                                    if name in MAX_PER_SLIDE else "") for name in DRAWERS)
+    return f"DESIGNED BLOCKS AS SLIDES\n{slide_lines}\n\n"
+
+
+# the guide parts a model loads on demand: writing first, then layouts, styles or charts only when the document needs them
+def guide_part(output_format, level):
+    writers = {"pdf": pdf_contract, "pptx": slides_contract, "docx": word_contract}
+    parts = {
+        "writing": lambda: writers[output_format](complete=False),
+        "layouts": lambda: layouts_text() + (slide_blocks() if output_format == "pptx" else "") + "Example:\n" + EXAMPLE_DOCUMENT,
+        "styles": lambda: styles_text() + "\n" + core_card(output_format),
+        "charts": lambda: charts_text() + "\n" + pdf_visuals(),
+    }
+    return parts[level]()
 
 
 # the writing guide an AI model should read before producing markdown for output_format: the language core card, then
-# (level "full") the layout catalogue
+# (level "full") the layout catalogue; the other levels are the on-demand parts
 def guide(output_format="pdf", level="full"):
     writers = {"pdf": pdf_contract, "pptx": slides_contract, "docx": word_contract}
     if output_format not in writers:
         raise UnsupportedFormatError(f"No guide for {output_format!r}, expected one of {', '.join(writers)}")
     if level not in GUIDE_LEVELS:
         raise UnsupportedFormatError(f"No guide level {level!r}, expected one of {', '.join(GUIDE_LEVELS)}")
-    return core_card(output_format) if level == "core" else core_card(output_format) + "\n\n" + writers[output_format]()
+    if level in ("core", "full"):
+        return core_card(output_format) if level == "core" else core_card(output_format) + "\n\n" + writers[output_format]()
+    return guide_part(output_format, level)

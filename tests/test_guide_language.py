@@ -23,6 +23,7 @@ def test_should_keep_the_core_card_short_and_name_every_top_level_key():
 def test_should_put_the_core_card_before_the_catalogue_and_let_the_level_pick_it_alone():
     assert markitdoc.guide("pptx").startswith("MARKITDOC LANGUAGE") and "SLIDE DESIGN GUIDE" in markitdoc.guide("pptx")
     assert markitdoc.guide("pdf", level="core") == core_card("pdf") and "LAYOUTS" not in markitdoc.guide("pdf", level="core")
+    assert all("markitdoc " not in markitdoc.guide(name) and "generate_document" not in markitdoc.guide(name) for name in markitdoc.FORMATS)
     with pytest.raises(markitdoc.UnsupportedFormatError):
         markitdoc.guide("pdf", level="tiny")
 
@@ -121,3 +122,13 @@ def test_should_link_a_citation_to_its_references_entry_in_pdf_and_word(refs_fol
 
     assert "ref-dewit2021" in cited
     assert 'w:anchor="ref_dewit2021"' in xml and 'w:name="ref_dewit2021"' in xml
+
+
+def test_should_split_the_guide_into_parts_a_model_loads_on_demand():
+    for name in markitdoc.FORMATS:
+        writing = markitdoc.guide(name, level="writing")
+        assert len(writing) < len(markitdoc.guide(name)) * 0.6
+        assert "LAYOUTS (word counts" not in writing and "read the layouts part" in writing
+        assert "- cover:" in markitdoc.guide(name, level="layouts")
+        assert "## Palettes" in markitdoc.guide(name, level="styles")
+        assert "```mermaid" in markitdoc.guide(name, level="charts")

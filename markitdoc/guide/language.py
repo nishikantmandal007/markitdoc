@@ -42,5 +42,4 @@ Blocks: '::: box {{border=thin padding=m bg=surface}}' ... ':::' and '::: column
 Images: ![alt](images/gauge.jpg){{#gauge width=1/2 side={'|'.join(IMAGE_SIDES)} caption="Alder, 2024"}}.
 References: give a heading, figure, chart, table caption or equation an {{#id}}; [@id] reads 'Figure 3'{pages}; [@key] cites an entry of refs.yml
   (style: numeric|author-year){lists}.
-Check: run 'markitdoc check file.md --json --format {output_format}' and fix every error and warning before rendering; 'markitdoc explain file.md:41' shows where a value came from.
 Not fully supported in {output_format}: {notes or 'nothing, everything above is full'}."""
