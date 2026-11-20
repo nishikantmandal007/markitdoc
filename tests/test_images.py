@@ -247,3 +247,38 @@ def test_should_use_only_relevant_photos_never_graphics(tmp_path, monkeypatch):
     assert images.find_image("smart city traffic night", 16 / 9).title == "Smart city traffic at night.jpg"
     monkeypatch.setattr(images, "remembered_choices", lambda: {"smart city traffic night": pool[:2]})
     assert images.find_image("smart city traffic night", 16 / 9) is None
+
+
+@pytest.mark.parametrize("licence, url", [
+    ("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/"), ("CC BY 2.0", "https://creativecommons.org/licenses/by/2.0/"),
+    ("CC0", "https://creativecommons.org/publicdomain/zero/1.0/"), ("Public domain", "https://creativecommons.org/publicdomain/mark/1.0/"),
+])
+def test_should_link_each_photo_licence_to_its_deed(licence, url):
+    from markitdoc.visuals.images import DocumentImage
+
+    image = DocumentImage(Path("x.jpg"), "Tram 28 in Alfama (2016).jpg", "Photo by Ana Silva", licence)
+
+    assert image.licence_url == url
+    assert image.full_credit.startswith("“Tram 28 in Alfama” by Ana Silva, [" + licence + "](" + url + ")") and image.full_credit.endswith(", cropped")
+
+
+def test_should_credit_every_photo_in_every_format(tmp_path, monkeypatch):
+    import fitz
+    from docx import Document as WordDocument
+    from PIL import Image as Picture
+    from pptx import Presentation
+
+    import markitdoc
+    from markitdoc import rendering
+    from markitdoc.visuals.images import DocumentImage
+
+    Picture.new("RGB", (1600, 900), (90, 120, 160)).save(tmp_path / "tram.jpg")
+    photo = DocumentImage(tmp_path / "tram.jpg", "Tram 28 in Alfama.jpg", "Ana Silva", "CC BY-SA 4.0")
+    monkeypatch.setattr(rendering, "find_images", lambda wanted, ratios: {key: photo for key in wanted})
+    markdown = "---\nimages: true\n---\n# Lisbon\n\n## Trams\n\nThe trams climb the hills.\n\n![Lisbon tram 28](figure)\n"
+
+    with fitz.open(markitdoc.render(markdown, "pdf", tmp_path / "doc.pdf")) as pdf:
+        assert "Photo credits" in "".join(page.get_text() for page in pdf)
+    assert any("Photo credits" in paragraph.text for paragraph in WordDocument(markitdoc.render(markdown, "docx", tmp_path / "doc.docx")).paragraphs)
+    deck = Presentation(markitdoc.render(markdown, "pptx", tmp_path / "doc.pptx"))
+    assert any(shape.has_text_frame and "Photo credits" in shape.text_frame.text for slide in deck.slides for shape in slide.shapes)

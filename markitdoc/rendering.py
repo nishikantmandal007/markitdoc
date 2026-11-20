@@ -10,7 +10,7 @@ from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
 from markitdoc.markup.fields import field_values, with_fields
 from markitdoc.models.catalogue import LAYOUTS
-from markitdoc.models.document import Document, parse_document
+from markitdoc.models.document import Block, Document, parse_document
 from markitdoc.models.front_matter import front_matter_yaml
 from markitdoc.models.references import number_document, resolve_document
 from markitdoc.options import Options, options_in_use, using_options
@@ -45,7 +45,16 @@ def images_for(document, require_images, ratio_of=None):
         for caption in re.findall(r"!\[([^\]]+)\]\([^)]*\)", block.body if block.layout == "flow" else ""):
             wanted[("figure", caption)], ratios[("figure", caption)] = caption, 1.5
     found = find_images(wanted, ratios) if wanted else {}
-    return {key: (image.path, image.caption, image.short_credit, image.source) for key, image in found.items()}, ()
+    return ({key: (image.path, image.caption, image.short_credit, image.source) for key, image in found.items()},
+            tuple(dict.fromkeys(image.full_credit for image in found.values())))
+
+
+# the document with a closing section crediting every photo it shows, as their licences ask
+def with_photo_credits(document, credit_lines):
+    if not credit_lines:
+        return document
+    body = "## Photo credits\n\n" + "\n".join(f"- {line}" for line in credit_lines) + "\n"
+    return Document(document.meta, document.blocks + (Block("flow", body=body),))
 
 
 # is most of the document's text in Devanagari script?
@@ -79,7 +88,9 @@ def draw_pdf(document, output_path, theme, styles, numbering, found):
     if not document.meta.get("lang") and written_in_devanagari(document):
         document = Document({**document.meta, "lang": "hi"}, document.blocks)
     tightened, sparse = {}, set()
-    images, credits = images_for(document, wants_images)
+    images, credit_lines = images_for(document, wants_images)
+    document = with_photo_credits(document, credit_lines)
+    credits = ()
     problems = page_problems(document, theme, wants_images, tightened, credits, sparse)
     for _, message in problems:
         logger.warning("PDF page problem (designed pages fall back to text, bad visuals are skipped): %s", message)
@@ -105,7 +116,8 @@ def render_laid_out_pptx(document, output_path, template, author, markdown=""):
     styles = stylesheet_for(markdown, theme)
     document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles, inject=False)
     document = resolve_document(document, numbering, "pptx")
-    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, SLIDE_PHOTO_RATIOS)
+    images, credit_lines = images_for(document, document.meta.get("images") in TRUE_WORDS, SLIDE_PHOTO_RATIOS)
+    document = with_photo_credits(document, credit_lines)
     render_pptx(document, theme, output_path, images, author, styles, numbering)
     logger.info("Rendered PPTX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)
@@ -119,7 +131,8 @@ def render_laid_out_docx(document, output_path, template, author, markdown=""):
     styles = stylesheet_for(markdown, theme)
     document, numbering = number_document(with_fields(document, field_values(styles, document.meta)), styles)
     document = resolve_document(document, numbering, "docx")
-    images, _ = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
+    images, credit_lines = images_for(document, document.meta.get("images") in TRUE_WORDS, DOCUMENT_PHOTO_RATIOS)
+    document = with_photo_credits(document, credit_lines)
     render_docx(document, theme, output_path, images, author, styles, numbering)
     logger.info("Rendered DOCX: %d blocks, theme %s, %d images, %d bytes, %.1f s", len(document.blocks), theme.name, len(images),
                 output_path.stat().st_size, time.perf_counter() - started)

@@ -23,6 +23,7 @@ WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 API_HOSTS = {"commons.wikimedia.org", "www.wikidata.org"}
 ALLOWED_HOSTS = {"upload.wikimedia.org", "thumb.wikimedia.org"}
 ALLOWED_LICENCES = ("public domain", "pd", "cc0", "cc by", "cc-by")
+CC_LICENCE = re.compile(r"cc[ -]?(by(?:-sa)?)[ -]?(\d\.\d)", re.IGNORECASE)
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 MAX_QUERY_LENGTH = 60
 LONGEST_WAIT_SECONDS = 10
@@ -74,6 +75,21 @@ class DocumentImage:
         name = re.sub(r"(?i)^.*?\b(?:taken|photographed|created|uploaded|made)\s+by\s+|^(?:photo|photograph|image)\s*(?:by|:)\s*", "", self.artist)
         name = re.split(r"\.\s|[(\[;|]|\s—\s", name)[0].strip(" ,.")
         return name if 2 <= len(name) <= 40 else name[:40].rsplit(" ", 1)[0] if name else "Unknown"
+
+    # the deed of the licence the photo is shared under, so a reader can check its terms
+    @property
+    def licence_url(self):
+        lowered = self.licence.lower()
+        if found := CC_LICENCE.search(lowered):
+            return f"https://creativecommons.org/licenses/{found.group(1)}/{found.group(2)}/"
+        if "cc0" in lowered:
+            return "https://creativecommons.org/publicdomain/zero/1.0/"
+        return "https://creativecommons.org/publicdomain/mark/1.0/"
+
+    # the attribution a CC licence asks for: title, author, licence with its link, source with its link, and the crop made to fit
+    @property
+    def full_credit(self):
+        return f"“{self.caption}” by {self.author}, [{self.licence}]({self.licence_url}), via [Wikimedia Commons]({self.source}), cropped"
 
     # formats the full image credit and source attribution
     @property
