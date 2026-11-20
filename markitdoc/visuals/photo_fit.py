@@ -6,9 +6,16 @@ from PIL import Image, ImageFilter, ImageOps
 
 from markitdoc.utils.helpers import lifted
 
+PHOTO_FOCUS = {"top": (0.5, 0), "bottom": (0.5, 1), "left": (0, 0.5), "right": (1, 0.5), "center": (0.5, 0.5)}
+
 
 # finds the crop with the most visual detail at the target shape
-def interest_box(picture, target):
+def interest_box(picture, target, focus=""):
+    if anchor := PHOTO_FOCUS.get(str(focus).lower()):
+        width = min(picture.width, max(1, round(picture.height * target)))
+        height = min(picture.height, max(1, round(picture.width / target)))
+        left, top = round((picture.width - width) * anchor[0]), round((picture.height - height) * anchor[1])
+        return left, top, left + width, top + height
     small = picture.copy()
     small.thumbnail((160, 160))
     scale = picture.width / small.width
@@ -47,15 +54,15 @@ def treated(picture, treatment, theme):
 
 
 # crops, treats, fades, and saves an image at the requested size
-def fitted_image(path: Path, width, height, work_folder: Path, fades=(), treatment="natural", theme=None):
+def fitted_image(path: Path, width, height, work_folder: Path, fades=(), treatment="natural", theme=None, focus=""):
     picture = Image.open(path).convert("RGB")
-    picture = treated(picture.crop(interest_box(picture, width / height)), treatment, theme)
+    picture = treated(picture.crop(interest_box(picture, width / height, focus)), treatment, theme)
     for top_ratio, bottom_ratio, start, end, rgb in fades:
         mask = Image.new("L", (1, picture.height), 0)
         first, last = int(picture.height * top_ratio), int(picture.height * bottom_ratio)
         for row in range(first, last):
             mask.putpixel((0, row), int(255 * (start + (end - start) * (row - first) / max(1, last - first - 1))))
         picture = Image.composite(Image.new("RGB", picture.size, rgb), picture, mask.resize(picture.size))
-    output = work_folder / f"{path.stem}_{int(width)}x{int(height)}_{zlib.crc32(repr(fades).encode()):08x}_{treatment}.jpg"
+    output = work_folder / f"{path.stem}_{int(width)}x{int(height)}_{zlib.crc32(repr((fades, focus)).encode()):08x}_{treatment}.jpg"
     picture.save(output, "JPEG", quality=88)
     return str(output)

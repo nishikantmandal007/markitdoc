@@ -212,16 +212,16 @@ def picture_ratio(text):
 
 
 # the image cropped to ratio around its most detailed part, saved once in the cache folder; the image itself without a ratio
-def cropped_picture(path, ratio):
+def cropped_picture(path, ratio, focus=""):
     path = Path(path)
     if not ratio or not image_size(path):
         return path
-    key = f"{path.resolve()}|{path.stat().st_mtime_ns}|{ratio:.4f}".encode()
+    key = f"{path.resolve()}|{path.stat().st_mtime_ns}|{ratio:.4f}|{focus}".encode()
     target = Path(options_in_use().cache_folder or tempfile.gettempdir()) / "markitdoc-crops" / f"{path.stem}-{zlib.crc32(key):08x}.png"
     if not target.is_file():
         target.parent.mkdir(parents=True, exist_ok=True)
         with Image.open(path) as picture:
-            picture.crop(interest_box(picture.convert("RGB"), ratio)).save(target)
+            picture.crop(interest_box(picture.convert("RGB"), ratio, focus)).save(target)
     return target
 
 

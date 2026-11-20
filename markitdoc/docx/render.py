@@ -88,7 +88,7 @@ def body(writer, block):
 # adds a block photo and its caption when an image is available
 def block_photo(writer, image, alt):
     if image:
-        photo(writer, image[0], writer.width, writer.width / (16 / 9), alt)
+        photo(writer, image[0], writer.width, writer.width / (16 / 9), alt, image[4])
         caption(writer, image[1] or alt, image[2], image[3])
 
 
@@ -103,7 +103,8 @@ def draw_cover(writer, block, image):
         width, height = logo_box(writer.theme.logo, COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT)
         add_picture(writer, str(writer.theme.logo), width, writer.theme.brand or "Logo", height).alignment = WD_ALIGN_PARAGRAPH.LEFT
     if image:
-        photo(writer, image[0], writer.width, writer.width / (COMPANY_COVER_PHOTO_RATIO if company else 16 / 9), slots.get("image", "Photograph"))
+        photo(writer, image[0], writer.width, writer.width / (COMPANY_COVER_PHOTO_RATIO if company else 16 / 9),
+              slots.get("image", "Photograph"), image[4])
         credit = writer.body.add_paragraph(style="Caption")
         write_runs(writer, credit, [Run(image[2], link=image[3])])
     else:

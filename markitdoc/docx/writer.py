@@ -265,8 +265,8 @@ def add_picture(writer, source, width_cm, alt="", height_cm=None):
 
 
 # crops and adds a fitted photo to the Word document
-def photo(writer, path, width_cm, height_cm, alt):
-    fitted = fitted_image(Path(path), width_cm * 40, height_cm * 40, writer.work_folder, (), writer.photos, writer.theme)
+def photo(writer, path, width_cm, height_cm, alt, focus=""):
+    fitted = fitted_image(Path(path), width_cm * 40, height_cm * 40, writer.work_folder, (), writer.photos, writer.theme, focus)
     return add_picture(writer, str(fitted), width_cm, alt, height_cm)
 
 

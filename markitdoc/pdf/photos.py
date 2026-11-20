@@ -8,7 +8,7 @@ MEASURING_PHOTO = "measuring photo"
 def placed(pdf, image, x, y, width, height, work_folder, fades=(), description="Photograph"):
     if image == MEASURING_PHOTO:
         return
-    pdf.image(fitted_image(image, width, height, work_folder, fades, pdf.photos, pdf.theme), x, y, width, height,
+    pdf.image(fitted_image(image, width, height, work_folder, fades, pdf.photos, pdf.theme, pdf.photo_focus), x, y, width, height,
               alt_text=description)
     if pdf.photo_credit:
         credit_on_photo(pdf, x, y, width, height, *pdf.photo_credit)

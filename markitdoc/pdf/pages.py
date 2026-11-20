@@ -105,7 +105,7 @@ class PdfPages(FPDF):
         for family in faces if text is None else ("Brand", "Head", *(("Mono",) if has_code else ())):
             self.add_family(family, faces[family])
         self.use_fallbacks()
-        self.photos, self.work_folder, self.photo_credit = "natural", None, None
+        self.photos, self.work_folder, self.photo_credit, self.photo_focus = "natural", None, None, ""
         self.tightness = 1.0
         self.styles, self.context, self.fit = None, None, (0, 0, 1)
         self.set_text_shaping(True)

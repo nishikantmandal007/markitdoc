@@ -225,7 +225,7 @@ The two paths make the change visible at a glance. Leave migration details for t
 - Use a cover for a report, '# Title' for a memo, ## for sections and ### for subsections. Add toc: true in a longer
   report and numbering: decimal for manuals. Use +++ on its own line for a major page break.
 - Plan about 450 words per page, fewer with charts or tables. Designed blocks become sections: read the layouts
-  part first. Tables remain editable. Shorten diagram labels rather than shrinking a busy diagram.
+  part first. Tables remain editable. Use short diagram labels to keep figures legible.
 
 MARKDOWN → READER
 ## Escalate critical incidents within 15 minutes
@@ -264,6 +264,7 @@ CHOOSING_LAYOUTS = """CHOOSING DESIGNED PAGES
 - Chapter body: two substantial paragraphs, one per column (roughly 80-100 words each).
 
 PHOTOS (only with images: true)
+- Give the crop one focal hint, e.g. focus=top on a cover or photo; use top, bottom, left, right or center.
 - photos: natural | duotone | mono (natural = true colour; duotone = tinted in the palette, unifies mixed photos;
   mono = black and white, archival or sober).
 - Add 'image: <query>' to the cover and to 1-3 chapter or feature pages: 2-4 English words naming a concrete,

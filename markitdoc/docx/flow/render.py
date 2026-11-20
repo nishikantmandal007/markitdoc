@@ -370,7 +370,8 @@ def add_file_picture(writer, found):
     attributes = parse_attributes(written)
     look = writer.look("figure", attributes.classes, attributes.values)
     folders = options_in_use().style_folders
-    path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")))
+    path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")),
+                           attributes.values.get("focus", ""))
     natural = image_size(path)
     if natural:
         room = figure_room(writer, label=str(attributes.values.get("caption", "")))
@@ -519,8 +520,8 @@ def add_figure(writer, query):
     if not found:
         logger.info("Figure skipped (no image found or images are off): %s", query[:60])
         return
-    path, title, credit, source = found
-    photo(writer, path, writer.width, writer.width / 1.5, title or query)
+    path, title, credit, source, focus = found
+    photo(writer, path, writer.width, writer.width / 1.5, title or query, focus)
     caption(writer, title or query, credit, source)
 
 

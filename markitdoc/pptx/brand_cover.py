@@ -1,18 +1,19 @@
 import re
 
-from pptx.enum.text import PP_ALIGN
-from pptx.util import Inches
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 from markitdoc.markup.inline import literal
-from markitdoc.pptx.deck import BODY_SIZES, SIDE_MARGIN, SLIDE_WIDTH, draw_footer, key_sentences, title_fit, write_text
+from markitdoc.pptx.deck import CONTENT_WIDTH, SIDE_MARGIN, add_rect, draw_footer, title_fit, write_text
+from markitdoc.pptx.designed.titles import fit_text
 from markitdoc.pptx.photos import add_image
 from markitdoc.utils.helpers import long_date
-from markitdoc.visuals.logos import logo_box
+from markitdoc.visuals.logos import logo_box, logo_ratio, logo_row
 
-COVER_TITLE_SIZES = (40, 36, 32, 28)
-COVER_WIDTH = SLIDE_WIDTH - 2 * SIDE_MARGIN
-COVER_LOGO_TOP, COVER_LOGO_SIZE, COVER_STACK_TOP, COVER_STACK_BOTTOM = 0.4, 1.4, 2.0, 4.95
-COVER_GAP, TAGLINE_HEIGHT, SUBTITLE_CAP = 0.22, 0.35, 20
+COVER_TITLE_SIZES = (52, 48, 44, 40, 36, 32)
+COVER_WIDTH = 11.3
+COVER_LOGO_TOP, COVER_LOGO_HEIGHT, COVER_STACK_TOP = 0.55, 0.55, 1.68
+PARTNER_ROW_HEIGHT, PARTNER_GAP, PARTNER_TOP = 0.44, 0.34, 5.55
+COVER_RULE_TOP = 6.55
 
 
 # finds the first slide shape whose text starts with a value
@@ -34,56 +35,51 @@ def remove_sample_text(slide, sample_texts):
             shape._element.getparent().remove(shape._element)
 
 
-# sets a slide shape top position in inches
-def move(shape, top):
-    shape.top = Inches(top)
+# adds brand marks and address below the main cover composition
+def company_details(deck, slide):
+    ratios = [logo_ratio(path) for path in deck.theme.partners]
+    height = PARTNER_ROW_HEIGHT
+    places = logo_row(ratios, CONTENT_WIDTH, height, PARTNER_GAP)
+    while places and places[-1][1] + height > COVER_RULE_TOP - PARTNER_TOP - 0.12:
+        height *= 0.85
+        places = logo_row(ratios, CONTENT_WIDTH, height, PARTNER_GAP * height / PARTNER_ROW_HEIGHT)
+    for path, (x, top, width, height) in zip(deck.theme.partners, places):
+        add_image(slide, str(path), SIDE_MARGIN + x, PARTNER_TOP + top, width, height, "Partner logo", "Partner logo")
+    if deck.theme.address:
+        write_text(deck, slide, literal("  ·  ".join(deck.theme.address)), SIDE_MARGIN, 5.14, CONTENT_WIDTH, 9.5, "muted", name="Address")
 
 
-# chooses a subtitle size that fits the cover area
-def subtitle_size(deck, source, height):
-    return next((size for size in BODY_SIZES if size <= SUBTITLE_CAP and deck.text_height(source, COVER_WIDTH, size) <= height), 14)
-
-
-# draws the configured branded cover slide
-def draw_brand_cover(deck, block):
+# uses the same title-led company cover with or without the registered master
+def draw_brand_cover(deck, block, slide=None):
     slots = block.slots if block else {}
-    slide = deck.presentation.slides[0]
-    deck.slide = slide
-    tagline = shape_with_text(slide, deck.theme.tagline) if deck.theme.tagline else None
-    logo = next((shape for shape in slide.shapes if shape.shape_type == 13 and shape.width == shape.height), None)
-    remove_sample_text(slide, deck.theme.sample_texts)
-    if logo is not None:
-        logo.left, logo.top = Inches((SLIDE_WIDTH - COVER_LOGO_SIZE) / 2), Inches(COVER_LOGO_TOP)
-        logo.width = logo.height = Inches(COVER_LOGO_SIZE)
-    elif deck.theme.logo:
-        width, height = logo_box(deck.theme.logo, COVER_LOGO_SIZE * 3, COVER_LOGO_SIZE)
-        add_image(slide, str(deck.theme.logo), (SLIDE_WIDTH - width) / 2, COVER_LOGO_TOP, width, height, deck.theme.brand or "Logo", "Logo")
+    tagline = deck.theme.tagline
+    if slide is None:
+        slide = deck.presentation.slides[0]
+        deck.slide = slide
+        remove_sample_text(slide, (*deck.theme.sample_texts, *((tagline,) if tagline else ())))
+        for shape in list(slide.shapes):
+            if (deck.theme.logo and shape.shape_type == MSO_SHAPE_TYPE.PICTURE and shape.top.inches < 3
+                    or deck.theme.partners and shape.top.inches >= 5 and shape.shape_type in (MSO_SHAPE_TYPE.PICTURE, MSO_SHAPE_TYPE.FREEFORM)):
+                shape._element.getparent().remove(shape._element)
+    if deck.theme.logo:
+        width, height = logo_box(deck.theme.logo, 2.2, COVER_LOGO_HEIGHT)
+        add_image(slide, str(deck.theme.logo), SIDE_MARGIN, COVER_LOGO_TOP, width, height, deck.theme.brand or "Logo", "Logo")
     title = slots.get("title") or deck.title
-    kicker = slots.get("kicker", "")
-    subtitle = slots.get("subtitle", "")
-    fixed = COVER_STACK_TOP + (0.45 if kicker else 0) + COVER_GAP + (TAGLINE_HEIGHT + COVER_GAP if tagline is not None else 0)
-    for sizes in (COVER_TITLE_SIZES[index:] for index in range(len(COVER_TITLE_SIZES))):
-        size, shown = title_fit(deck, title, COVER_WIDTH, sizes, 2, "B")
-        title_room = deck.text_height(shown, COVER_WIDTH, size, "B", 1.12)
-        if not subtitle or deck.text_height(subtitle, COVER_WIDTH, 14) <= COVER_STACK_BOTTOM - fixed - title_room:
-            break
     top = COVER_STACK_TOP
-    if kicker:
-        write_text(deck, slide, literal(kicker.upper()), SIDE_MARGIN, top, COVER_WIDTH, 14, "mood", bold=True, align=PP_ALIGN.CENTER, name="Kicker")
-        top += 0.45
-    write_text(deck, slide, shown, SIDE_MARGIN, top, COVER_WIDTH, size, "mood", heading=True, leading=1.12, align=PP_ALIGN.CENTER, name="Title")
-    top += title_room + COVER_GAP
-    if tagline is not None:
-        move(tagline, top)
-        top += TAGLINE_HEIGHT + COVER_GAP
-    if subtitle:
-        height = COVER_STACK_BOTTOM - top
-        size = subtitle_size(deck, subtitle, height)
-        if deck.text_height(subtitle, COVER_WIDTH, size) > height:
-            deck.note(f"Subtitle: {subtitle}")
-            subtitle = key_sentences(deck, subtitle, COVER_WIDTH, height, size)
-        write_text(deck, slide, subtitle, SIDE_MARGIN, top, COVER_WIDTH, size, "body", align=PP_ALIGN.CENTER, name="Subtitle")
+    if kicker := slots.get("kicker"):
+        write_text(deck, slide, literal(kicker.upper()), SIDE_MARGIN, top, COVER_WIDTH, 13, "mood", bold=True, name="Kicker")
+        top += 0.37
+    size, shown = title_fit(deck, title, COVER_WIDTH, COVER_TITLE_SIZES, 2, "B")
+    top += write_text(deck, slide, shown, SIDE_MARGIN, top, COVER_WIDTH, size, "ink",
+                      heading=True, leading=1.12, name="Title") + 0.20
+    if subtitle := slots.get("subtitle"):
+        subtitle, size = fit_text(deck, subtitle, COVER_WIDTH, max(0.55, 4.82 - top), "Subtitle", cap=18)
+        top += write_text(deck, slide, subtitle, SIDE_MARGIN, top, COVER_WIDTH, size, "body", name="Subtitle") + 0.18
+    if tagline:
+        write_text(deck, slide, literal(tagline), SIDE_MARGIN, min(top, 4.85), COVER_WIDTH, 11, "mood", name="Tagline")
+    if slots.get("variant") == "company" or deck.branded:
+        company_details(deck, slide)
+    add_rect(deck, slide, SIDE_MARGIN, COVER_RULE_TOP, CONTENT_WIDTH, 0.015, "rule", "Cover rule")
+    if date := long_date(deck.meta.get("date", "")):
+        write_text(deck, slide, literal(date), SIDE_MARGIN, 6.66, 4, 11, "muted", name="Date")
     draw_footer(deck, slide)
-    date = long_date(deck.meta.get("date", ""))
-    if date:
-        write_text(deck, slide, literal(date), SLIDE_WIDTH - SIDE_MARGIN - 3.7, 6.45, 3.7, 14, "muted", align=PP_ALIGN.RIGHT, name="Date")

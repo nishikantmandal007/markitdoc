@@ -127,7 +127,7 @@ def test_should_not_set_a_drop_cap_on_a_paragraph_shorter_than_its_lines(tmp_pat
     markdown = source("Short.\n{dropcap=3}\n")
     found = body_spans(tmp_path, markdown)
 
-    assert not [item for item in found if item[1]["size"] > 24]
+    assert any(span["text"] == "Short." and span["size"] < 24 for _, span in found)
     assert not [item for item in found if item[1]["text"] == "S"]
     assert any("shorter than 3 lines" in item.message for item in check_document(markdown, (FIXTURES,)))
 

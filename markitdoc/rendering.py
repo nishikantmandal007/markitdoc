@@ -10,7 +10,8 @@ from markitdoc.docx.render import DOCUMENT_PHOTO_RATIOS, render_docx
 from markitdoc.errors import EmptyDocumentError, UnsupportedFormatError
 from markitdoc.markup.blocks import as_flow
 from markitdoc.markup.fields import field_values, with_fields
-from markitdoc.models.catalogue import LAYOUTS
+from markitdoc.models.attributes import parse_attributes
+from markitdoc.models.catalogue import COVER_SPLIT_WIDTH, LAYOUTS, PAGE_HEIGHT
 from markitdoc.models.document import Document, parse_document
 from markitdoc.models.front_matter import front_matter_yaml
 from markitdoc.models.references import number_document, resolve_document
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 FORMATS = ("pdf", "pptx", "docx")
 TRUE_WORDS = ("true", "yes", "on", True)
 PAGE_REFERENCE_PASSES = 2
+PHOTO_FIGURE = re.compile(r"!\[([^\]]+)\]\([^)]*\)(?:\{([^{}]*)\})?")
 NAMED_PHOTO = re.compile(r"!\[[^\]]*\]\((File:[^)]+)\)", re.IGNORECASE)
 render_problems = ContextVar("markitdoc_render_problems", default=None)
 
@@ -47,18 +49,27 @@ def stylesheet_for(markdown, theme):
 def images_for(document, require_images, ratio_of=None):
     if not require_images:
         return {}
+    pdf = ratio_of is None
     ratio_of = ratio_of or {name: layout.image_ratio for name, layout in LAYOUTS.items()}
     wanted = {index: block.slots["image"] for index, block in enumerate(document.blocks)
               if block.slots.get("image") and ratio_of.get(block.layout)}
     ratios = {index: ratio_of[document.blocks[index].layout] for index in wanted}
+    focuses = {index: document.blocks[index].slots.get("focus", "") for index in wanted}
+    if pdf:
+        for index in wanted:
+            block = document.blocks[index]
+            if block.layout == "cover" and block.slots.get("variant") == "split":
+                ratios[index] = COVER_SPLIT_WIDTH / PAGE_HEIGHT
     for block in document.blocks:
-        for caption in re.findall(r"!\[([^\]]+)\]\([^)]*\)", block.body if block.layout == "flow" else ""):
-            wanted[("figure", caption)], ratios[("figure", caption)] = caption, 1.5
+        for caption, attrs in PHOTO_FIGURE.findall(block.body if block.layout == "flow" else ""):
+            key = ("figure", caption)
+            wanted[key], ratios[key] = caption, 1.5
+            focuses[key] = parse_attributes(attrs).values.get("focus", "")
     found = find_images(wanted, ratios) if wanted else {}
     for key, query in wanted.items():
         if key not in found:
             report_problem(f"No relevant photo was found for '{query}', so it was left out: use a shorter, well-known subject or drop the image.")
-    return {key: (image.path, image.caption, image.short_credit, image.source) for key, image in found.items()}
+    return {key: (image.path, image.caption, image.short_credit, image.source, focuses[key]) for key, image in found.items()}
 
 
 # is most of the document's text in Devanagari script?

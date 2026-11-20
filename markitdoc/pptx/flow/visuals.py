@@ -102,10 +102,10 @@ def place_equation(deck, slide, piece, box):
 
 # adds a photo to the slide with its caption and credit
 def place_figure(deck, slide, piece, box):
-    path, caption, credit, source = deck.figures[piece.data]
+    path, caption, credit, source, focus = deck.figures[piece.data]
     left, top, width, height = box
     photo_height = height - CAPTION_HEIGHT - CREDIT_HEIGHT
-    add_image(slide, photo_credit, photo_for(deck, path, width, photo_height), left, top, width, photo_height, caption or "Photograph")
+    add_image(slide, photo_credit, photo_for(deck, path, width, photo_height, focus=focus), left, top, width, photo_height, caption or "Photograph")
     write_text(deck, slide, literal(caption), left, top + photo_height + 0.08, width, 14, "muted", italic=True, name="Caption")
     photo_credit(deck, slide, credit, source, left, top + photo_height + CAPTION_HEIGHT, width, 10, "muted", PP_ALIGN.LEFT)
 

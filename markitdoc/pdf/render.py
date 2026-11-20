@@ -136,9 +136,10 @@ def render_pdf(document: Document, theme: Theme, output_path: Path, work_folder:
             pdf.tightness = float(block.slots.get("tightness", 1.0))
             picture = images.get(index)
             pdf.photo_credit = picture[2:4] if picture else None
+            pdf.photo_focus = picture[4] if picture else ""
             with pdf.centred():
                 draw_block(pdf, block, picture[0] if picture else None, work_folder, ())
-            pdf.photo_credit = None
+            pdf.photo_credit, pdf.photo_focus = None, ""
             pdf.tightness = 1.0
         except Exception:
             logger.exception("Page %d (%s) failed to draw; shown as text instead", index + 1, block.layout)

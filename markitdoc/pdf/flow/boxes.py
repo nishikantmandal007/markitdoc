@@ -114,7 +114,8 @@ def add_picture(pdf: FlowPages, found):
     attributes = parse_attributes(written)
     look = pdf.styles.look("figure", attributes.classes, attributes.values, context=pdf.context)
     folders = options_in_use().style_folders
-    path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")))
+    path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")),
+                           attributes.values.get("focus", ""))
     natural = image_size(path)
     caption = str(attributes.values.get("caption", ""))
     reserve = CAPTION_ROOM if caption or attributes.id else 0

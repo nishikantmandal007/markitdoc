@@ -51,7 +51,7 @@ def photo_credit(deck, slide, credit, source, left, top, width, size, role, alig
 
 # places an image across the full slide with an optional overlay
 def full_bleed(deck, slide, image, fades, alt):
-    picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT, alt,
+    picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades, image[4]), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT, alt,
                         "Background photo")
     send_to_back(slide, picture)
     photo_credit(deck, slide, image[2], image[3], SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE)
@@ -63,7 +63,7 @@ def half_bleed(deck, slide, image, alt):
     deck.photo_side = "left" if side == "right" else "right"
     half = SLIDE_WIDTH / 2
     left = half if side == "right" else 0
-    add_image(slide, photo_for(deck, image[0], half, SLIDE_HEIGHT, overlay(deck, 0.0, 0.6, 0.82)), left, 0, half, SLIDE_HEIGHT, alt,
+    add_image(slide, photo_for(deck, image[0], half, SLIDE_HEIGHT, overlay(deck, 0.0, 0.6, 0.82), image[4]), left, 0, half, SLIDE_HEIGHT, alt,
               "Side photo")
     photo_credit(deck, slide, image[2], image[3], left + 0.3, 7.05, half - 0.6, 10, SOFT_WHITE)
     return (SIDE_MARGIN if side == "right" else half + 0.6), half - 1.2
@@ -77,8 +77,8 @@ def side_title(deck, slide, title, left, width, role="ink"):
 
 
 # returns the photo assigned to a designed block
-def photo_for(deck, path, width, height, fades=()):
-    fitted = Path(fitted_image(Path(path), width * 100, height * 100, deck.work_folder, fades, deck.photos, deck.theme))
+def photo_for(deck, path, width, height, fades=(), focus=""):
+    fitted = Path(fitted_image(Path(path), width * 100, height * 100, deck.work_folder, fades, deck.photos, deck.theme, focus))
     with Image.open(fitted) as picture:
         if picture.width > PHOTO_WIDTH_LIMIT:
             picture.resize((PHOTO_WIDTH_LIMIT, round(picture.height * PHOTO_WIDTH_LIMIT / picture.width)), Image.LANCZOS).save(

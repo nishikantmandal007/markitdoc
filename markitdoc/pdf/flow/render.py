@@ -2,7 +2,7 @@ import logging
 import re
 from dataclasses import replace
 
-from fpdf.enums import XPos, YPos
+from fpdf.enums import MethodReturnValue, XPos, YPos
 
 from markitdoc.markup.editorial import dropcap_lines, interrupts_opening, trimmed_runs
 from markitdoc.markup.elements import (
@@ -21,9 +21,10 @@ from markitdoc.markup.inline import ANCHOR, UNNUMBERED, inline_runs, parser
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.model_constants import PAGE_SWITCH
 from markitdoc.pdf.flow.boxes import add_picture, draw_frame, end_float, float_check, page_extents
-from markitdoc.pdf.flow.pages import BODY_SIZE, FlowPages, measured, place_notes, probe_of, top_height
+from markitdoc.pdf.flow.pages import BODY_SIZE, LINE_MM, FlowPages, measured, place_notes, probe_of, top_height
 from markitdoc.pdf.flow.tables import add_table, table_rows
 from markitdoc.pdf.flow.text import (
+    HEADING_ABOVE,
     TEXT_WIDTH,
     add_callout,
     add_dropcap,
@@ -165,7 +166,8 @@ def render_tokens(pdf: FlowPages, tokens):
                 runs = inline_runs(inline, pdf.targets)
                 if look and block_line and runs:
                     runs[-1] = replace(runs[-1], text=re.sub(r"\s*\{[^{}]*\}\s*$", "", runs[-1].text))
-                draw_runs(pdf, [run for run in runs if run.text], align, indent + (INDENT_STEP if "indent" in style else 0), look=look)
+                draw_runs(pdf, [run for run in runs if run.text], align, indent + (INDENT_STEP if "indent" in style else 0), look=look,
+                          following=opening_height(pdf, tokens, index + 3) if text.endswith(":") else 0)
             elif text == PAGE_BREAK_MARKER:
                 if pdf.page_break_trigger - pdf.get_y() < pdf.eph * SOFT_BREAK_SHARE:
                     pdf.add_page()
@@ -361,23 +363,31 @@ def add_styled_box(pdf: FlowPages, look, title, inner):
     pdf.set_xy(margins[0], pdf.get_y() + 3)
 
 
-# divides container content into two groups using headings or top-level blocks
-def column_groups(inner):
-    starts = [position for position, token in enumerate(inner) if token.type == "heading_open"]
-    if len(starts) < 2:
-        top = min((token.level for token in inner), default=0)
-        blocks = [position for position, token in enumerate(inner) if token.level == top and token.type.endswith("_open")]
-        middle = blocks[len(blocks) // 2] if len(blocks) > 1 else len(inner)
-        return [inner[:middle], inner[middle:]]
-    half = starts[len(starts) // 2]
-    return [inner[:half], inner[half:]]
+# divides columns at headings or top-level block boundaries, comparing rough heights for mixed measures
+def column_groups(inner, widths):
+    top = min((token.level for token in inner), default=0)
+    starts = [index for index, token in enumerate(inner) if token.type == "heading_open" and token.level == top]
+    if len(starts) >= 2:
+        breaks = starts[1:]
+    else:
+        breaks = [index for index, token in enumerate(inner) if index and token.level == top and token.type.endswith("_open")]
+    if not breaks:
+        return [inner, []]
+    middle = breaks[(len(breaks) - 1) // 2]
+    if widths[0] != widths[1] and len(breaks) > 1:
+        totals = [0]
+        for token in inner:
+            cost = len(token.content) if token.type in ("inline", "fence", "code_block") else 16 if token.type.endswith("_close") else 0
+            totals.append(totals[-1] + cost)
+        middle = min(breaks, key=lambda index: abs(totals[index] / widths[0] - (totals[-1] - totals[index]) / widths[1]))
+    return [inner[:middle], inner[middle:]]
 
 
 # adds columns to the PDF
 def add_columns(pdf: FlowPages, inner, gutter=8, weights=(1, 1)):
     margins, full = (pdf.l_margin, pdf.r_margin), pdf.area
     widths = [(full - gutter) * weight / sum(weights) for weight in weights]
-    groups = column_groups(inner)
+    groups = column_groups(inner, widths)
 
     def draw(target, group, column, top):
         target.narrow = True
@@ -413,15 +423,38 @@ def opening_height(pdf: FlowPages, tokens, position):
     token = tokens[position]
     if token.type == "paragraph_open" and tokens[position + 1].content.startswith("Table:"):
         return 8 * pdf.scale + opening_height(pdf, tokens, position + 3)
-    if token.type == "fence" and token.info.strip() in ("mermaid", "chart", "infographic"):
+    if token.type == "fence" and token.info.split("{")[0].strip() in ("mermaid", "chart", "infographic"):
         return pdf.eph * 0.25
     if token.type == "fence":
         lines = token.content.rstrip().count("\n") + 1
         return (lines if lines <= SHORT_CODE_LINES else 3) * 4.2 + 6
     if token.type in ("bullet_list_open", "ordered_list_open"):
         return 12
-    if token.type == "paragraph_open" and any(child.type == "image" for child in tokens[position + 1].children or []):
-        return pdf.eph * 0.25
+    if token.type == "heading_open":
+        inline = tokens[position + 1]
+        level = int(token.tag[1])
+        look = pdf.look(f"h{min(level, 4)}")
+        size = look.size * pdf.scale
+        with pdf.local_context():
+            pdf.set_font(pdf.family_of(look, "Head"), "B", size)
+            lines = pdf.multi_cell(min(TEXT_WIDTH, pdf.area), size * 0.42, inline.content, dry_run=True, output=MethodReturnValue.LINES)
+        return len(lines) * size * 0.42 + HEADING_ABOVE + opening_height(pdf, tokens, position + 3)
+    if token.type == "paragraph_open":
+        inline = tokens[position + 1]
+        if any(child.type == "image" for child in inline.children or []):
+            return pdf.eph * 0.25
+        attrs = parse_attributes((re.search(r"\{([^{}]*)\}\s*$", inline.content) or ["", ""])[1])
+        look = pdf.look("paragraph.first", attrs.classes, attrs.values)
+        sizes = [look.size or BODY_SIZE]
+        sizes.extend(pdf.styles.span_look(run.style, look).size or sizes[0] for run in inline_runs(inline, pdf.targets) if run.style)
+        scale = 1.2 if "lead" in attrs.classes and not look.props.get("size", ("", ""))[1].endswith(":styles.lead") else 1
+        height = 3 * max(sizes) * LINE_MM * pdf.scale * pdf.spacing * scale
+        if inline.content.rstrip().endswith(":"):
+            height += opening_height(pdf, tokens, position + 3)
+        return height
+    if token.type == "blockquote_open":
+        end = closing_index(tokens, position, "blockquote_open", "blockquote_close")
+        return top_height(pdf, lambda probe: render_tokens(probe, tokens[position:end + 1]))
     if token.type == "table_open":
         rows = table_rows(tokens[position:closing_index(tokens, position, "table_open", "table_close")], pdf.targets, [])
         return top_height(pdf, lambda probe: add_table(probe, rows[:4]))

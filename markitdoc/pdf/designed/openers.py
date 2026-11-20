@@ -2,6 +2,7 @@ from markitdoc.markup.blocks import paragraphs
 from markitdoc.models.catalogue import (
     CONTENT_LIMIT,
     CONTENT_WIDTH,
+    COVER_SPLIT_WIDTH,
     MARGIN,
     PAGE_HEIGHT,
     PAGE_WIDTH,
@@ -59,11 +60,11 @@ def draw_cover(pdf: PdfPages, block: Block, image, work_folder):
     if variant == "split":
         pdf.fill_page("paper")
         pdf.set_fill_color(*pdf.theme.rgb("night"))
-        pdf.rect(0, 0, 76, PAGE_HEIGHT, "F")
+        pdf.rect(0, 0, COVER_SPLIT_WIDTH, PAGE_HEIGHT, "F")
         if image:
-            placed(pdf, image, 0, 0, 76, PAGE_HEIGHT, work_folder, description=block.slots.get("image", "Photograph"))
+            placed(pdf, image, 0, 0, COVER_SPLIT_WIDTH, PAGE_HEIGHT, work_folder, description=block.slots.get("image", "Photograph"))
         else:
-            pdf.glow(38, 200, 160, clip=(0, 0, 76, PAGE_HEIGHT))
+            pdf.glow(38, 200, 160, clip=(0, 0, COVER_SPLIT_WIDTH, PAGE_HEIGHT))
         pdf.brand_mark(88, 20, on_dark=False)
         pdf.kicker(88, 100, kicker)
         pdf.bar(88, 110, role="mood")

@@ -1,6 +1,7 @@
 import time
 
 import pymupdf as fitz
+import pytest
 from fpdf import FPDF
 from helpers import generate_document
 
@@ -119,3 +120,59 @@ def test_should_render_nested_blocks_inside_columns_without_breaking_out(tmp_pat
         outline = [title for _, title, _ in pdf.get_toc()]
 
     assert ":::" not in " ".join(page_texts(path)) and "Method" not in outline and "Method Gauge" not in " ".join(outline)
+
+
+@pytest.mark.parametrize("styled", (False, True))
+def test_paragraph_keeps_two_lines_at_a_page_break(tmp_path, styled):
+    from markitdoc.markup.inline import Run
+    from markitdoc.pdf.flow.pages import FlowPages
+    from markitdoc.pdf.flow.text import add_paragraph, draw_runs
+    from markitdoc.themes.stylesheet import load_stylesheet
+    from markitdoc.themes.themes import theme_for
+
+    theme = theme_for({}, "default")
+    pdf = FlowPages(theme, "Pagination", False)
+    pdf.use_styles(load_stylesheet({}, theme))
+    pdf.add_page()
+    pdf.set_y(pdf.page_break_trigger - 15.5)
+    source = "\n".join(f"Line {index}" for index in range(1, 5))
+    if styled:
+        draw_runs(pdf, [Run(source, role="mood")])
+    else:
+        add_paragraph(pdf, source)
+    path = tmp_path / "widows.pdf"
+    pdf.output(path)
+    with fitz.open(path) as document:
+        assert [page.get_text().count("Line ") for page in document] == [2, 2]
+
+
+def test_mixed_width_columns_split_on_document_boundaries():
+    from markitdoc.markup.inline import parser
+    from markitdoc.pdf.flow.render import column_groups
+
+    source = "\n\n".join(f"### Block {index}\n\n" + "copy " * 40 for index in range(4))
+    left, right = column_groups(parser.parse(source), (110, 35))
+    assert [token.content for token in left if token.type == "inline" and token.content.startswith("Block")] == [
+        "Block 0", "Block 1", "Block 2"]
+    assert right[1].content == "Block 3"
+
+
+def test_wrapped_heading_and_intro_stay_with_the_following_text(tmp_path):
+    from markitdoc.markup.inline import parser
+    from markitdoc.pdf.flow.pages import FlowPages
+    from markitdoc.pdf.flow.render import render_tokens
+    from markitdoc.themes.stylesheet import load_stylesheet
+    from markitdoc.themes.themes import theme_for
+
+    theme = theme_for({}, "default")
+    pdf = FlowPages(theme, "Pagination", False)
+    pdf.use_styles(load_stylesheet({}, theme))
+    pdf.add_page()
+    pdf.set_y(pdf.page_break_trigger - 24)
+    source = "## Evidence and composition in a very long PDF section heading\n\nMeasured outcomes include:\n\n```text\nOne\nTwo\nThree\n```"
+    render_tokens(pdf, parser.parse(source))
+    path = tmp_path / "heading.pdf"
+    pdf.output(path)
+    with fitz.open(path) as document:
+        assert "Evidence" not in document[0].get_text()
+        assert all(token in document[1].get_text() for token in ("Evidence", "Measured outcomes", "Three"))

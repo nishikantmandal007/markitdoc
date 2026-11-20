@@ -169,7 +169,7 @@
  },
  "pptx-brand": {
   "pictures": [
-   1,
+   2,
    0,
    0,
    0,
@@ -177,8 +177,9 @@
   ],
   "slides": [
    [
-    "Simple tools for serious work",
     "AI-Safe",
+    "Simple tools for serious work",
+    "Acme Tools Ltd · 1 Example Street · hello@acme.example",
     "acme.example | Acme Tools Ltd",
     "Internal use only"
    ],

@@ -26,6 +26,7 @@ from markitdoc.themes.theme_constants import (
 from markitdoc.themes.themes import available_themes, read_theme
 from markitdoc.visuals.diagrams import problems_in_diagram
 from markitdoc.visuals.infographics import problems_in_infographic
+from markitdoc.visuals.photo_fit import PHOTO_FOCUS
 
 FRONT_KEY_LINE = re.compile(r"^markitdoc\s*:", re.IGNORECASE)
 PHOTO_QUERY = re.compile(r'image="([^"]+)"|^\s*image:\s*(.+)$|!\[([^\]]+)\]\(figure\)')
@@ -49,6 +50,8 @@ def unknown_keys(text, line):
             close = get_close_matches(key, known, n=1)
             findings.append(Finding(line, "warning", f"unknown attribute '{key}'", f"did you mean '{close[0]}'?" if close else ""))
     attributes = parse_attributes(text).values
+    if "focus" in attributes and str(attributes["focus"]).strip().lower() not in PHOTO_FOCUS:
+        findings.append(Finding(line, "error", "invalid photo focus", f"use one of: {', '.join(PHOTO_FOCUS)}"))
     if "columns" in attributes and any(role.strip().lower() not in TABLE_COLUMN_ROLES for role in str(attributes["columns"]).split(",")):
         findings.append(Finding(line, "error", "unknown table column role", "use label, numeric or rating"))
     if "precision" in attributes and str(attributes["precision"]) not in tuple(map(str, range(MAX_DECIMAL_PLACES + 1))):
@@ -106,7 +109,10 @@ def bad_picture_ratios(lines):
     findings = []
     for number, text in enumerate(lines, 1):
         for found in IMAGE_WRITTEN.finditer(text):
-            ratio = parse_attributes(found.group(3) or "").values.get("ratio")
+            values = parse_attributes(found.group(3) or "").values
+            ratio = values.get("ratio")
+            if "focus" in values:
+                findings += unknown_keys(f'focus="{values["focus"]}"', number)
             if ratio is not None and picture_ratio(ratio) is None:
                 findings.append(Finding(number, "error", f"image ratio '{ratio}' is not a shape", "write it as width:height, e.g. 16:9, 4:3, 1:1 or 3:2"))
     return findings
@@ -156,6 +162,8 @@ def check_document(markdown, folders=(), output_format="pdf") -> list[Finding]:
             findings += unknown_keys(opening.group(2), number)
         elif switch := PAGE_SWITCH.match(stripped):
             findings += unknown_keys(switch.group(1), number)
+        elif open_blocks and stripped.startswith("focus:"):
+            findings += unknown_keys(f'focus="{stripped.partition(":")[2].strip()}"', number)
         elif stripped.startswith("{") and stripped.endswith("}"):
             findings += unknown_keys(stripped, number)
         else:

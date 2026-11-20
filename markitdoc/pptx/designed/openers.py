@@ -2,6 +2,7 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 
 from markitdoc.markup.blocks import paragraphs
 from markitdoc.markup.inline import literal
+from markitdoc.pptx.brand_cover import draw_brand_cover
 from markitdoc.pptx.deck import (
     BODY_HEIGHT,
     BODY_SIZES,
@@ -29,27 +30,30 @@ from markitdoc.pptx.deck import (
 from markitdoc.pptx.designed.titles import draw_group, fit_text, plan_group
 from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_credit, photo_for, send_to_back, side_title
 from markitdoc.utils.helpers import lifted, long_date
-from markitdoc.visuals.logos import logo_box, logo_ratio, logo_row
+from markitdoc.visuals.logos import logo_box
 
 COVER_SIZES, DIVIDER_SIZES = (48, 44, 40, 36, 32, 28), (44, 40, 36, 32, 28)
 QUOTE_SIZES = (36, 32, 28, 26, 24, 22, 20)
 PHOTO_FADES = ((0, 0.25, 0.35, 0.0), (0.4, 0.8, 0.0, 0.85), (0.8, 1.0, 0.85, 0.92))
 
 COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT = 2.4, 0.6
-PARTNER_ROW_HEIGHT, PARTNER_GAP = 0.6, 0.3
 
 
 # draws a designed cover slide from the block content
 def draw_cover(deck, block, image):
     slots = block.slots
     photo = image is not None and slots.get("variant") not in ("light", "company")
+    if deck.theme.locked and not photo:
+        slide = deck.new_slide(slots["title"], footer=False, standard=False)
+        draw_brand_cover(deck, block, slide)
+        return
     dark = photo or slots.get("variant") not in ("light", "company")
     slide = deck.new_slide(slots["title"], "night" if dark else "paper", False, standard=False)
     group = plan_group(deck, slots.get("kicker", ""), slots["title"], slots.get("subtitle", ""), COVER_SIZES, 11.2)
     if photo:
         night = deck.theme.rgb("night")
         fades = tuple((*fade, night) for fade in PHOTO_FADES)
-        picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT,
+        picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades, image[4]), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT,
                             slots.get("image", "Photograph"), "Cover photo")
         send_to_back(slide, picture)
         photo_credit(deck, slide, image[2], image[3], SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE)
@@ -70,17 +74,6 @@ def draw_cover(deck, block, image):
             write_text(deck, slide, literal(deck.theme.brand), text_left, 0.42, 6, 16, WHITE if dark else "ink", bold=True, name="Brand name")
             if deck.theme.tagline:
                 write_text(deck, slide, literal(deck.theme.tagline), text_left, 0.75, 6, 11, "mood", bold=True, name="Tagline")
-    if slots.get("variant") == "company":
-        company_details(deck, slide)
-
-
-# the brand's address on one line and its partner logos in rows above the cover rule, for any number of either
-def company_details(deck, slide):
-    if deck.theme.address:
-        write_text(deck, slide, literal("  ·  ".join(deck.theme.address)), SIDE_MARGIN, 6.05, CONTENT_WIDTH, 12, "muted", name="Address")
-    places = logo_row([logo_ratio(path) for path in deck.theme.partners], CONTENT_WIDTH, PARTNER_ROW_HEIGHT, PARTNER_GAP)
-    for path, (x, top, width, height) in zip(deck.theme.partners, places):
-        add_image(slide, str(path), SIDE_MARGIN + x, 5.3 + top, width, height, "Partner logo", "Partner logo")
 
 
 # draws a section divider slide with its title and optional photo

@@ -67,3 +67,21 @@ def test_should_report_a_ratio_that_is_not_a_shape():
     findings = markitdoc.check_document("# Pictures\n\n![logo](logo.png){ratio=wide}\n")
 
     assert [(finding.line, finding.message) for finding in findings if finding.severity == "error"] == [(3, "image ratio 'wide' is not a shape")]
+
+
+def test_photo_focus_selects_an_edge_and_has_its_own_cached_crop(tmp_path):
+    from markitdoc.markup.elements import cropped_picture
+    from markitdoc.visuals.photo_fit import interest_box
+
+    source = tmp_path / "focus.png"
+    picture = Image.new("RGB", (300, 100), "red")
+    picture.paste("blue", (200, 0, 300, 100))
+    picture.save(source)
+    left = cropped_picture(source, 1, "left")
+    right = cropped_picture(source, 1, "right")
+    assert Image.open(left).getpixel((50, 50)) == (255, 0, 0)
+    assert Image.open(right).getpixel((50, 50)) == (0, 0, 255)
+    assert interest_box(picture, 1, "center") == (100, 0, 200, 100)
+    assert interest_box(picture, 6, "bottom") == (0, 50, 300, 100)
+    assert any(finding.severity == "error" and "invalid photo focus" in finding.message for finding in
+               markitdoc.check_document('::: {.cover focus=diagonal}\ntitle: Test\n:::'))
