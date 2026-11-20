@@ -169,6 +169,7 @@ def charts_text():
 
 ## Charts
 A ```chart fence holds JSON with type ({' | '.join(CHART_TYPES)}), title, labels and datasets [{{label, values}}], one value per label.
+Give it a takeaway title, unit (e.g. "USD millions"), optional source, one highlight (exact category label) and precision (0–6 decimals).
 Sizes: {', '.join(CHART_SIZES)} (```chart {{size=half}}). Give a chart {{#id caption="..."}} to number it and cite it as [@id].
 Callouts: {', '.join('> **' + kind + ':**' for kind in CALLOUT_KINDS)}.
 
@@ -367,6 +368,8 @@ date: YYYY-MM-DD; lang: en | de | fr | es; notes: section | page (footnotes at t
 - Containers: {', '.join(f"'::: {{.{name}}}'" for name in FLOW_CONTAINERS)}: box = shaded panel, sidebar = narrow panel on the
   right, columns = two columns split at ### headings.
 - Definition list: a term on one line, then ': definition' on the next. Column alignment with |:---|:---:|---:|.
+- Table roles: after the table add '{{columns="label,numeric,rating" precision=2}}' (one role per column).
+  Put units in headers and use words such as High or Low for ratings.
 - Citations: list the sources in the front matter and cite them as [@key]; a '::: references' block places the bibliography:
   refs:
     gdpr: {{author: European Union, title: General Data Protection Regulation, year: 2016, url: "https://eur-lex.europa.eu/eli/reg/2016/679/oj"}}

@@ -130,8 +130,9 @@ def render_tokens(writer, tokens):
         elif kind == "table_open":
             end = closing_index(tokens, index, "table_open", "table_close")
             settings = element_settings(tokens, end + 1)
-            add_table(writer, tokens[index:end], settings.get("class") if settings.get("class") in TABLE_STYLES else "")
-            index = end + 1 + (3 if settings.get("class") in TABLE_STYLES else 0)
+            styled = settings.get("class") in TABLE_STYLES or bool(settings.keys() & {"columns", "precision"})
+            add_table(writer, tokens[index:end], settings if styled else {})
+            index = end + 1 + (3 if styled else 0)
             continue
         elif kind == "fence":
             add_fence(writer, token.info.strip(), token.content, figure_groups.get(index, ("", "")))
@@ -436,7 +437,7 @@ def add_chart(writer, content, settings, ident="", group=("", "")):
     width = writer.width * (0.75 if settings.get("size") == "half" else 1.0)
     target = writer.numbers.get(ident)
     label = target.text if target else title
-    width, height = fitted_size((2, 1), width, None, writer.width, figure_room(writer, group, label))
+    width, height = fitted_size((1, 0.56 if data.get("source") else 0.5), width, None, writer.width, figure_room(writer, group, label))
     try:
         image = render_chart(data, width_inches=width / 2.54, height_inches=height / 2.54, dpi=200)
     except Exception as error:

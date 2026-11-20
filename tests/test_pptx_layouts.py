@@ -297,7 +297,7 @@ def test_should_brand_the_table_header_and_colour_changes_and_ticks(tmp_path, mo
     header_fill = table.cell(0, 0).fill.fore_color.rgb
     colours = [table.cell(row, 1).text_frame.paragraphs[0].runs[0].font.color.rgb for row in (1, 2)]
     assert header_fill is not None and colours[0] != colours[1]
-    assert [table.cell(row, 2).text_frame.text for row in (1, 2)] == ["✓", "✕"]
+    assert [table.cell(row, 2).text_frame.text for row in (1, 2)] == ["✓ Yes", "✕ No"]
 
 
 def test_should_draw_a_straight_flowchart_as_steps(tmp_path, monkeypatch):
@@ -398,7 +398,9 @@ Q3 2026 – Q1 2027 — Cloud — Frankfurt.
     assert names.count("Progress") == 2 and names.count("Harvey ball") == 4 and names.count("Gantt bar") == 3
     chart = next(shape.chart for slide in deck.slides for shape in slide.shapes if shape.has_chart)
     assert list(chart.plots[0].categories) == ["2025", "Customers", "Hosting", "2026"]
-    assert "Residency" in all_text(deck) and "Full" not in all_text(deck)
+    assert "Residency" in all_text(deck) and "Full" in all_text(deck)
+    assert names.count("Waterfall connector") == 3
+    assert not chart.has_legend
 
 
 def test_should_render_investor_update_as_a_pptx(tmp_path, monkeypatch, caplog):

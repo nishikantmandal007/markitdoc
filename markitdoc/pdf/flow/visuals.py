@@ -74,12 +74,14 @@ def add_fence(pdf: FlowPages, language: str, content: str):
         else:
             data["colors"] = ["#" + pdf.theme.colors[role].lstrip("#") for role in ("mood", "second", "muted", "primary", "success", "danger")]
             data["background"], data["font"] = "#" + pdf.theme.colors["paper"].lstrip("#"), str(pdf.theme.fonts["body"])
+            reserve = 6 + (8 if ident in pdf.numbers else 0)
+            width, height = room_for(pdf, width, width * (0.56 if data.get("source") else 0.5), reserve)
             try:
-                image = render_chart(data, width_inches=width / 25.4, height_inches=width * 0.5 / 25.4)
+                image = render_chart(data, width_inches=width / 25.4, height_inches=height / 25.4)
             except Exception as error:
                 logger.warning("Chart skipped: %s", type(error).__name__)
                 return
-            add_picture(pdf, io.BytesIO(image), width, width * 0.5, f"Chart: {data.get('title') or data['type']}", ident)
+            add_picture(pdf, io.BytesIO(image), width, height, f"Chart: {data.get('title') or data['type']}", ident)
         return
     lines = content.rstrip().count("\n") + 1
     if lines <= SHORT_CODE_LINES and pdf.will_page_break(lines * 4.2 + 6):

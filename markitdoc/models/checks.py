@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from difflib import get_close_matches
 
 from markitdoc.guide.support import support_findings
-from markitdoc.markup.elements import IMAGE_WRITTEN, chart_data, picture_ratio
+from markitdoc.markup.elements import IMAGE_WRITTEN, MAX_DECIMAL_PLACES, TABLE_COLUMN_ROLES, chart_data, picture_ratio
 from markitdoc.markup.latex import latex_findings
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.front_matter import front_matter, front_matter_yaml
@@ -43,11 +43,16 @@ class Finding:
 # warns about each attribute key no renderer reads, naming the closest key
 def unknown_keys(text, line):
     findings = []
-    known = KNOWN_KEYS + STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + PARAGRAPH_PROPERTIES + ("italic", "page", "numbers")
+    known = KNOWN_KEYS + STYLE_PROPERTIES + BOX_PROPERTIES + LAYOUT_ATTRIBUTES + PARAGRAPH_PROPERTIES + ("italic", "page", "numbers", "columns", "precision")
     for key in parse_attributes(text).values:
         if key not in known:
             close = get_close_matches(key, known, n=1)
             findings.append(Finding(line, "warning", f"unknown attribute '{key}'", f"did you mean '{close[0]}'?" if close else ""))
+    attributes = parse_attributes(text).values
+    if "columns" in attributes and any(role.strip().lower() not in TABLE_COLUMN_ROLES for role in str(attributes["columns"]).split(",")):
+        findings.append(Finding(line, "error", "unknown table column role", "use label, numeric or rating"))
+    if "precision" in attributes and str(attributes["precision"]) not in tuple(map(str, range(MAX_DECIMAL_PLACES + 1))):
+        findings.append(Finding(line, "error", "invalid table precision", f"use a whole number from 0 to {MAX_DECIMAL_PLACES}"))
     return findings
 
 

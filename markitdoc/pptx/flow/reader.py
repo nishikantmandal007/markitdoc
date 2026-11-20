@@ -10,8 +10,11 @@ from markitdoc.markup.elements import (
     column_alignments,
     cropped_picture,
     element_settings,
+    formatted_number,
     only_display_maths,
     picture_ratio,
+    settings_from,
+    table_columns,
     top_level_blocks,
     without_display_maths,
     written_image,
@@ -45,6 +48,8 @@ class Table:
     rows: tuple
     aligns: tuple
     style: str
+    roles: tuple
+    declared: bool
 
 
 @dataclass
@@ -232,13 +237,16 @@ class FlowReader:
                 row = None
         settings = element_settings(tokens, end + 1)
         last = rows[-1] if len(rows) > 2 else ()
+        consume = settings.get("class") in TABLE_STYLES or bool(settings.keys() & {"columns", "precision"})
         if last and re.fullmatch(r"\{[^{}]*\}", last[0].strip()) and not any(cell.strip() for cell in last[1:]):
-            settings, rows = {"class": last[0].strip("{} .").split()[0] if last[0].strip("{} .") else ""}, rows[:-1]
-        styled = settings.get("class") in TABLE_STYLES
-        style = settings["class"] if styled else self.deck.table_style
-        self.parts.append(Piece("table", Table(tuple(rows), tuple(column_alignments(tokens[index:end])), style), self.caption))
+            settings, rows = {**settings, **settings_from(last[0].strip())}, rows[:-1]
+        style = settings.get("class") if settings.get("class") in TABLE_STYLES else self.deck.table_style
+        roles, precision = table_columns(rows, settings)
+        formatted = (rows[0], *(tuple(formatted_number(cell, precision[column]) for column, cell in enumerate(row)) for row in rows[1:]))
+        self.parts.append(Piece("table", Table(formatted, tuple(column_alignments(tokens[index:end])), style, tuple(roles),
+                                              bool(settings.get("columns"))), self.caption))
         self.caption = ""
-        return end + 1 + (3 if styled else 0)
+        return end + 1 + (3 if consume else 0)
 
     # turns a code fence into a chart, diagram, image, or code block
     def fence(self, token):

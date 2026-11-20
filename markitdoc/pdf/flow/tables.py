@@ -3,7 +3,7 @@ import logging
 from fpdf.enums import TableCellFillMode
 from fpdf.fonts import FontFace
 
-from markitdoc.markup.elements import NUMERIC_CELL, TABLE_STYLES, TOTALS_ROW
+from markitdoc.markup.elements import NUMERIC_CELL, TABLE_STYLES, TOTALS_ROW, formatted_number, rating_text, table_columns
 from markitdoc.markup.inline import inline_runs
 from markitdoc.pdf.flow.pages import TABLE_SIZE, FlowPages, top_height
 from markitdoc.pdf.flow.text import CODE_SCALE, add_paragraph
@@ -57,10 +57,13 @@ def column_widths(pdf: FlowPages, rows, available, size=TABLE_SIZE):
     return [low + spare * extra / total for low, extra in zip(minimums, flexible)], readable
 
 
-# draws a styled PowerPoint table with a repeated header
-def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=()):
+# draws a styled PDF table with a repeated header
+def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(), settings=None):
     if not rows or not rows[0]:
         return
+    columns, precision = table_columns(rows, settings or {})
+    rows = [rows[0], *[[rating_text(cell) if columns[index] == "rating" else formatted_number(cell, precision[index])
+                       for index, cell in enumerate(row)] for row in rows[1:]]]
     width = pdf.area
     for size in (TABLE_SIZE * pdf.scale, TABLE_SIZE * pdf.scale - 1, TABLE_SIZE * pdf.scale - 1.5):
         widths, needed = column_widths(pdf, rows, width, size)
@@ -74,20 +77,19 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
     if pdf.will_page_break(size * TABLE_LINE * 1.6 * min(len(rows), 3) + 6 + caption_room):
         pdf.add_page()
     elif not pdf.measuring and pdf.w < pdf.h and len(rows) > 1:
-        if pdf.will_page_break(top_height(pdf, lambda probe: add_table(probe, rows[:3], style, alignments, roles, monos)) + caption_room):
+        if pdf.will_page_break(top_height(pdf, lambda probe: add_table(probe, rows[:3], style, alignments, roles, monos, settings)) + caption_room):
             pdf.add_page()
     if pdf.pending_caption:
         caption, pdf.pending_caption = pdf.pending_caption, ""
         pdf.mark_target(pdf.pending_target)
         add_paragraph(pdf, caption, after=1.5)
-    numeric = [all(NUMERIC_CELL.match(row[column].strip()) for row in rows[1:] if column < len(row) and row[column].strip())
-               for column in range(len(rows[0]))]
     labels = [len(rows) > 2 and all(len(row[column].strip()) <= 14 and len(row[column].split()) <= 2 and not NUMERIC_CELL.match(row[column].strip())
                                     for row in rows[1:] if column < len(row) and row[column].strip())
               for column in range(len(rows[0]))]
-    align = [(alignments[column] if column < len(alignments) and alignments[column] else None)
-             or ("RIGHT" if is_number and len(rows) > 1 else "CENTER" if labels[column] and column > 0 else "LEFT")
-             for column, is_number in enumerate(numeric)]
+    declared = bool((settings or {}).get("columns"))
+    align = [(alignments[column] if column < len(alignments) and alignments[column] and not declared else None)
+             or ("RIGHT" if role == "numeric" else "CENTER" if role == "rating" or (not role and labels[column] and column) else "LEFT")
+             for column, role in enumerate(columns)]
     style = style if style in TABLE_STYLES else pdf.table_style if pdf.table_style in TABLE_STYLES else "lined"
     boxed = style == "boxed"
     heading_style = FontFace(emphasis="BOLD", color=pdf.theme.rgb("ink"), fill_color=pdf.theme.rgb("surface") if boxed else None)
@@ -110,6 +112,7 @@ def add_table(pdf: FlowPages, rows, style=None, alignments=(), roles=(), monos=(
                 for column in range(len(rows[0])):
                     role = roles[row_index][column] if row_index < len(roles) and column < len(roles[row_index]) else ""
                     mono = row_index < len(monos) and column < len(monos[row_index]) and monos[row_index][column]
+                    mono = mono or columns[column] == "numeric"
                     face = (FontFace(color=pdf.theme.rgb(role) if role else None, emphasis="BOLD" if total else None,
                                      family="Mono" if mono else None, size_pt=size * CODE_SCALE if mono else None)
                             if role or total or mono else None)

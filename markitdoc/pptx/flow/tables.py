@@ -6,8 +6,8 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-from markitdoc.markup.elements import NUMERIC_CELL, SIGNED_NUMBER, TABLE_MARKS, rating_level
-from markitdoc.markup.inline import plain_text
+from markitdoc.markup.elements import SIGNED_NUMBER, TABLE_MARKS, rating_level, rating_text
+from markitdoc.markup.inline import literal, plain_text
 from markitdoc.pdf.flow.tables import column_widths
 from markitdoc.pptx.deck import (
     CONTENT_WIDTH,
@@ -20,6 +20,7 @@ from markitdoc.pptx.deck import (
     set_spacing,
     tint,
 )
+from markitdoc.utils.helpers import MONO_FONT
 
 MAX_BULLETS, MAX_TABLE_ROWS, MAX_LEAD_ABOVE = 6, 8, 1.15
 TABLE_SIZES = (18, 16, 14)
@@ -82,9 +83,8 @@ def pack_rows(rows, heights, room):
 
 # chooses a declared or numeric alignment for a table column
 def cell_align(table, column):
-    declared = table.aligns[column] if column < len(table.aligns) else None
-    numbers = all(NUMERIC_CELL.match(table_cells(row[column]).strip()) for row in table.rows[1:] if column < len(row) and row[column].strip())
-    pick = declared or ("RIGHT" if numbers and len(table.rows) > 1 else "LEFT")
+    declared = table.aligns[column] if column < len(table.aligns) and not table.declared else None
+    pick = declared or ("RIGHT" if table.roles[column] == "numeric" else "LEFT")
     return {"RIGHT": PP_ALIGN.RIGHT, "CENTER": PP_ALIGN.CENTER}.get(pick, PP_ALIGN.LEFT)
 
 
@@ -125,7 +125,7 @@ def draw_harvey_ball(deck, slide, left, top, size, level):
 
 
 # sets cell text, alignment, fill, and borders for a slide table
-def style_cell(deck, cell, source, align, size, header, style, last, odd, first=False, highlight=False, rating=False):
+def style_cell(deck, cell, source, align, size, header, style, last, odd, first=False, highlight=False, column_role=""):
     cell.margin_left = cell.margin_right = Inches(CELL_SIDE)
     cell.margin_top = cell.margin_bottom = Inches(CELL_VERTICAL)
     cell.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -140,20 +140,22 @@ def style_cell(deck, cell, source, align, size, header, style, last, odd, first=
         cell.fill.fore_color.rgb = deck.color(fill)
     else:
         cell.fill.background()
+    rating = not header and column_role == "rating" and rating_ball(source)
     if rating:
-        cell.fill.background() if not highlight else None
-        return
-    mark = TABLE_MARKS.get(plain_text(source).strip().lower()) if not header else None
+        cell.margin_left = Inches(CELL_SIDE + 0.38)
+        align = PP_ALIGN.LEFT
+    mark = TABLE_MARKS.get(plain_text(source).strip().lower()) if not header and not rating and column_role != "label" else None
     paragraph = cell.text_frame.paragraphs[0]
     paragraph.alignment = PP_ALIGN.CENTER if mark else align
     set_spacing(paragraph, size, 1.2, 0)
     if mark:
-        add_runs(deck, paragraph, mark[0], size + 2, mark[1], bold=True)
+        add_runs(deck, paragraph, f"{mark[0]} {literal(rating_text(source))}", size, mark[1], bold=True)
         return
     signed = SIGNED_NUMBER.match(plain_text(source)) if not header else None
     role = (WHITE if header else "mood" if highlight else ("success" if signed.group(1) == "+" else "danger") if signed
             else "ink" if first else "body")
-    add_runs(deck, paragraph, source, size, role, bold=header or highlight or first)
+    add_runs(deck, paragraph, source, size, role, bold=header or highlight or first,
+             font=MONO_FONT if not header and column_role == "numeric" else None)
 
 
 # draws a styled PowerPoint table with a repeated header
@@ -171,16 +173,15 @@ def add_table(deck, slide, table, rows, widths, header_height, heights, size, to
     aligns = [cell_align(table, column) for column in range(len(widths))]
     brand = (deck.theme.brand or "").split()[:1]
     highlighted = {column for column, heading in enumerate(table.rows[0]) if column and brand and brand[0].lower() in plain_text(heading).lower()}
-    rated = {column for column in range(1, len(widths)) if rows and all(rating_ball(row[column] if column < len(row) else "") for row in rows)}
     for position, row in enumerate([table.rows[0]] + list(rows)):
         for column in range(len(widths)):
             style_cell(deck, grid.cell(position, column), row[column] if column < len(row) else "", aligns[column], size,
                        position == 0, table.style, position == len(rows), position % 2 == 0 and position > 0, column == 0 and len(widths) > 2,
-                       column in highlighted, column in rated and position > 0)
+                       column in highlighted, table.roles[column])
     for position, row in enumerate(rows, 1):
         y = top + header_height + sum(heights[:position - 1])
-        for column in rated:
-            ball = rating_level(row[column] if column < len(row) else "")
-            x = SIDE_MARGIN + sum(widths[:column])
-            diameter = min(0.3, heights[position - 1] * 0.6)
-            draw_harvey_ball(deck, slide, x + widths[column] / 2 - diameter / 2, y + heights[position - 1] / 2 - diameter / 2, diameter, ball)
+        for column, source in enumerate(row):
+            if table.roles[column] == "rating" and (ball := rating_level(source)) is not None:
+                x = SIDE_MARGIN + sum(widths[:column]) + CELL_SIDE
+                diameter = min(0.3, heights[position - 1] * 0.6)
+                draw_harvey_ball(deck, slide, x, y + (heights[position - 1] - diameter) / 2, diameter, ball)

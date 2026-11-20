@@ -1,18 +1,32 @@
 import io
 import re
+from dataclasses import replace
 from functools import lru_cache
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from markitdoc.docx.styles import cell_borders, cell_fill, cell_margins, keep_together, new_table, repeat_header
 from markitdoc.docx.writer import WHITE, bookmark, first_paragraph, landscape_section, plain, write_runs
-from markitdoc.markup.elements import SIGNED_NUMBER, TABLE_MARKS, TOTALS_ROW, column_alignments, rating_level, settings_from
+from markitdoc.markup.elements import (
+    SIGNED_NUMBER,
+    TABLE_MARKS,
+    TABLE_STYLES,
+    TOTALS_ROW,
+    column_alignments,
+    formatted_number,
+    rating_level,
+    rating_text,
+    settings_from,
+    table_columns,
+)
 from markitdoc.markup.inline import inline_runs, parser
+from markitdoc.themes.theme_constants import POINT_MM
+from markitdoc.utils.helpers import MONO_FONT
 
 HEAVY_RULE, LIGHT_RULE = 6, 3
-NUMERIC_CELL = re.compile(r"^[\s$€£¥+\-−~≈<>]*\d[\d.,\s]*(%|[kKmMbB]|bn|x|pts?|bps)?\s*$")
+HEADER_MEASURE_SCALE = 10
 
 
 # removes inline emphasis markers from table cell text
@@ -29,16 +43,17 @@ def table_cells(tokens):
     return rows
 
 
-# draws a styled PowerPoint table with a repeated header
-def add_table(writer, tokens, style):
+# draws a styled Word table with a repeated header
+def add_table(writer, tokens, settings):
     rows = table_cells(tokens)
     if not rows:
         return
     header_text = ["".join(run.text for run in inline_runs(cell)) for cell in rows[0]]
     if len(rows) > 2 and re.fullmatch(r"\{[^{}]*\}", rows[-1][0].content.strip() if rows[-1] else "") and not any(
             cell.content.strip() for cell in rows[-1][1:]):
-        style = settings_from(rows[-1][0].content.strip()[1:-1]).get("class", "") or style
+        settings = {**settings, **settings_from(rows[-1][0].content.strip()[1:-1])}
         rows = rows[:-1]
+    style = settings.get("class") if settings.get("class") in TABLE_STYLES else writer.table_style
     columns = len(rows[0])
     wide = columns > 8 and writer.body is writer.document
     width = landscape_section(writer, True) if wide else writer.width
@@ -53,17 +68,20 @@ def add_table(writer, tokens, style):
             plain(writer, paragraph, f"Table {writer.table_count}. ", bold=True)
         plain(writer, paragraph, writer.pending_caption)
         writer.pending_caption = ""
-    body_rows = [[cell.content for cell in row] for row in rows[1:]]
-    numeric = [all(NUMERIC_CELL.match(row[column]) for row in body_rows if column < len(row) and row[column].strip()) and any(
-        column < len(row) and row[column].strip() for row in body_rows) for column in range(columns)]
-    rated = {column for column in range(1, columns) if body_rows and all(rating_level(row[column] if column < len(row) else "") is not None
-                                                                          for row in body_rows)}
+    roles, precision = table_columns([[cell.content for cell in row] for row in rows], settings)
+    declared = bool(settings.get("columns"))
+    size = 8.5 if columns > 6 else 9
     brand = (writer.theme.brand or "").split()[:1]
     highlighted = {column for column, heading in enumerate(header_text) if column and brand and brand[0].lower() in heading.lower()}
     alignment = column_alignments(tokens)
     weights = [max(9, max(len(inline_runs_text(row[column])) if column < len(row) else 0 for row in rows)) for column in range(columns)]
     weights = [min(weight, 40) for weight in weights]
-    widths = [width * weight / sum(weights) for weight in weights]
+    font = ImageFont.truetype(str(writer.theme.fonts.get("bold", writer.theme.fonts["heading"])), int(size * HEADER_MEASURE_SCALE))
+    minimums = [max((font.getlength(word) for word in heading.split()), default=0) / HEADER_MEASURE_SCALE * POINT_MM / 10 + 0.6
+                for heading in header_text]
+    minimum_total = sum(minimums)
+    widths = ([minimum + (width - minimum_total) * weight / sum(weights) for minimum, weight in zip(minimums, weights)]
+              if minimum_total <= width else [width * minimum / minimum_total for minimum in minimums])
     table = new_table(writer, len(rows), columns, widths)
     repeat_header(table.rows[0])
     hairline = writer.hex(writer.tint("mood", 0.75))
@@ -86,24 +104,29 @@ def add_table(writer, tokens, style):
             cell_borders(cell, top=top, bottom=bottom,
                          left=(hairline, 4) if style == "boxed" else None, right=(hairline, 4) if style == "boxed" else None)
             paragraph = first_paragraph(cell)
-            align = alignment[column] if column < len(alignment) and alignment[column] else ("right" if numeric[column] and not header else "")
+            align = alignment[column] if column < len(alignment) and alignment[column] and not declared else (
+                "right" if roles[column] == "numeric" and not header else "")
             paragraph.alignment = {"right": WD_ALIGN_PARAGRAPH.RIGHT, "center": WD_ALIGN_PARAGRAPH.CENTER}.get(str(align).lower(),
                                                                                                                 WD_ALIGN_PARAGRAPH.LEFT)
             runs = inline_runs(source, writer.targets) if source is not None else []
             text = "".join(run.text for run in runs).strip()
-            if not header and column in rated:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                paragraph.add_run().add_picture(harvey_png(rating_level(text), writer.hex("mood")), width=Cm(0.42))
+            if not header and roles[column] == "rating" and (level := rating_level(text)) is not None:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                paragraph.add_run().add_picture(harvey_png(level, writer.hex("mood")), width=Cm(0.31))
+                plain(writer, paragraph, "\u00a0" + rating_text(text), size)
                 continue
-            mark = TABLE_MARKS.get(text.lower()) if not header else None
+            mark = TABLE_MARKS.get(text.lower()) if not header and roles[column] != "label" else None
             if mark:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                plain(writer, paragraph, mark[0], 11, mark[1], bold=True)
+                plain(writer, paragraph, f"{mark[0]} {rating_text(text)}", size, mark[1], bold=True)
                 continue
             signed = SIGNED_NUMBER.match(text) if not header else None
             role = (WHITE if ruled else "ink") if header else "mood" if column in highlighted else (
                 "success" if signed.group(1) == "+" else "danger") if signed else "ink" if column == 0 and columns > 2 else None
-            write_runs(writer, paragraph, runs, size=8.5 if columns > 6 else 9, role=role,
+            numeric = not header and roles[column] == "numeric"
+            if numeric and len(runs) == 1:
+                runs = [replace(runs[0], text=formatted_number(runs[0].text, precision[column]))]
+            write_runs(writer, paragraph, runs, size=size, role=role, font=MONO_FONT if numeric else None,
                        bold=header or total or column in highlighted or (column == 0 and columns > 2))
     if len(rows) <= 7:
         keep_together(table)

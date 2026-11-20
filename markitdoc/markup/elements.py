@@ -3,6 +3,7 @@ import math
 import re
 import tempfile
 import zlib
+from decimal import Decimal
 from pathlib import Path
 
 from PIL import Image
@@ -14,7 +15,9 @@ from markitdoc.themes.theme_constants import IMAGE_SUFFIXES
 from markitdoc.visuals.charts import parse_chart_fence
 from markitdoc.visuals.photo_fit import interest_box
 
-NUMERIC_CELL = re.compile(r"^[-+]?[\d.,]+\s*%?$|^[-+]?[$€£]\s?[\d.,]+[kKmMbB]?$")
+NUMERIC_CELL = re.compile(r"^([\s$€£¥+−~≈<>-]*)(\d+(?:,\d{3})*(?:\.\d+)?)(\s*(?:%|[kKmMbB]|bn|x|pts?|bps)?\s*)$")
+TABLE_COLUMN_ROLES = ("label", "numeric", "rating")
+MAX_DECIMAL_PLACES = 6
 CALLOUT_KINDS = ("Note", "Action", "Risk", "Key figure")
 TABLE_STYLES = ("lined", "striped", "boxed")
 IMAGE_WRITTEN = re.compile(r"!\[([^\]]*)\]\(([^)\s]*)\)(?:\{([^{}]*)\})?")
@@ -85,6 +88,47 @@ def column_alignments(tokens):
     return alignments
 
 
+# assigns a role to each column, preferring an explicit role over numeric and rating inference
+def table_columns(rows, settings):
+    declared = [role.strip().lower() for role in str(settings.get("columns", "")).split(",")]
+    roles, precisions = [], []
+    for index in range(len(rows[0])):
+        cells = [plain_text(row[index]).strip() for row in rows[1:] if index < len(row) and row[index].strip()]
+        numbers = [NUMERIC_CELL.fullmatch(cell) for cell in cells]
+        role = declared[index] if index < len(declared) else ""
+        if role not in TABLE_COLUMN_ROLES:
+            role = ("numeric" if cells and all(numbers) else
+                    "rating" if index and cells and all(rating_level(cell) is not None for cell in cells) else "")
+        places = str(settings.get("precision", ""))
+        precision = int(places) if places.isascii() and places.isdigit() and len(places) == 1 else None
+        if precision is None and cells and all(numbers) and len({(match[1].strip(" +−-"), match[3].strip()) for match in numbers}) == 1:
+            precision = max(len(match[2].partition(".")[2]) for match in numbers)
+        roles.append(role)
+        precisions.append(precision if role == "numeric" and precision is not None and precision <= MAX_DECIMAL_PLACES else None)
+    return roles, precisions
+
+
+# presents comparable numbers at one precision without rewriting non-numeric text or mixed units
+def formatted_number(source, precision):
+    match = NUMERIC_CELL.fullmatch(plain_text(source).strip()) if precision is not None else None
+    if not match:
+        return source
+    number = match[2]
+    decimal = Decimal(number.replace(",", ""))
+    fmt = f",.{precision}f" if "," in number else f".{precision}f"
+    return source.replace(number, format(decimal, fmt), 1)
+
+
+# returns the visible text represented by a rating or a yes/no mark
+def rating_text(source):
+    text = plain_text(source).strip()
+    if text in ("✓", "✔"):
+        return "Yes"
+    if text.lower() in ("✕", "✗", "x"):
+        return "No"
+    return text
+
+
 # reads settings attached to a markdown paragraph
 def element_settings(tokens, position):
     if position + 1 >= len(tokens) or tokens[position].type != "paragraph_open":
@@ -132,12 +176,19 @@ def chart_data(content):
         data["datasets"] = [{"values": data.pop("values")}]
     datasets = data.get("datasets") if data else None
     if (not isinstance(datasets, list) or not datasets or not all(isinstance(dataset, dict) for dataset in datasets)
-            or not all(isinstance(value, (int, float)) and math.isfinite(value) for dataset in datasets
-                       for value in (dataset.get("values") or [None]))):
+            or any(not isinstance(values := dataset.get("values"), list) or not values
+                   or any(type(value) not in (int, float) or not math.isfinite(value) for value in values) for dataset in datasets)):
         return None
-    labels = data.get("labels") or []
-    if labels and any(len(dataset.get("values") or []) != len(labels) for dataset in data["datasets"]):
+    labels = data.get("labels") or [str(index) for index in range(1, len(datasets[0]["values"]) + 1)]
+    if not isinstance(labels, list) or not all(type(label) in (str, int, float) for label in labels):
         return None
+    if any(len(dataset["values"]) != len(labels) for dataset in datasets):
+        return None
+    if "precision" in data and (type(data["precision"]) is not int or not 0 <= data["precision"] <= MAX_DECIMAL_PLACES):
+        return None
+    if "highlight" in data and data["highlight"] not in labels and data["highlight"] != data.get("total"):
+        return None
+    data["labels"] = labels
     return data
 
 

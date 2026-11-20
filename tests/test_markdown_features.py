@@ -265,3 +265,69 @@ def test_should_not_end_a_quote_with_a_dash_when_nobody_is_credited(tmp_path):
     with fitz.open(generate_document(markdown, "pdf", filename_stem="quote", output_dir=str(tmp_path))) as pdf:
         text = " ".join(page.get_text() for page in pdf)
     assert "Short words stay." in text and "stay. —" not in text and "stay.—" not in text
+
+
+def test_table_roles_display_tabular_values_and_readable_ratings(tmp_path):
+    import pymupdf
+    from docx import Document
+    from pptx import Presentation
+
+    import markitdoc
+
+    markdown = """## Evidence
+
+| Service | Cost (USD) | Risk |
+|---|---|---|
+| Atlas | 1,200.3 | High |
+| Grove | 120 | ✓ |
+
+{columns="label,numeric,rating" precision=2}
+"""
+    doc = Document(markitdoc.render(markdown, "docx", tmp_path / "table.docx"))
+    cells = doc.tables[0].rows[1].cells
+    number = cells[1].paragraphs[0]
+    assert number.text == "1,200.30" and number.runs[0].font.name == "Consolas"
+    assert cells[2].text.endswith("High") and doc.tables[0].rows[2].cells[2].text.endswith("Yes")
+
+    deck = Presentation(markitdoc.render(markdown, "pptx", tmp_path / "table.pptx"))
+    table = next(shape.table for slide in deck.slides for shape in slide.shapes if shape.has_table)
+    assert table.cell(2, 1).text == "120.00"
+    assert table.cell(1, 2).text == "High"
+
+    with pymupdf.open(markitdoc.render(markdown, "pdf", tmp_path / "table.pdf")) as pdf:
+        text = pdf[0].get_text()
+        assert all(value in text for value in ("1,200.30", "120.00", "High", "Yes"))
+        assert any("Mono" in font[3] for font in pdf[0].get_fonts())
+    malformed = markdown.replace("label,numeric,rating", "name,numeric,rating").replace("precision=2", "precision=-1")
+    assert {"unknown table column role", "invalid table precision"} <= {finding.message for finding in markitdoc.check_document(malformed)}
+
+
+def test_waterfall_labels_and_connectors_show_the_reconciled_total():
+    from matplotlib.figure import Figure
+
+    from markitdoc.markup.elements import chart_data
+    from markitdoc.visuals.charts import _waterfall, chart_title, waterfall_steps
+
+    data = chart_data('{"type":"waterfall","labels":["Baseline","Compute","Savings"],"values":[12,5.2,-2.6],'
+                      '"title":"Savings offset growth","unit":"USD millions","total":"Year end","precision":2}')
+    axes = Figure(figsize=(6, 3)).subplots()
+    _waterfall(axes, data)
+    assert chart_title(data) == "Savings offset growth (USD millions)"
+    assert [text.get_text() for text in axes.texts] == ["12.00", "+5.20", "−2.60", "14.60"]
+    assert len(axes.collections) == len(waterfall_steps(data)) - 1
+    assert chart_data('{"type":"bar","labels":["A"],"values":[1],"highlight":"missing"}') is None
+    assert chart_data('{"type":"bar","labels":["A"],"values":[1],"precision":-1}') is None
+
+
+def test_pdf_table_keeps_a_trailing_caption_and_repeats_its_header(tmp_path):
+    import pymupdf
+
+    import markitdoc
+
+    rows = "\n".join(f"| Risk tier {index:02} | Review the spending allocation and retain the evidence. |"
+                     for index in range(70))
+    markdown = f"## Risks\n\n| Classification | Decision |\n|---|---|\n{rows}\n\nTable: Evidence by risk tier"
+    with pymupdf.open(markitdoc.render(markdown, "pdf", tmp_path / "split.pdf")) as pdf:
+        texts = [page.get_text() for page in pdf]
+    assert len(texts) > 1 and all("Classification" in text for text in texts)
+    assert "Evidence by risk tier" in texts[0] and "Risk tier 69" in texts[-1]

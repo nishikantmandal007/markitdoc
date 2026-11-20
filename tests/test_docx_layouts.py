@@ -105,7 +105,7 @@ def test_should_repeat_table_headers_and_draw_harvey_balls_as_pictures(word):
     region = next(table for table in document.tables if table.cell(0, 0).text == "Region")
     assert region.rows[0]._tr.trPr.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tblHeader") is not None
     controls = next(table for table in document.tables if table.cell(0, 0).text == "Capability")
-    assert controls.cell(1, 1).text == "" and controls.cell(1, 1)._tc.xpath(".//w:drawing")
+    assert controls.cell(1, 1).text.strip() == "Full" and controls.cell(1, 1)._tc.xpath(".//w:drawing")
 
 
 def test_should_write_identical_bytes_for_the_same_markdown(tmp_path, monkeypatch):

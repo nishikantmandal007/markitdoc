@@ -212,13 +212,24 @@ def render_tokens(pdf: FlowPages, tokens):
             end = closing_index(tokens, index, "table_open", "table_close")
             cell_roles, cell_monos = [], []
             rows, settings = table_rows(tokens[index:end], pdf.targets, cell_roles, cell_monos), element_settings(tokens, end + 1)
-            if settings.get("class") not in TABLE_STYLES:
+            if not (settings.get("class") in TABLE_STYLES or settings.keys() & {"columns", "precision"}):
                 settings = {}
             skip = 3 if settings else 0
             last = rows[-1] if len(rows) > 1 else []
             if last and last[0].startswith("{") and last[0].endswith("}") and not any(last[1:]):
                 settings, rows = settings_from(last[0][1:-1]), rows[:-1]
-            add_table(pdf, rows, settings.get("class"), column_alignments(tokens[index:end]), cell_roles, cell_monos)
+            after = end + 1 + skip
+            if not pdf.pending_caption and after + 1 < len(tokens) and tokens[after].type == "paragraph_open":
+                caption, _, attrs = tokens[after + 1].content.partition("{")
+                if caption.startswith("Table:"):
+                    ident = parse_attributes(attrs).id
+                    target = pdf.numbers.get(ident)
+                    if not target:
+                        pdf.table_count += 1
+                    mark = target.mark if target else f"Table {pdf.table_count}"
+                    pdf.pending_caption, pdf.pending_target = f"__{mark}. {caption[6:].strip()}__", ident
+                    skip += 3
+            add_table(pdf, rows, settings.get("class"), column_alignments(tokens[index:end]), cell_roles, cell_monos, settings)
             index = end + 1 + skip
             continue
         elif token.type == "fence":
