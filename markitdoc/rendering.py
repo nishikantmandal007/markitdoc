@@ -2,6 +2,7 @@ import logging
 import re
 import tempfile
 import time
+from contextvars import ContextVar
 from dataclasses import replace
 from pathlib import Path
 
@@ -26,6 +27,14 @@ logger = logging.getLogger(__name__)
 FORMATS = ("pdf", "pptx", "docx")
 TRUE_WORDS = ("true", "yes", "on", True)
 PAGE_REFERENCE_PASSES = 2
+render_problems = ContextVar("markitdoc_render_problems", default=None)
+
+
+# notes a problem the writer of the markdown can fix, when the caller asked for a render report
+def report_problem(message):
+    problems = render_problems.get()
+    if problems is not None and message not in problems:
+        problems.append(message)
 
 
 # the stylesheet of a document: its theme, style files and front matter layered
@@ -45,6 +54,9 @@ def images_for(document, require_images, ratio_of=None):
         for caption in re.findall(r"!\[([^\]]+)\]\([^)]*\)", block.body if block.layout == "flow" else ""):
             wanted[("figure", caption)], ratios[("figure", caption)] = caption, 1.5
     found = find_images(wanted, ratios) if wanted else {}
+    for key, query in wanted.items():
+        if key not in found:
+            report_problem(f"No relevant photo was found for '{query}', so it was left out: use a shorter, well-known subject or drop the image.")
     return ({key: (image.path, image.caption, image.short_credit, image.source) for key, image in found.items()},
             tuple(dict.fromkeys(image.full_credit for image in found.values())))
 
@@ -92,8 +104,12 @@ def draw_pdf(document, output_path, theme, styles, numbering, found):
     document = with_photo_credits(document, credit_lines)
     credits = ()
     problems = page_problems(document, theme, wants_images, tightened, credits, sparse)
-    for _, message in problems:
+    for index, message in problems:
         logger.warning("PDF page problem (designed pages fall back to text, bad visuals are skipped): %s", message)
+        report_problem(message + ("; the page was printed as plain text" if document.blocks[index].layout != "flow" else "; it was left out"))
+    for index in sorted(sparse):
+        report_problem(f"The {document.blocks[index].layout} page (block {index + 1}) had too little content for a full page and was printed as "
+                       "plain text: give it more content or write it as normal markdown.")
     broken = {index for index, _ in problems if document.blocks[index].layout != "flow"} | sparse
     if sparse:
         logger.info("Designed pages with too little content for a full page, printed as normal text: %s", sorted(sparse))
@@ -140,7 +156,7 @@ def render_laid_out_docx(document, output_path, template, author, markdown=""):
 
 
 # markdown to a PDF, PowerPoint or Word file at output; returns the written path
-def render(markdown, output_format, output, template="default", author="", options=None):
+def render(markdown, output_format, output, template="default", author="", options=None, report=None):
     if output_format not in FORMATS:
         raise UnsupportedFormatError(f"Unsupported format {output_format!r}, expected one of {', '.join(FORMATS)}")
     if not markdown or not markdown.strip():
@@ -148,9 +164,13 @@ def render(markdown, output_format, output, template="default", author="", optio
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Rendering %s: %d characters, template %s, to %s", output_format, len(markdown), template, output_path)
-    with using_options(options or Options()):
-        if output_format == "docx":
-            return render_laid_out_docx(parse_document(markdown), output_path, template, author, markdown)
-        if output_format == "pptx":
-            return render_laid_out_pptx(parse_document(markdown), output_path, template, author, markdown)
-        return render_laid_out_pdf(parse_document(markdown), output_path, template, markdown)
+    token = render_problems.set(report)
+    try:
+        with using_options(options or Options()):
+            if output_format == "docx":
+                return render_laid_out_docx(parse_document(markdown), output_path, template, author, markdown)
+            if output_format == "pptx":
+                return render_laid_out_pptx(parse_document(markdown), output_path, template, author, markdown)
+            return render_laid_out_pdf(parse_document(markdown), output_path, template, markdown)
+    finally:
+        render_problems.reset(token)

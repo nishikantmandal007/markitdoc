@@ -94,3 +94,19 @@ def test_should_ask_for_short_photo_queries_only_when_photos_are_on():
 
     assert [(finding.line, finding.severity) for finding in check_document(markdown) if "photo query" in finding.message] == [(6, "error")]
     assert not [finding for finding in check_document(markdown.replace("images: true", "images: false")) if "photo query" in finding.message]
+
+
+def test_should_report_what_a_render_left_out_so_the_writer_can_fix_it(tmp_path, monkeypatch):
+    import markitdoc
+    from markitdoc import rendering
+
+    monkeypatch.setattr(rendering, "find_images", lambda wanted, ratios: {})
+    markdown = ("---\nimages: true\n---\n# Review\n\n::: {.figures}\ntitle: Numbers\n42% — Growth — Up from last year.\n:::\n\n"
+                "## Body\n\nText.\n\n![Lisbon tram 28](figure)\n")
+    report = []
+
+    markitdoc.render(markdown, "pdf", tmp_path / "doc.pdf", report=report)
+
+    assert any("No relevant photo was found for 'Lisbon tram 28'" in problem for problem in report)
+    assert any("printed as plain text" in problem for problem in report)
+    assert markitdoc.render(markdown, "pdf", tmp_path / "again.pdf").stat().st_size > 0
