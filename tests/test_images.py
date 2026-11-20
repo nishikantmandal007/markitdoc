@@ -281,8 +281,9 @@ def test_should_place_a_named_photo_written_as_a_figure(tmp_path, monkeypatch):
     asked = []
     monkeypatch.setattr(rendering, "find_images", lambda wanted, ratios: asked.extend(wanted.values()) or
                         {key: DocumentImage(tmp_path / "tram.jpg", "Tram 28 Lisbon.jpg", "Ana", "CC BY 2.0") for key in wanted})
-    markdown = "---\nimages: true\n---\n# Lisbon\n\n## Trams\n\nText.\n\n![File:Tram 28 Lisbon.jpg](figure)\n"
-
     import fitz
-    with fitz.open(markitdoc.render(markdown, "pdf", tmp_path / "doc.pdf")) as pdf:
-        assert asked == ["File:Tram 28 Lisbon.jpg"] and any(page.get_images() for page in pdf)
+    for photo in ("![File:Tram 28 Lisbon.jpg](figure)", "![Tram 28 climbing in Alfama](File:Tram 28 Lisbon.jpg){width=70%}"):
+        asked.clear()
+        markdown = f"---\nimages: true\n---\n# Lisbon\n\n## Trams\n\nText.\n\n{photo}\n"
+        with fitz.open(markitdoc.render(markdown, "pdf", tmp_path / "doc.pdf")) as pdf:
+            assert asked == ["File:Tram 28 Lisbon.jpg"] and any(page.get_images() for page in pdf)

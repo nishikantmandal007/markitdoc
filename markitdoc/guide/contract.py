@@ -268,7 +268,7 @@ PHOTOS (only with images: true)
 - In normal pages, ![a concrete photographable subject](figure) on its own line becomes a captioned "Figure N"; its
   text is also the photo search.
 - To use one exact Wikimedia Commons photo, write its file title instead of a query: image="File:Tram 28 Lisbon.jpg"
-  on a designed page, or ![File:Tram 28 Lisbon.jpg](figure) in normal pages."""
+  on a designed page, or ![Tram 28 climbing in Alfama](File:Tram 28 Lisbon.jpg) in normal pages."""
 SLIDE_EXTRAS = """SLIDE VISUALS
 - A timeline whose entries are date ranges ('Q1 2026 – Q3 2026', 'Jan – Apr 2027') becomes a Gantt chart; use one unit
   (quarters, months or years) for every entry. A figure whose value is a percentage gets a progress ring.

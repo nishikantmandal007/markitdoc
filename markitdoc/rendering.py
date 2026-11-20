@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 FORMATS = ("pdf", "pptx", "docx")
 TRUE_WORDS = ("true", "yes", "on", True)
 PAGE_REFERENCE_PASSES = 2
+NAMED_PHOTO = re.compile(r"!\[[^\]]*\]\((File:[^)]+)\)", re.IGNORECASE)
 render_problems = ContextVar("markitdoc_render_problems", default=None)
 
 
@@ -164,6 +165,7 @@ def render(markdown, output_format, output, template="default", author="", optio
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Rendering %s: %d characters, template %s, to %s", output_format, len(markdown), template, output_path)
+    markdown = NAMED_PHOTO.sub(lambda found: f"![{found.group(1).strip()}](figure)", markdown)
     token = render_problems.set(report)
     try:
         with using_options(options or Options()):
