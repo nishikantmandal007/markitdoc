@@ -132,3 +132,12 @@ def test_should_split_the_guide_into_parts_a_model_loads_on_demand():
         assert "- cover:" in markitdoc.guide(name, level="layouts")
         assert "## Palettes" in markitdoc.guide(name, level="styles")
         assert "```mermaid" in markitdoc.guide(name, level="charts")
+
+
+
+def test_should_tell_the_writer_what_each_optional_part_offers():
+    for name in markitdoc.FORMATS:
+        writing = markitdoc.guide(name, level="writing")
+        assert all(f"- {part}: {offer}" in writing for part, offer in markitdoc.GUIDE_PARTS.items())
+        assert len(writing.split("\nBrands you can use")[0]) < 5000
+    assert "citations with a bibliography" in markitdoc.GUIDE_PARTS["styles"]

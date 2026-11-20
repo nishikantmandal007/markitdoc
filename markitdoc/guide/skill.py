@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from markitdoc.guide.contract import charts_text, layouts_text, styles_text
+from markitdoc.guide.contract import GUIDE_PARTS, charts_text, layouts_text, styles_text
 from markitdoc.guide.language import core_card
 
 SKILL_FOLDER = "references"
@@ -32,9 +32,7 @@ Write plain markdown first: headings, paragraphs, lists, tables, charts. Add the
 
 ## References
 
-- `{SKILL_FOLDER}/layouts.md`: the designed pages and slides, their slots and limits.
-- `{SKILL_FOLDER}/styles.md`: palettes, font pairs, papers, selectors, a style file example and the support table by format.
-- `{SKILL_FOLDER}/charts.md`: charts, diagrams and infographics.
+{chr(10).join(f"- `{SKILL_FOLDER}/{name}.md`: {offer}." for name, offer in GUIDE_PARTS.items())}
 """
 
 

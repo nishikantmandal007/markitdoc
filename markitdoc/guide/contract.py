@@ -77,6 +77,12 @@ title: The next five years
 body: The programme now moves upstream, where the same methods can protect three more towns.
 :::"""
 GUIDE_LEVELS = ("core", "full", "writing", "layouts", "styles", "charts")
+GUIDE_PARTS = {
+    "layouts": "designed pages and slides (cover, key figures, timeline, comparison and more) and photos",
+    "styles": "two-column sections, boxes and sidebars, drop caps, citations with a bibliography, cross-references such as "
+              "'see Figure 3', landscape or per-section pages, headers and footers, watermark, custom heading and paragraph styles",
+    "charts": "every chart type and size, waterfall charts, diagrams (flows, sequences, timelines, mind maps, Gantt) and infographics",
+}
 CHART_TYPES = ("bar", "horizontal_bar", "stacked_bar", "line", "pie", "donut", "waterfall")
 STYLE_EXAMPLE = """page: {paper: a4, margins: wide}
 pages:
@@ -249,7 +255,7 @@ MARKDOWN
   ```
   type: bar | horizontal_bar | stacked_bar | line | pie | donut | waterfall. Values are plain numbers (no %, units
   or commas), exactly one per label, or the chart is left out.
-- Never draw diagrams with text characters. Diagrams (```mermaid), infographics and chart options: charts part."""
+- Never draw diagrams with text characters; use a diagram (charts part)."""
 CHOOSING_LAYOUTS = """CHOOSING DESIGNED PAGES
 - From the content: headline numbers -> figures; findings or recommendations -> keypoints; argument or story -> chapter;
   options or before/after -> comparison; SWOT, risks or quadrants -> matrix; steps -> process; dates -> timeline;
@@ -314,7 +320,8 @@ images: true             (your call: photos help guides, places, history, produc
 ---
 Palettes, by subject: {palettes}.
 Fonts: {fonts}.
-Headers, footers, watermark, text size, table styles and custom styles: styles part.{brands_rule()}"""
+Other parts of this guide, to read only when the document needs what they offer:
+{chr(10).join(f"- {name}: {offer}" for name, offer in GUIDE_PARTS.items())}{brands_rule()}"""
 
 
 # the brands an application registered, so a model can choose one only when the user asks for it or the document has it

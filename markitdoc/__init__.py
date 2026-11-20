@@ -1,7 +1,7 @@
 import logging
 
 from markitdoc.errors import EmptyDocumentError, MarkitDocError, RenderError, ThemeError, UnsupportedFormatError
-from markitdoc.guide.contract import guide
+from markitdoc.guide.contract import GUIDE_PARTS, guide
 from markitdoc.models.attributes import Attributes, parse_attributes
 from markitdoc.models.checks import Finding, check_document
 from markitdoc.models.document import Block, Document, parse_document
