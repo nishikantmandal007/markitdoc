@@ -48,7 +48,7 @@ class TestPhotoSearch:
 
         commons = [params for url, params in fake.calls if "commons" in url]
         assert all(params["gsrlimit"] == 30 for params in commons)
-        assert all("filetype:bitmap filew:>1600" in params["gsrsearch"] for params in commons)
+        assert all("filemime:image/jpeg filew:>1600" in params["gsrsearch"] for params in commons)
 
     def test_should_ask_for_resolution_only_on_full_bleed_slots(self, monkeypatch, tmp_path):
         fake = wetland(monkeypatch, tmp_path, answers=["wetland_many.json"] * 5)
@@ -59,20 +59,12 @@ class TestPhotoSearch:
         full, band = fake.searches()[0], fake.searches()[-1]
         assert "fileres:>" in full and "fileres:>" not in band
 
-    def test_should_search_depicted_item_first_when_wikidata_knows_the_query(self, monkeypatch, tmp_path):
-        fake = wetland(monkeypatch, tmp_path, answers=["wetland_many.json"])
-        with using_options(fake.options):
-            find_image("wetland", 1.5)
-
-        assert fake.searches()[0].startswith("haswbstatement:P180=Q170321") and "Quality_images" in fake.searches()[0]
-        assert fake.calls[0][0] == images.WIKIDATA_API
-
     def test_should_fall_back_down_the_ladder_in_order(self, monkeypatch, tmp_path):
         fake = wetland(monkeypatch, tmp_path, wikidata="wikidata_none.json")
         with using_options(fake.options):
             assert find_image("reed wetland", 1.5) is None
 
-        steps = [text.split(" filetype")[0] for text in fake.searches()]
+        steps = [text.split(" filemime")[0] for text in fake.searches()]
         assert steps == ['reed wetland incategory:"Quality_images|Featured_pictures_on_Wikimedia_Commons"', "reed wetland", "wetland"]
 
     def test_should_stop_at_the_first_step_with_enough_candidates(self, monkeypatch, tmp_path):
@@ -175,14 +167,6 @@ class TestPhotoRelevance:
 
         assert titles[0] == "City street at night.jpg"
 
-    def test_should_rank_depicts_sourced_candidates_above_text_only_ones_of_equal_quality(self, monkeypatch, tmp_path):
-        pool = [{**one, "depicts": False} for one in json.loads(json.dumps(images.candidates(
-            fixture("equal_pair.json")["query"]["pages"].values(), 1.5, ["marsh"])))]
-        pool[1]["depicts"] = True
-        ranked = sorted(pool, key=lambda one: images.photo_score(one, ["marsh"], 1.5), reverse=True)
-
-        assert ranked[0]["title"] == "Marsh scene.jpg"
-
     def test_should_never_let_a_map_or_diagram_win_a_cover_slot(self, monkeypatch, tmp_path):
         titles = self.titles(monkeypatch, tmp_path, "river delta", "map_only_and_photo.json", ratio=0.7)
 
@@ -207,22 +191,6 @@ class TestPhotoRelevance:
         titles = self.titles(monkeypatch, tmp_path, "glass sculpture", "heron_art.json")
 
         assert titles[0] == "Heron sculpture in reeds.jpg"
-
-    def test_should_use_a_depicts_search_when_only_a_sub_phrase_resolves_on_wikidata(self, monkeypatch, tmp_path):
-        class Heron(FakeWikimedia):
-            def get(self, url, **kwargs):
-                if "wikidata" in url and kwargs["params"]["search"] != "heron":
-                    self.wikidata = "wikidata_none.json"
-                elif "wikidata" in url:
-                    self.wikidata = "wikidata_heron.json"
-                return super().get(url, **kwargs)
-
-        fake = Heron(monkeypatch, tmp_path, answers=["heron_art.json"])
-        with using_options(fake.options):
-            find_image("heron in reeds", 1.5)
-
-        assert fake.searches()[0].startswith("haswbstatement:P180=Q18789")
-        assert [params["search"] for url, params in fake.calls if "wikidata" in url] == ["heron in reeds", "heron reeds", "heron"]
 
     def test_should_rank_a_photo_whose_only_art_signal_is_a_category_below_a_real_heron(self, monkeypatch, tmp_path):
         titles = self.titles(monkeypatch, tmp_path, "heron in reeds", "heron_category_art.json")

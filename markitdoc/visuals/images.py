@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -19,8 +20,7 @@ logger = logging.getLogger(__name__)
 
 Image.MAX_IMAGE_PIXELS = 40_000_000
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
-WIKIDATA_API = "https://www.wikidata.org/w/api.php"
-API_HOSTS = {"commons.wikimedia.org", "www.wikidata.org"}
+API_HOSTS = {"commons.wikimedia.org"}
 ALLOWED_HOSTS = {"upload.wikimedia.org", "thumb.wikimedia.org"}
 ALLOWED_LICENCES = ("public domain", "pd", "cc0", "cc by", "cc-by")
 CC_LICENCE = re.compile(r"cc[ -]?(by(?:-sa)?)[ -]?(\d\.\d)", re.IGNORECASE)
@@ -36,8 +36,7 @@ REMEMBERED_CHOICES = 8
 ABOUT_LENGTH = 600
 RELEVANT_SCORE = 3
 PHOTO_SUFFIXES = (".jpg", ".jpeg")
-STOP_WORDS = {"in", "at", "of", "the", "a", "an", "on", "with", "by", "and", "near", "under", "over"}
-NOT_A_SUBJECT = r"name|disambiguation|wikimedia|municipality|film|album|song|band"
+PHOTO_SEARCHES = 4
 OFF_TOPIC = {
     "building", "apartment", "street", "road", "highway", "city", "skyline", "car", "pylon", "power", "construction",
     "factory", "residence", "cityscape", "urban", "skyscraper", "housing", "logo", "map", "diagram", "chart", "poster", "document", "screenshot",
@@ -112,8 +111,15 @@ def client_headers():
 # finds distinct images for the requested document sections
 def find_images(wanted: dict, ratios: dict) -> dict:
     found, used, owner = {}, set(), {}
+    remembered = remembered_choices()
+    unknown = [key for key, query in wanted.items() if query_words(query) and " ".join(query_words(query)).lower() not in remembered]
+    with ThreadPoolExecutor(max_workers=PHOTO_SEARCHES) as executor:
+        searched = dict(zip(unknown, executor.map(lambda key: search_pool(query_words(wanted[key]), ratios[key]), unknown)))
+    for key, pool in searched.items():
+        if pool:
+            remember_choice(" ".join(query_words(wanted[key])).lower(), pool)
     for key, query in wanted.items():
-        image = find_image(query, ratios[key], used)
+        image = find_image(query, ratios[key], used, searched.get(key))
         if image:
             if image.title in owner:
                 logger.warning("Photo reused on blocks %s and %s: %s; use a more specific image query", owner[image.title], key, image.title)
@@ -124,19 +130,25 @@ def find_images(wanted: dict, ratios: dict) -> dict:
     return found
 
 
+# the words of a photo query, cut to the length a search accepts
+def query_words(query):
+    return re.sub(r"[^\w\s,.-]", " ", query)[:MAX_QUERY_LENGTH].split()
+
+
 # picks an unused photo from the remembered or searched pool, reusing the best one only when every photo is used
-def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | None:
-    words = re.sub(r"[^\w\s,.-]", " ", query)[:MAX_QUERY_LENGTH].split()
+def find_image(query: str, ratio: float, used=frozenset(), searched=None) -> DocumentImage | None:
+    words = query_words(query)
     if not words:
         return None
     key = " ".join(words).lower()
     pool = remembered_choices().get(key)
     pool = [one for one in [pool] if isinstance(pool, dict)] or pool or []
     pool = [one for one in pool if permitted(one["licence"])]
-    if not pool:
+    if not pool and searched is None:
         pool = search_pool(words, ratio)
         if pool:
             remember_choice(key, pool)
+    pool = pool or searched or []
     pool = sorted((one for one in pool if one["title"].lower().endswith(PHOTO_SUFFIXES) and photo_score(one, words, ratio)[0] >= RELEVANT_SCORE),
                   key=lambda one: photo_score(one, words, ratio), reverse=True)
     if not pool:
@@ -179,38 +191,15 @@ def remember_choice(query, pool):
     cache_entry("choices.json", query, pool[:REMEMBERED_CHOICES])
 
 
-# resolves a query to a Wikidata item id once, skipping names and disambiguations and remembering misses too
-def depicted_item(text):
-    known = cached_mapping("depicts.json")
-    if text not in known:
-        found = api_get(WIKIDATA_API, {"action": "wbsearchentities", "format": "json", "language": "en", "limit": 5, "search": text}).get("search")
-        if found is None:
-            return ""
-        found = [one for one in found if not re.search(NOT_A_SUBJECT, one.get("description", ""), re.I)]
-        cache_entry("depicts.json", text, found[0]["id"] if found else "")
-        known = cached_mapping("depicts.json")
-    return known.get(text, "")
-
-
-# resolves the whole query to a Wikidata item, else its longest content-word sequence that resolves
-def depicted_phrase(words):
-    content = [word for word in words if word.lower() not in STOP_WORDS]
-    phrases = [" ".join(words).lower()] + [" ".join(content[start:start + size]).lower()
-                                           for size in range(len(content), 0, -1) for start in range(len(content) - size + 1)]
-    return next((item for item in map(depicted_item, dict.fromkeys(phrases)) if item), "")
-
-
 # searches Wikimedia for permitted images, stopping at the first ladder step that gives enough candidates
 def search_pool(words, ratio):
     full, shorter = " ".join(words), " ".join(words[-min(2, max(1, len(words) - 1)):])
-    item = depicted_phrase(words)
-    filters = f" filetype:bitmap filew:>{MIN_WIDTH}" + (f" fileres:>{FULL_BLEED_KILOPIXELS}" if ratio < 1 else "")
-    steps = [(f"haswbstatement:P180={item}{STARRED_FILTER}", True, False), (f"haswbstatement:P180={item}", False, False)] if item else []
-    steps += [(full + STARRED_FILTER, True, False), (full, False, False)] + ([(shorter, False, True)] if shorter != full else [])
+    filters = f" filemime:image/jpeg filew:>{MIN_WIDTH}" + (f" fileres:>{FULL_BLEED_KILOPIXELS}" if ratio < 1 else "")
+    steps = [(full + STARRED_FILTER, True, False), (full, False, False)] + ([(shorter, False, True)] if shorter != full else [])
     pool = []
     for text, starred, strict in steps:
         title_words = [plain(word) for word in re.findall(r"\w+", text.split(" incategory")[0]) if len(word) > 3 or word.isdigit() or word.isupper()]
-        found = candidates(search(text + filters), ratio, title_words, starred, strict, text.startswith("haswbstatement"))
+        found = candidates(search(text + filters), ratio, title_words, starred, strict)
         pool += [one for one in found if one["title"] not in {have["title"] for have in pool}]
         if sum(photo_score(one, words, ratio)[0] >= RELEVANT_SCORE for one in pool) >= ENOUGH_CANDIDATES:
             break
@@ -252,14 +241,14 @@ def stems(text):
     return {part[:-1] if len(part) > 3 and part.endswith("s") and not part.endswith("ss") else part for part in re.findall(r"\w+", plain(text))}
 
 
-# scores how well a photo suits the query: relevance first (depicts, words in title and description, off-topic penalty), then shape, quality and resolution as tie-breakers
+# scores how well a photo suits the query: relevance first (words in title and description, off-topic penalty), then shape, quality and resolution as tie-breakers
 def photo_score(pick, words, ratio):
     subject = [stem for stem in stems(" ".join(word for word in words if len(word) > 3 or word.isdigit() or word.isupper()))]
     wanted = stems(" ".join(words))
     title, about = stems(pick["title"].rsplit(".", 1)[0]), stems(pick.get("about", ""))
     hit = lambda found: sum(any(word == part or part.startswith(word) for part in found) for word in subject) / max(len(subject), 1)
     off = len((title | about) & (OFF_TOPIC - wanted))
-    relevance = 4 * bool(pick.get("depicts")) + 3 * hit(title) + 2 * hit(about) - 5 * min(off, 2)
+    relevance = 3 * hit(title) + 2 * hit(about) - 5 * min(off, 2)
     width, height = pick.get("size", (0, 0))
     fit = abs(width / height - ratio) if height else 0
     shape = min(fit, 2) * -1 + 0.5 * (width >= height)
@@ -267,7 +256,7 @@ def photo_score(pick, words, ratio):
 
 
 # filters image search results by licence, size and content, keeping what ranking needs
-def candidates(pages, ratio, words, starred=False, strict=False, depicts=False):
+def candidates(pages, ratio, words, starred=False, strict=False):
     found = []
     for page in pages:
         info = page["imageinfo"][0]
@@ -287,7 +276,7 @@ def candidates(pages, ratio, words, starred=False, strict=False, depicts=False):
         categories = " ".join(one["title"].removeprefix("Category:") for one in page.get("categories", []))
         about = " ".join(re.sub(r"\s+", " ", f"{text('ObjectName')} {text('ImageDescription')} {categories}").split())[:ABOUT_LENGTH]
         found.append({"title": title, "url": url, "artist": artist[:60], "licence": licence, "sha1": info["sha1"],
-                      "about": about, "depicts": depicts, "starred": starred, "size": [info["width"], info["height"]]})
+                      "about": about, "starred": starred, "size": [info["width"], info["height"]]})
     return found
 
 
