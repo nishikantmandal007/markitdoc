@@ -43,12 +43,18 @@ def overlay(deck, top, bottom, start=0.0):
     return ((start, 1.0, top, bottom, deck.theme.rgb("night")),)
 
 
+# links small photo credit text to its attribution while preserving its colour over the image
+def photo_credit(deck, slide, credit, source, left, top, width, size, role, align=PP_ALIGN.RIGHT):
+    write_text(deck, slide, literal(credit), left, top, width, size, role, align=align, name="Credit")
+    slide.shapes[-1].click_action.hyperlink.address = source
+
+
 # places an image across the full slide with an optional overlay
 def full_bleed(deck, slide, image, fades, alt):
     picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT, alt,
                         "Background photo")
     send_to_back(slide, picture)
-    write_text(deck, slide, literal(image[2]), SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE, align=PP_ALIGN.RIGHT, name="Credit")
+    photo_credit(deck, slide, image[2], image[3], SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE)
 
 
 # places an image beside a text area on the slide
@@ -59,7 +65,7 @@ def half_bleed(deck, slide, image, alt):
     left = half if side == "right" else 0
     add_image(slide, photo_for(deck, image[0], half, SLIDE_HEIGHT, overlay(deck, 0.0, 0.6, 0.82)), left, 0, half, SLIDE_HEIGHT, alt,
               "Side photo")
-    write_text(deck, slide, literal(image[2]), left + 0.3, 7.05, half - 0.6, 10, SOFT_WHITE, align=PP_ALIGN.RIGHT, name="Credit")
+    photo_credit(deck, slide, image[2], image[3], left + 0.3, 7.05, half - 0.6, 10, SOFT_WHITE)
     return (SIDE_MARGIN if side == "right" else half + 0.6), half - 1.2
 
 

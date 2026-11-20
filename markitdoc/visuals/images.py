@@ -67,7 +67,7 @@ class DocumentImage:
     # formats a compact image credit for display
     @property
     def short_credit(self):
-        return f"Photo: {self.author}, {self.licence}, Wikimedia Commons"
+        return f"Photo: {self.author}, {self.licence}, Wikimedia Commons (cropped)"
 
     # extracts a short author name from image attribution text
     @property

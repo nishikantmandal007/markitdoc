@@ -235,6 +235,7 @@ def test_should_credit_every_photo_in_every_format(tmp_path, monkeypatch):
     from docx import Document as WordDocument
     from PIL import Image as Picture
     from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
 
     import markitdoc
     from markitdoc import rendering
@@ -246,10 +247,18 @@ def test_should_credit_every_photo_in_every_format(tmp_path, monkeypatch):
     markdown = "---\nimages: true\n---\n# Lisbon\n\n## Trams\n\nThe trams climb the hills.\n\n![Lisbon tram 28](figure)\n"
 
     with fitz.open(markitdoc.render(markdown, "pdf", tmp_path / "doc.pdf")) as pdf:
-        assert "Photo credits" in "".join(page.get_text() for page in pdf)
-    assert any("Photo credits" in paragraph.text for paragraph in WordDocument(markitdoc.render(markdown, "docx", tmp_path / "doc.docx")).paragraphs)
+        assert len(pdf) == 1
+        assert "Ana Silva" in pdf[0].get_text()
+        assert any(link.get("uri") == photo.source for link in pdf[0].get_links())
+    doc = WordDocument(markitdoc.render(markdown, "docx", tmp_path / "doc.docx"))
+    assert any("Ana Silva" in paragraph.text for paragraph in doc.paragraphs if paragraph.style.name == "Caption")
+    assert all("Photo credits" not in paragraph.text for paragraph in doc.paragraphs)
     deck = Presentation(markitdoc.render(markdown, "pptx", tmp_path / "doc.pptx"))
-    assert any(shape.has_text_frame and "Photo credits" in shape.text_frame.text for slide in deck.slides for shape in slide.shapes)
+    credits = [shape for slide in deck.slides for shape in slide.shapes if shape.name == "Credit"]
+    assert all("Photo credits" not in shape.text for slide in deck.slides for shape in slide.shapes if shape.has_text_frame)
+    assert any(shape.shape_type == MSO_SHAPE_TYPE.PICTURE for slide in deck.slides if any(shape.name == "Credit" for shape in slide.shapes)
+               for shape in slide.shapes)
+    assert [(shape.text, shape.click_action.hyperlink.address) for shape in credits] == [(photo.short_credit, photo.source)]
 
 
 def test_should_offer_candidates_with_thumbnails_for_a_writer_to_choose(monkeypatch, tmp_path):

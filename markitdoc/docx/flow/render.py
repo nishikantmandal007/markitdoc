@@ -1,6 +1,7 @@
 import io
 import logging
 import re
+import textwrap
 from pathlib import Path
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING, WD_TAB_ALIGNMENT, WD_TAB_LEADER
@@ -54,6 +55,8 @@ from markitdoc.visuals.infographics import render_infographic
 logger = logging.getLogger(__name__)
 DROPCAP_LINE, DROPCAP_CAP_HEIGHT = 1.18 * 1.2, 0.7
 ALIGNMENTS = {"center": WD_ALIGN_PARAGRAPH.CENTER, "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}
+FIGURE_LANGUAGES = {"chart", "mermaid"}
+FIGURE_SPACING_CM = 1.5
 BOX_DRAWING = "─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬"
 
 
@@ -71,6 +74,7 @@ def render_markdown(writer, markdown):
 # renders markdown tokens into the current output format
 def render_tokens(writer, tokens):
     index, stack, pending = 0, [], ""
+    figure_groups = {}
     while index < len(tokens):
         token = tokens[index]
         kind = token.type
@@ -88,11 +92,25 @@ def render_tokens(writer, tokens):
             index = end + 1
             continue
         if kind == "heading_open":
-            add_heading(writer, int(token.tag[1]), tokens[index + 1])
+            level = int(token.tag[1])
+            heading = add_heading(writer, level, tokens[index + 1])
+            figure_index = index + 3
+            intro = ""
+            if figure_index + 2 < len(tokens) and tokens[figure_index].type == "paragraph_open":
+                intro = tokens[figure_index + 1].content
+                figure_index += 3
+            if (heading is not None and figure_index < len(tokens) and tokens[figure_index].type == "fence"
+                    and tokens[figure_index].info.split("{")[0].strip() in FIGURE_LANGUAGES):
+                heading.paragraph_format.keep_with_next = True
+                figure_groups[figure_index] = (heading.text, intro)
             index += 3
             continue
         if kind == "paragraph_open":
+            previous = len(writer.body.paragraphs) if index + 3 in figure_groups else None
             pending = add_paragraph_token(writer, tokens, index, stack, pending)
+            if previous is not None:
+                for paragraph in writer.body.paragraphs[previous:]:
+                    paragraph.paragraph_format.keep_with_next = True
             index += 3
             continue
         if kind in ("bullet_list_open", "ordered_list_open"):
@@ -116,7 +134,7 @@ def render_tokens(writer, tokens):
             index = end + 1 + (3 if settings.get("class") in TABLE_STYLES else 0)
             continue
         elif kind == "fence":
-            add_fence(writer, token.info.strip(), token.content)
+            add_fence(writer, token.info.strip(), token.content, figure_groups.get(index, ("", "")))
         elif kind == "code_block":
             add_code(writer, token.content)
         elif kind == "math_block":
@@ -332,6 +350,19 @@ def add_styled_box(writer, look, tokens):
     writer.body.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+# leaves room for the Word figure's spacing and any attached heading, introduction and caption
+def figure_room(writer, group=("", ""), label=""):
+    section = writer.document.sections[-1]
+    heading, intro = group
+    reserve = FIGURE_SPACING_CM
+    for text, points in ((heading, 32), (intro, BODY_SIZE), (label, 10)):
+        if text:
+            characters = max(1, int(writer.width * 10 / (points * POINT_MM * 0.55)))
+            reserve += len(textwrap.wrap(text, characters)) * points * POINT_MM * 0.14 + 0.35
+    page = section.page_height.cm - section.top_margin.cm - section.bottom_margin.cm
+    return max(page / 4, page - reserve)
+
+
 # adds an image written with a file path at its width, with its caption; a missing file leaves its alt text in brackets
 def add_file_picture(writer, found):
     alt, source, written = found.group(1), found.group(2), found.group(3) or ""
@@ -341,8 +372,7 @@ def add_file_picture(writer, found):
     path = cropped_picture((Path(folders[0]) if folders else Path()) / source, picture_ratio(attributes.values.get("ratio")))
     natural = image_size(path)
     if natural:
-        section = writer.document.sections[-1]
-        room = section.page_height.cm - section.top_margin.cm - section.bottom_margin.cm - 1.5
+        room = figure_room(writer, label=str(attributes.values.get("caption", "")))
         asked = writer.styles.length(look.width, writer.width * 10) / 10 if look.width else None
         asked_height = writer.styles.length(attributes.values["height"], room * 10) / 10 if "height" in attributes.values else None
         width, height = fitted_size((natural[0] / 10, natural[1] / 10), asked, asked_height, writer.width, room)
@@ -367,7 +397,7 @@ def drop_empty_first(cell):
 
 
 # renders a code fence as text, chart, diagram, or code
-def add_fence(writer, language, content):
+def add_fence(writer, language, content, group=("", "")):
     settings = settings_from(language[language.find("{"):]) if "{" in language else {}
     ident = parse_attributes(language[language.find("{"):]).id if "{" in language else ""
     language = language.split("{")[0].strip()
@@ -375,9 +405,9 @@ def add_fence(writer, language, content):
         add_code(writer, content, 8.5)
         return
     if language == "chart":
-        add_chart(writer, content, settings, ident)
+        add_chart(writer, content, settings, ident, group)
     elif language == "mermaid":
-        add_diagram(writer, content, ident)
+        add_diagram(writer, content, ident, group)
     elif language.split()[:1] == ["infographic"]:
         syntax = f"{language}\n{content}" if " " in language else content
         path = render_infographic(syntax, writer.theme)
@@ -393,7 +423,7 @@ def add_fence(writer, language, content):
 
 
 # renders chart data as an image in the Word document
-def add_chart(writer, content, settings, ident=""):
+def add_chart(writer, content, settings, ident="", group=("", "")):
     data = chart_data(content)
     if not data:
         logger.warning("Chart skipped: invalid JSON, unknown type, no values, or a value count that differs from the labels")
@@ -404,18 +434,22 @@ def add_chart(writer, content, settings, ident=""):
                       else ["#" + writer.theme.colors[role].lstrip("#") for role in ("mood", "second", "muted", "primary", "success", "danger")])
     data["background"], data["font"] = "#ffffff", str(writer.theme.fonts["body"])
     width = writer.width * (0.75 if settings.get("size") == "half" else 1.0)
+    target = writer.numbers.get(ident)
+    label = target.text if target else title
+    width, height = fitted_size((2, 1), width, None, writer.width, figure_room(writer, group, label))
     try:
-        image = render_chart(data, width_inches=width / 2.54, height_inches=width * 0.5 / 2.54, dpi=200)
+        image = render_chart(data, width_inches=width / 2.54, height_inches=height / 2.54, dpi=200)
     except Exception as error:
         logger.warning("Chart skipped: %s", type(error).__name__)
         return
-    picture = add_picture(writer, io.BytesIO(image), width, f"Chart: {title or data['type']}")
-    if target := writer.numbers.get(ident):
-        caption(writer, target.text, target=target, anchor=picture)
+    picture = add_picture(writer, io.BytesIO(image), width, f"Chart: {title or data['type']}", height)
+    picture.paragraph_format.keep_with_next = bool(label)
+    if label:
+        caption(writer, label, target=target, anchor=picture)
 
 
 # renders a diagram or falls back to a Word step table
-def add_diagram(writer, content, ident=""):
+def add_diagram(writer, content, ident="", group=("", "")):
     target = writer.numbers.get(ident)
     lines = content.strip().splitlines()
     titled = any(line.strip().startswith(("title ", "pie title ")) for line in lines)
@@ -435,13 +469,14 @@ def add_diagram(writer, content, ident=""):
             paragraph = writer.body.add_paragraph()
             plain(writer, paragraph, "→ " + line)
         return
+    label = target.text if target else title
     with Image.open(path) as picture:
-        natural = picture.width / ZOOM / 96 * 2.54
-    picture = add_picture(writer, str(path), min(writer.width, max(natural, writer.width * 0.55)), f"Diagram: {title or 'diagram'}")
-    if target:
-        caption(writer, target.text, target=target, anchor=picture)
-    elif title:
-        caption(writer, title)
+        natural = tuple(pixels / ZOOM / 96 * 2.54 for pixels in picture.size)
+    width, height = fitted_size(natural, max(natural[0], writer.width * 0.55), None, writer.width, figure_room(writer, group, label))
+    picture = add_picture(writer, str(path), width, f"Diagram: {title or 'diagram'}", height)
+    picture.paragraph_format.keep_with_next = bool(label)
+    if label:
+        caption(writer, label, target=target, anchor=picture)
 
 
 # adds monospaced code lines to the Word document

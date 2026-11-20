@@ -27,7 +27,7 @@ from markitdoc.pptx.deck import (
     write_text,
 )
 from markitdoc.pptx.designed.titles import draw_group, fit_text, plan_group
-from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, send_to_back, side_title
+from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_credit, photo_for, send_to_back, side_title
 from markitdoc.utils.helpers import lifted, long_date
 from markitdoc.visuals.logos import logo_box, logo_ratio, logo_row
 
@@ -52,7 +52,7 @@ def draw_cover(deck, block, image):
         picture = add_image(slide, photo_for(deck, image[0], SLIDE_WIDTH, SLIDE_HEIGHT, fades), 0, 0, SLIDE_WIDTH, SLIDE_HEIGHT,
                             slots.get("image", "Photograph"), "Cover photo")
         send_to_back(slide, picture)
-        write_text(deck, slide, literal(image[2]), SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE, align=PP_ALIGN.RIGHT, name="Credit")
+        photo_credit(deck, slide, image[2], image[3], SLIDE_WIDTH - SIDE_MARGIN - 6, 7.05, 6, 10, SOFT_WHITE)
         draw_group(deck, slide, group, SIDE_MARGIN, max(0.9, 6.6 - group.total), 11.2,
                    (WHITE, lifted(deck.theme.rgb("mood"), 0.55), SOFT_WHITE))
         return

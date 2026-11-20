@@ -29,7 +29,7 @@ from markitdoc.docx.writer import (
     write_runs,
 )
 from markitdoc.markup.blocks import paragraphs, prepared
-from markitdoc.markup.inline import inline_runs, parser, plain_text
+from markitdoc.markup.inline import Run, inline_runs, parser, plain_text
 from markitdoc.models.attributes import parse_attributes
 from markitdoc.models.document import Document
 from markitdoc.models.model_constants import PAGE_SWITCH
@@ -104,6 +104,8 @@ def draw_cover(writer, block, image):
         add_picture(writer, str(writer.theme.logo), width, writer.theme.brand or "Logo", height).alignment = WD_ALIGN_PARAGRAPH.LEFT
     if image:
         photo(writer, image[0], writer.width, writer.width / (COMPANY_COVER_PHOTO_RATIO if company else 16 / 9), slots.get("image", "Photograph"))
+        credit = writer.body.add_paragraph(style="Caption")
+        write_runs(writer, credit, [Run(image[2], link=image[3])])
     else:
         spacer = writer.body.add_paragraph()
         spacer.paragraph_format.space_before = Pt(COMPANY_COVER_SPACE if company else 150)

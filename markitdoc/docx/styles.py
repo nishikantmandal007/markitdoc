@@ -71,6 +71,7 @@ def setup_styles(writer):
         style_spacing(style, HEADING_ABOVE, HEADING_BELOW, 1.05, keep=True)
     style_font(styles["Caption"], writer, SMALL_SIZE, "muted", italic=True)
     style_spacing(styles["Caption"], 3, 12, 1.1)
+    styles["Caption"].paragraph_format.keep_together = True
     style_font(styles["Quote"], writer, 13, "ink", italic=True)
     style_spacing(styles["Quote"], 8, 10, 1.25)
     border_left(styles["Quote"].element, writer.hex("mood"), 24, 10)

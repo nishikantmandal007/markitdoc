@@ -127,3 +127,35 @@ def test_should_hand_the_word_chrome_and_cover_to_the_brand_hooks(tmp_path, monk
     path = generate_document("# Brand report\n\nBody text.", "docx", filename_stem="brand", output_dir=str(tmp_path), template="acme")
     assert calls == ["chrome", ("cover", "Brand report")]
     assert "Body text." in "\n".join(paragraph.text for paragraph in WordDocument(path).paragraphs)
+
+
+def test_tall_word_diagram_leaves_room_for_its_heading_and_caption(tmp_path, monkeypatch):
+    from PIL import Image
+
+    from markitdoc.docx.flow import render
+
+    tall = tmp_path / "tall.png"
+    Image.new("RGB", (800, 2200), "white").save(tall)
+    monkeypatch.setattr(render, "render_diagram", lambda *args: tall)
+    markdown = """## Escalation
+
+Introduce the figure.
+
+```mermaid
+flowchart TD
+  title Escalation path
+  A --> B
+  A --> C
+```
+
+The next paragraph starts a new topic.
+"""
+    doc = WordDocument(generate_document(markdown, "docx", "tall", tmp_path))
+    heading, intro, picture, caption, following = doc.paragraphs
+    assert all(part.paragraph_format.keep_with_next for part in (heading, intro, picture))
+    assert caption.style.name == "Caption" and "Escalation path" in caption.text
+    assert not caption.paragraph_format.keep_with_next and not following.paragraph_format.keep_with_next
+    shape = doc.inline_shapes[0]
+    section = doc.sections[0]
+    assert shape.height.cm < section.page_height.cm - section.top_margin.cm - section.bottom_margin.cm - 2
+    assert shape.width / shape.height == pytest.approx(800 / 2200, rel=0.001)

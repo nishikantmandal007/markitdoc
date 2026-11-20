@@ -1,7 +1,7 @@
 import logging
 from dataclasses import replace
 
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR
 from pptx.util import Pt
 
 from markitdoc.markup.elements import fitted_size, image_size
@@ -50,7 +50,7 @@ from markitdoc.pptx.flow.visuals import (
     visual_box,
     visual_fallback,
 )
-from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_for, side_title
+from markitdoc.pptx.photos import add_image, full_bleed, half_bleed, overlay, photo_credit, photo_for, side_title
 from markitdoc.themes.theme_constants import IMAGE_SIDES
 from markitdoc.utils.helpers import MONO_FONT
 
@@ -209,25 +209,25 @@ def draw_gallery(deck, titles, pieces):
     width = (CONTENT_WIDTH - gap * (len(pieces) - 1)) / len(pieces)
     height = BODY_HEIGHT - 0.5
     for index, piece in enumerate(pieces):
-        path, caption, credit, _ = deck.figures[piece.data]
+        path, caption, credit, source = deck.figures[piece.data]
         left = SIDE_MARGIN + index * (width + gap)
         add_image(slide, photo_for(deck, path, width, height, overlay(deck, 0.0, 0.6, 0.85)), left, BODY_TOP, width, height, caption or "Photograph")
-        write_text(deck, slide, literal(credit), left + 0.15, BODY_TOP + height - 0.3, width - 0.3, 9, WHITE, align=PP_ALIGN.RIGHT, name="Credit")
+        photo_credit(deck, slide, credit, source, left + 0.15, BODY_TOP + height - 0.3, width - 0.3, 9, WHITE)
         write_text(deck, slide, literal(caption), left, BODY_TOP + height + 0.1, width, 14, "muted", italic=True, name="Caption")
 
 
 # draws a photo beside its related slide text
 def draw_photo_slide(deck, titles, items, piece):
-    path, caption, credit, _ = deck.figures[piece.data]
+    path, caption, credit, source = deck.figures[piece.data]
     title = next(titles)
     slide = deck.new_slide(title, footer=False, standard=False)
     if items:
-        left, width = half_bleed(deck, slide, (path, caption, credit), caption or "Photograph")
+        left, width = half_bleed(deck, slide, (path, caption, credit, source), caption or "Photograph")
         top = side_title(deck, slide, title, left, width)
         write_column(deck, slide, items, left, top, width, 6.45)
         write_text(deck, slide, literal(caption), left, 6.6, width, 14, "muted", italic=True, name="Caption")
         return
-    full_bleed(deck, slide, (path, caption, credit), overlay(deck, 0.08, 0.86, 0.35), caption or "Photograph")
+    full_bleed(deck, slide, (path, caption, credit, source), overlay(deck, 0.08, 0.86, 0.35), caption or "Photograph")
     place_title(deck, slide, title, WHITE, SIDE_MARGIN, 4.6, CONTENT_WIDTH, 1.6, (40, 36, 32, 28), 2, MSO_ANCHOR.BOTTOM)
     write_text(deck, slide, literal(caption), SIDE_MARGIN, 6.35, CONTENT_WIDTH - 6.5, 16, SOFT_WHITE, italic=True, name="Caption")
 

@@ -9,7 +9,7 @@ from markitdoc.markup.inline import inline_maths, literal
 from markitdoc.pptx.deck import BODY_HEIGHT, BODY_TOP, CONTENT_WIDTH, SLIDE_WIDTH, VISUAL_LEFT, VISUAL_WIDTH, Item, write_text
 from markitdoc.pptx.diagrams import flow_graph
 from markitdoc.pptx.flow.reader import Piece
-from markitdoc.pptx.photos import add_image, contained, image_ratio, photo_for
+from markitdoc.pptx.photos import add_image, contained, image_ratio, photo_credit, photo_for
 from markitdoc.visuals.diagrams import diagram_as_text, render_diagram
 from markitdoc.visuals.equations import equation_png, mathtext_ready
 from markitdoc.visuals.infographics import render_infographic
@@ -102,12 +102,12 @@ def place_equation(deck, slide, piece, box):
 
 # adds a photo to the slide with its caption and credit
 def place_figure(deck, slide, piece, box):
-    path, caption, credit, _ = deck.figures[piece.data]
+    path, caption, credit, source = deck.figures[piece.data]
     left, top, width, height = box
     photo_height = height - CAPTION_HEIGHT - CREDIT_HEIGHT
-    add_image(slide, photo_for(deck, path, width, photo_height), left, top, width, photo_height, caption or "Photograph")
+    add_image(slide, photo_credit, photo_for(deck, path, width, photo_height), left, top, width, photo_height, caption or "Photograph")
     write_text(deck, slide, literal(caption), left, top + photo_height + 0.08, width, 14, "muted", italic=True, name="Caption")
-    write_text(deck, slide, literal(credit), left, top + photo_height + CAPTION_HEIGHT, width, 10, "muted", name="Credit")
+    photo_credit(deck, slide, credit, source, left, top + photo_height + CAPTION_HEIGHT, width, 10, "muted", PP_ALIGN.LEFT)
 
 
 # prepares a visual piece for slide rendering
