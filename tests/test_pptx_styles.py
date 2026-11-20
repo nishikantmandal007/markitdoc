@@ -51,7 +51,7 @@ def test_should_apply_a_set_rule_to_slide_body_runs(tmp_path):
 def test_should_apply_a_set_rule_to_the_slide_title(tmp_path):
     run = run_with(deck_of(FRONT + "## Findings\n\nWater levels rose steadily.\n", tmp_path), "Findings")
 
-    assert run.font.size == Pt(30) and run.font.name == "PT Serif" and str(run.font.color.rgb) == "0F766E"
+    assert run.font.size == Pt(30) and run.font.name == "Georgia" and str(run.font.color.rgb) == "0F766E"
 
 
 def test_should_apply_a_named_inline_style_to_a_span(tmp_path):

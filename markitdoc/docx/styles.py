@@ -4,11 +4,12 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
+from markitdoc.themes.theme_constants import HEADING_SIZES
+
 PAGE_WIDTH, PAGE_HEIGHT, SIDE_MARGIN, TOP_MARGIN = 21.0, 29.7, 2.2, 2.4
 TEXT_WIDTH = PAGE_WIDTH - 2 * SIDE_MARGIN
 BODY_SIZE, SMALL_SIZE = 10, 9
 LANGUAGE_TAGS = {"en": "en-GB", "de": "de-DE", "fr": "fr-FR", "es": "es-ES", "hi": "hi-IN"}
-HEADING_SIZES = {1: 24, 2: 14.5, 3: 12, 4: 10.5}
 HEADING_ABOVE, HEADING_BELOW = 20, 7
 
 
@@ -54,7 +55,7 @@ def paragraph_style(writer, name, base="Normal"):
 def setup_styles(writer):
     styles = writer.document.styles
     normal = styles["Normal"]
-    style_font(normal, writer, BODY_SIZE)
+    style_font(normal, writer, writer.styles.base)
     style_spacing(normal, 0, 8, 1.18)
     language = str(writer.meta.get("lang", "en")) or "en"
     lang = OxmlElement("w:lang")
@@ -69,7 +70,10 @@ def setup_styles(writer):
         style = styles[f"Heading {level}"]
         style_font(style, writer, size, "mood" if level == 2 else "ink", bold=True, heading=level <= 3)
         style_spacing(style, HEADING_ABOVE, HEADING_BELOW, 1.05, keep=True)
-    style_font(styles["Caption"], writer, SMALL_SIZE, "muted", italic=True)
+    caption = writer.look("caption")
+    custom_caption = any(source.endswith(":set.caption") for _, source in caption.props.values())
+    style_font(styles["Caption"], writer, caption.size if custom_caption and caption.size else SMALL_SIZE,
+               caption.rgb if custom_caption and caption.rgb else "muted", italic=caption.italic if custom_caption else True)
     style_spacing(styles["Caption"], 3, 12, 1.1)
     styles["Caption"].paragraph_format.keep_together = True
     style_font(styles["Quote"], writer, 13, "ink", italic=True)
@@ -77,7 +81,10 @@ def setup_styles(writer):
     border_left(styles["Quote"].element, writer.hex("mood"), 24, 10)
     styles["Quote"].paragraph_format.left_indent = Cm(0.6)
     lead = paragraph_style(writer, "Lead")
-    style_font(lead, writer, 13.5, "ink")
+    lead_look = writer.look("paragraph", ("lead",))
+    custom_lead = any(source.endswith(":styles.lead") for _, source in lead_look.props.values())
+    style_font(lead, writer, lead_look.size if custom_lead and lead_look.size else 13.5,
+               lead_look.rgb or "ink", bold=bool(lead_look.bold))
     style_spacing(lead, 0, 10, 1.25)
     kicker = paragraph_style(writer, "Kicker")
     style_font(kicker, writer, 9.5, "mood", bold=True)

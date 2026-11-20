@@ -34,6 +34,7 @@ from markitdoc.themes.theme_constants import (
     STYLE_FILE_SUFFIX,
     STYLE_PROPERTIES,
     TRACKING_POINTS,
+    TYPE_PRESETS,
 )
 from markitdoc.themes.themes import theme_folders
 from markitdoc.utils.constants import ASSETS_FOLDER
@@ -133,6 +134,9 @@ def face_of(value, folder):
 # the style layers of a document: use: files in order, then its own front matter, plus what could not be loaded
 def load_layers(front, folders):
     layers, problems = [], []
+    preset = str(front.get("preset", "")).strip().lower()
+    if preset in TYPE_PRESETS:
+        layers.append(Layer(preset, TYPE_PRESETS[preset]))
     for name in used_names(front):
         path = find_style_file(name, folders)
         try:

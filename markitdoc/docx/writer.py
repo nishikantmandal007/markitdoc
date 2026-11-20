@@ -11,6 +11,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+from markitdoc.docx.fonts import embed_fonts, word_font
 from markitdoc.docx.styles import (
     LANGUAGE_TAGS,
     PAGE_HEIGHT,
@@ -26,7 +27,7 @@ from markitdoc.markup.inline import Run
 from markitdoc.themes.brands import brand_hooks
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.constants import PLATFORM_CREATOR, PLATFORM_KEYWORDS
-from markitdoc.utils.helpers import MONO_FONT, lifted, long_date, office_font
+from markitdoc.utils.helpers import MONO_FONT, lifted, long_date
 from markitdoc.visuals.logos import logo_box
 from markitdoc.visuals.photo_fit import fitted_image
 
@@ -45,7 +46,8 @@ class Writer:
         self.document = docx.Document()
         self.styles, self.context = styles, None
         self.theme, self.meta, self.work_folder, self.title = theme, meta, work_folder, title
-        self.heading_font, self.body_font = office_font(theme.fonts["heading"]), office_font(theme.fonts["body"])
+        self.heading_font, self.body_font = word_font(theme.fonts["heading"]), word_font(theme.fonts["body"])
+        self.used_fonts = {theme.fonts["heading"], theme.fonts["body"]}
         self.figures = {key[1]: value for key, value in images.items() if isinstance(key, tuple)}
         self.photos_by_block = {key: value for key, value in images.items() if not isinstance(key, tuple)}
         self.photos = str(meta.get("photos", "natural")).lower()
@@ -81,7 +83,13 @@ class Writer:
     def font_named(self, name):
         if name == "heading":
             return self.heading_font
-        return MONO_FONT if name == "mono" else self.styles.faces[name].family if name in self.styles.faces else self.body_font
+        if name == "mono":
+            return MONO_FONT
+        if face := self.styles.faces.get(name):
+            family = word_font(face.files[0])
+            self.used_fonts.add(face.files[0])
+            return family
+        return self.body_font
 
     # returns a theme color as a Word RGB value
     def rgb(self, role):
@@ -423,6 +431,7 @@ def stamp_properties(writer, created, user_email):
 
 # saves a Word document with stable ZIP metadata
 def save_document(writer, output_path: Path):
+    embed_fonts(writer.document, writer.used_fonts)
     buffer = io.BytesIO()
     writer.document.save(buffer)
     output = io.BytesIO()

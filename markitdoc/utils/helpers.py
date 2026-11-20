@@ -2,7 +2,11 @@ import os
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
-FONTS_BY_FILE = {"PTSerif": "Georgia"}
+OFFICE_FONTS = {"Inter": "Arial", "PT Serif": "Georgia", "IBM Plex Sans": "Trebuchet MS", "Noto Sans": "Segoe UI",
+                "JetBrains Mono": "Consolas"}
+FONT_FAMILIES = {"Inter": "Inter", "PTSerif": "PT Serif", "IBMPlexSans": "IBM Plex Sans", "NotoSans": "Noto Sans",
+                 "JetBrainsMono": "JetBrains Mono", "NotoSansMono": "Noto Sans Mono", "NotoSansDevanagari": "Noto Sans Devanagari",
+                 "NotoSansSymbols2": "Noto Sans Symbols 2"}
 SANS_FONT, MONO_FONT = "Calibri", "Consolas"
 
 
@@ -35,4 +39,4 @@ def creation_date(written):
 
 # maps a font file path to a font name supported by Office
 def office_font(path):
-    return next((font for stem, font in FONTS_BY_FILE.items() if stem in Path(path).name), SANS_FONT)
+    return OFFICE_FONTS.get(FONT_FAMILIES.get(Path(path).stem.split("-")[0]), SANS_FONT)

@@ -73,6 +73,7 @@ FONT_WORDS = {"heading": "Head", "body": "Brand", "mono": "Mono"}
 TRACKING_POINTS = {"tight": -0.2, "normal": 0.0, "wide": 0.6}
 SMALL_CAPS_SCALE = 0.8
 BODY_POINTS = 10.0
+HEADING_SIZES = {1: 28, 2: 17, 3: 13, 4: 11}
 MAX_BASED_ON = 3
 NAME_STYLE_AFTER = 3
 SIZE_POINTS = re.compile(r"^(\d+(?:\.\d+)?)\s*pt$")
@@ -86,13 +87,31 @@ BUNDLED_FONTS = {
 }
 ENGINE_DEFAULTS = {
     "text": {"font": "body", "size": "10pt", "color": "body"},
-    "h1": {"font": "heading", "size": "24pt", "weight": "bold"},
-    "h2": {"font": "heading", "size": "14.5pt", "weight": "bold"},
-    "h3": {"font": "heading", "size": "12pt", "weight": "bold"},
-    "h4": {"size": "10.5pt", "weight": "bold"},
+    **{f"h{level}": {**({"font": "heading"} if level <= 3 else {}), "size": f"{size}pt", "weight": "bold"}
+       for level, size in HEADING_SIZES.items()},
+}
+TYPE_PRESETS = {
+    "board-brief": {
+        "page": {"margins": "wide"}, "text": {"size": "11pt"},
+        "set": {"h1": {"size": "32pt"}, "h2": {"size": "20pt"}, "h3": {"size": "14pt"}, "h4": {"size": "12pt"},
+                "caption": {"size": "9pt", "color": "muted"}},
+        "styles": {"lead": {"size": "15pt", "color": "ink"}, "metric": {"size": "xl", "weight": "bold", "color": "accent"}},
+    },
+    "editorial-report": {
+        "page": {"margins": "wide"}, "text": {"size": "10.5pt"},
+        "set": {"h1": {"size": "30pt"}, "h2": {"size": "18pt"}, "h3": {"size": "14pt"}, "h4": {"size": "11.5pt"},
+                "caption": {"size": "9pt", "italic": True, "color": "muted"}},
+        "styles": {"lead": {"size": "13.5pt", "color": "ink"}, "metric": {"size": "l", "weight": "bold"}},
+    },
+    "manual": {
+        "page": {"margins": "normal"}, "text": {"size": "10.5pt"},
+        "set": {"h1": {"size": "26pt"}, "h2": {"size": "16pt"}, "h3": {"size": "13pt"}, "h4": {"size": "11pt"},
+                "caption": {"size": "9pt", "italic": False, "color": "muted"}},
+        "styles": {"lead": {"size": "12pt", "weight": "bold"}, "metric": {"size": "m", "weight": "bold"}},
+    },
 }
 BUILTIN_CLASSES = ("unnumbered", "left", "center", "right", "justify", "lead", "indent", "lined", "striped", "boxed", "decimal", "alpha", "upper-alpha",
                    "roman", "upper-roman", "legal", "underline", "highlight", "accent", "second", "muted", "danger", "success",
                    "callout", "aside")
-STYLE_FILE_KEYS = ("use", "page", "pages", "text", "set", "styles", "colors", "fonts", "fields", "allow", "refs")
+STYLE_FILE_KEYS = ("preset", "use", "page", "pages", "text", "set", "styles", "colors", "fonts", "fields", "allow", "refs")
 STYLE_SELECTORS = ("h1", "h2", "h3", "h4", "paragraph", "list", "table", "quote", "code", "figure", "caption", "footnote", "link", "box")

@@ -18,14 +18,13 @@ from markitdoc.pdf.flow.pages import (
     hyphenated,
 )
 from markitdoc.pdf.pages import escaped
-from markitdoc.themes.theme_constants import POINT_MM, SMALL_CAPS_SCALE
+from markitdoc.themes.theme_constants import HEADING_SIZES, POINT_MM, SMALL_CAPS_SCALE
 from markitdoc.visuals.equations import equation_drawing, mathtext_ready, svg_size
 from markitdoc.visuals.icons import strip_icon
 from markitdoc.visuals.photo_fit import fitted_image
 
 logger = logging.getLogger(__name__)
 
-HEADING_SIZES = {1: 24, 2: 14.5, 3: 12, 4: 10.5}
 HEADING_ABOVE, HEADING_BELOW, PARAGRAPH_AFTER = 7, 2.5, 3
 TEXT_WIDTH = 160
 KEEP_WITH_NEXT = 28
@@ -138,19 +137,27 @@ def add_figure(pdf: FlowPages, query: str):
     picture = fitted_image(path, width, height, pdf.work_folder, (), pdf.photos, pdf.theme) if pdf.work_folder else str(path)
     pdf.image(picture, x=pdf.l_margin, w=width, h=height, alt_text=caption)
     pdf.ln(1.5)
-    pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * 0.85)
-    pdf.set_text_color(*pdf.theme.rgb("muted"))
+    size = caption_font(pdf)
     credit_link = f" · [{escaped(credit)}]({source})" if credit and source else ""
-    pdf.multi_cell(width, BODY_SIZE * pdf.scale * 0.45, f"Figure {pdf.figure_count}. {escaped(caption)}{credit_link}", markdown=True, align="L",
+    pdf.multi_cell(width, size * 0.53, f"Figure {pdf.figure_count}. {escaped(caption)}{credit_link}", markdown=True, align="L",
                    new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(3)
 
 
+# applies the caption rule, retaining the small italic default
+def caption_font(pdf):
+    look = pdf.look("caption")
+    if not look or not any(source.endswith(":set.caption") for _, source in look.props.values()):
+        pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * 0.85)
+        pdf.set_text_color(*pdf.theme.rgb("muted"))
+        return BODY_SIZE * pdf.scale * 0.85
+    return apply_look(pdf, look, "Brand", BODY_SIZE * pdf.scale * 0.85, role="muted")
+
+
 # draws a centred figure caption under a chart or diagram
 def add_caption(pdf: FlowPages, text: str):
-    pdf.set_font("Brand", "I", BODY_SIZE * pdf.scale * 0.85)
-    pdf.set_text_color(*pdf.theme.rgb("muted"))
-    pdf.multi_cell(pdf.area, BODY_SIZE * pdf.scale * 0.45, escaped(text), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    size = caption_font(pdf)
+    pdf.multi_cell(pdf.area, size * 0.53, escaped(text), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 # draws a section heading and tracks its outline level
@@ -190,7 +197,8 @@ def add_paragraph(pdf: FlowPages, text: str, align="L", indent=0, lead=False, af
         align = "L"
     if align == "J" or pdf.narrow:
         text = hyphenated(text, pdf.lang)
-    size = apply_look(pdf, look, "Brand", BODY_SIZE * pdf.scale, role="ink" if lead else "body", scale=1.2 if lead else 1)
+    sized_lead = lead and look and look.props.get("size", ("", ""))[1].endswith(":styles.lead")
+    size = apply_look(pdf, look, "Brand", BODY_SIZE * pdf.scale, role="ink" if lead else "body", scale=1.2 if lead and not sized_lead else 1)
     width, line_height = min(TEXT_WIDTH, pdf.area) - indent, size * LINE_MM * pdf.spacing
     lines = len(pdf.multi_cell(width, line_height, text, markdown=True, dry_run=True, output=MethodReturnValue.LINES))
     if following and lines <= 2 and pdf.will_page_break(lines * line_height + after + following):

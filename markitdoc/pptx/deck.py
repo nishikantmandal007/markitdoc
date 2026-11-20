@@ -14,7 +14,7 @@ from markitdoc.markup.inline import literal, plain_text, runs_of
 from markitdoc.models.catalogue import Box
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.themes.themes import Theme
-from markitdoc.utils.helpers import MONO_FONT, lifted, office_font
+from markitdoc.utils.helpers import MONO_FONT, OFFICE_FONTS, lifted, office_font
 from markitdoc.visuals.logos import logo_box
 
 SLIDE_WIDTH, SLIDE_HEIGHT = 13.333, 7.5
@@ -31,7 +31,7 @@ TITLE_SIZES = (30, 28, 26, 24)
 BODY_SIZES = (24, 22, 20, 19, 18, 17, 16, 15, 14)
 STANDARD_SIZE, COMFORTABLE_SIZE, SMALLEST_SIZE = 20, 18, 14
 LINE_FACTOR, TITLE_LEADING, GAP_FACTOR = 1.2, 1.12, 0.4
-WIDTH_FACTORS = {"Calibri": 1.07, "Georgia": 0.9}
+WIDTH_FACTORS = {"Calibri": 1.07, "Arial": 1.07, "Georgia": 0.9, "Trebuchet MS": 0.98, "Segoe UI": 0.98}
 BULLET_INDENT, NUMBER_INDENT, LEVEL_INDENT = 0.34, 0.5, 0.34
 BULLET_MARKS = ("•", "–", "◦")
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
@@ -122,7 +122,10 @@ class Deck:
     def font_named(self, name):
         if name == "heading":
             return self.heading_font
-        return MONO_FONT if name == "mono" else self.styles.faces[name].family if name in self.styles.faces else self.body_font
+        if name == "mono":
+            return MONO_FONT
+        face = self.styles.faces.get(name)
+        return OFFICE_FONTS.get(face.family, self.body_font) if face else self.body_font
 
     # returns a theme color as a PowerPoint color value
     def color(self, role):

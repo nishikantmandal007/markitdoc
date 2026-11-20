@@ -21,6 +21,7 @@ from markitdoc.themes.theme_constants import (
     PARAGRAPH_PROPERTIES,
     STYLE_PROPERTIES,
     TONES,
+    TYPE_PRESETS,
 )
 from markitdoc.themes.themes import available_themes, read_theme
 from markitdoc.visuals.diagrams import problems_in_diagram
@@ -56,7 +57,7 @@ def accepted_names():
     moods = {mood for name in themes for mood in read_theme(name).moods}
     colours = sorted({*ACCENTS, *moods})
     return {"palette": colours, "accent": colours, "mood": colours, "fonts": sorted(FONT_PAIRS), "paper": sorted({*PAPERS, *PAPER_MM}),
-            "template": sorted({*themes, *LEGACY_THEME_NAMES}), "tone": sorted(TONES)}
+            "template": sorted({*themes, *LEGACY_THEME_NAMES}), "tone": sorted(TONES), "preset": sorted(TYPE_PRESETS)}
 
 
 # an error for each front matter setting whose value the renderer does not know, naming the closest known value

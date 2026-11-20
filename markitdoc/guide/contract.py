@@ -313,9 +313,14 @@ def front_matter_rules():
 palette: <name>          ({DEFAULT_PALETTE} when left out)
 paper: {' | '.join(PAPERS)}      (warm = soft cream, editorial and long reads)
 fonts: <pair>
+preset: board-brief | editorial-report | manual
 images: true             (your call: photos help guides, places, history, products and brochures; leave them out
                          of data reports, policies, legal texts and letters; with true, read the layouts part)
 ---
+board-brief gives the lead and key numbers the most prominence.
+editorial-report gives long reading a narrower measure and quieter captions.
+manual gives procedures a compact heading scale and direct captions.
+For a preset, use {{.lead}} below the opening paragraph and [42%]{{.metric}} on a key number.
 Palettes, by subject: {palettes}.
 Fonts: {fonts}.
 Other parts of this guide, to read only when the document needs what they offer:

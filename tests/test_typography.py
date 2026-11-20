@@ -31,10 +31,10 @@ def test_should_set_body_and_heading_sizes(tmp_path):
 
     body = Counter(round(span["size"], 1) for _, span, _ in spans(path) if span["text"].startswith("Plain body"))
     assert body.most_common(1)[0][0] == 10
-    assert size_of(path, "Typography Title") == 24
-    assert size_of(path, "Section 1") == 14.5
-    assert size_of(path, "Detail 1") == 12
-    assert size_of(path, "Point 1") == 10.5
+    assert size_of(path, "Typography Title") == 28
+    assert size_of(path, "Section 1") == 17
+    assert size_of(path, "Detail 1") == 13
+    assert size_of(path, "Point 1") == 11
 
 
 def test_should_not_draw_an_accent_rule_under_h2(tmp_path):
@@ -87,7 +87,7 @@ def test_should_use_the_same_sizes_in_word(tmp_path):
 
     styles = WordDocument(path).styles
     assert styles["Normal"].font.size.pt == 10
-    assert styles["Heading 2"].font.size.pt == 14.5
+    assert styles["Heading 2"].font.size.pt == 17
 
 
 def test_should_collapse_paragraph_and_heading_spacing(tmp_path):
@@ -123,3 +123,39 @@ def test_should_not_fill_default_word_table_rows(tmp_path):
     path = render(f"# Title\n\n{TABLE}\n", tmp_path, "wordtable", "docx")
 
     assert 'w:fill="' not in WordDocument(path).tables[0]._tbl.xml.replace('w:fill="auto"', "")
+
+
+def test_word_embeds_the_actual_licensed_font_faces(tmp_path):
+    from uuid import UUID
+    from zipfile import ZipFile
+
+    from docx.oxml.ns import qn
+    from lxml import etree
+
+    import markitdoc
+    from markitdoc.utils.constants import ASSETS_FOLDER
+
+    markdown = "---\nfonts: serif-heads\n---\n# Headline\n\nBody."
+    path = markitdoc.render(markdown, "docx", tmp_path / "fonts.docx")
+    word = WordDocument(path)
+    assert word.styles["Heading 2"].font.name == "PT Serif"
+    assert word.styles["Normal"].font.name == "Inter"
+    with ZipFile(path) as package:
+        fonts = etree.fromstring(package.read("word/fontTable.xml"))
+        embedded = next(font for font in fonts if font.get(qn("w:name")) == "PT Serif").find(qn("w:embedRegular"))
+        key = UUID(embedded.get(qn("w:fontKey"))).bytes[::-1]
+        data = package.read("word/fonts/PTSerif-Regular.odttf")
+        assert bytes(byte ^ key[index % 16] for index, byte in enumerate(data[:32])) + data[32:] == (
+            ASSETS_FOLDER / "fonts/PTSerif-Regular.ttf").read_bytes()
+        assert "SIL OPEN FONT LICENSE" in package.read("word/fonts/OFL-PTSerif.txt").decode()
+
+
+def test_powerpoint_uses_deliberate_office_font_equivalents(tmp_path):
+    from pptx import Presentation
+
+    import markitdoc
+
+    markdown = "---\nfonts: plex\n---\n# Headline\n\n## Evidence\n\nBody text."
+    deck = Presentation(markitdoc.render(markdown, "pptx", tmp_path / "fonts.pptx"))
+    assert {run.font.name for slide in deck.slides for shape in slide.shapes if shape.has_text_frame
+            for paragraph in shape.text_frame.paragraphs for run in paragraph.runs} == {"Trebuchet MS"}

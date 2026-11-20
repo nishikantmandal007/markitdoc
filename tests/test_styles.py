@@ -206,3 +206,24 @@ def test_should_render_an_unavailable_font_in_the_inherited_font_and_explain_it(
     assert "not available; using the inherited font" in check_document(text, (tmp_path,))[0].message
     assert main(["explain", f"{tmp_path / 'd.md'}:7"]) == 0
     assert "'display' dropped" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(("preset", "heading", "lead", "metric", "margin"), [
+    ("board-brief", 20, 15, 17.6, 28), ("editorial-report", 18, 13.5, 13.125, 28), ("manual", 16, 12, 10.5, 20),
+])
+def test_should_apply_preset_styles_in_a_pdf(preset, heading, lead, metric, margin, tmp_path):
+    markdown = (f"---\npreset: {preset}\n---\n## Headline\n\n"
+                "The opening statement.\n{.lead}\n\nA share of [42%]{.metric} of the work.")
+    found = pdf_spans(markdown, tmp_path)
+    assert span_with(found, "Headline")["size"] == pytest.approx(heading)
+    assert span_with(found, "The opening")["size"] == pytest.approx(lead)
+    assert span_with(found, "42%")["size"] == pytest.approx(metric, abs=0.02)
+    assert span_with(found, "Headline")["bbox"][0] == pytest.approx((margin + 1) * 72 / 25.4, abs=0.1)
+
+
+def test_should_let_explicit_rules_override_a_preset_and_check_its_name():
+    sheet = load_stylesheet({"preset": "board-brief", "set": {"h2": {"size": "22pt"}}}, load_theme(None))
+    assert sheet.look("h2").size == 22
+    assert sheet.look("h3").size == 14
+    assert any(finding.severity == "error" and "unknown preset" in finding.message
+               for finding in check_document("---\npreset: briefing\n---\n# Headline"))
