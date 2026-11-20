@@ -250,3 +250,23 @@ def test_should_credit_every_photo_in_every_format(tmp_path, monkeypatch):
     assert any("Photo credits" in paragraph.text for paragraph in WordDocument(markitdoc.render(markdown, "docx", tmp_path / "doc.docx")).paragraphs)
     deck = Presentation(markitdoc.render(markdown, "pptx", tmp_path / "doc.pptx"))
     assert any(shape.has_text_frame and "Photo credits" in shape.text_frame.text for slide in deck.slides for shape in slide.shapes)
+
+
+def test_should_offer_candidates_with_thumbnails_for_a_writer_to_choose(monkeypatch, tmp_path):
+    fake = wetland(monkeypatch, tmp_path, answers=["wetland_many.json"])
+    monkeypatch.setattr(images, "shrunk", lambda path: True)
+    with using_options(fake.options):
+        found = images.photo_candidates("wetland")
+
+    assert 1 <= len(found) <= 5 and all(one["title"].startswith("File:") and one["thumbnail"].is_file() for one in found)
+    assert fake.searches() == ["wetland filemime:image/jpeg filew:>1600"]
+
+
+def test_should_fetch_exactly_the_file_a_writer_chose(monkeypatch, tmp_path):
+    title = next(iter(fixture("wetland_one.json")["query"]["pages"].values()))["title"]
+    fake = wetland(monkeypatch, tmp_path, answers=["wetland_one.json"])
+    with using_options(fake.options):
+        image = find_image(title, 1.5)
+
+    assert image.title == title.removeprefix("File:") and not any("gsrsearch" in params for url, params in fake.calls)
+    assert [params["titles"] for url, params in fake.calls] == [title]

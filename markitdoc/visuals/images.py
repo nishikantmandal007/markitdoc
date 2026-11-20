@@ -37,6 +37,7 @@ ABOUT_LENGTH = 600
 RELEVANT_SCORE = 3
 PHOTO_SUFFIXES = (".jpg", ".jpeg")
 PHOTO_SEARCHES = 4
+THUMBNAIL_WIDTH = 330
 OFF_TOPIC = {
     "building", "apartment", "street", "road", "highway", "city", "skyline", "car", "pylon", "power", "construction",
     "factory", "residence", "cityscape", "urban", "skyscraper", "housing", "logo", "map", "diagram", "chart", "poster", "document", "screenshot",
@@ -130,6 +131,47 @@ def find_images(wanted: dict, ratios: dict) -> dict:
     return found
 
 
+# the exact Commons file a writer chose, still held to the licence, format and size rules
+def named_photo(title):
+    pages = api_get(COMMONS_API, {"action": "query", "format": "json", "titles": "File:" + title.split(":", 1)[1].strip(), "prop": "imageinfo",
+                                  "iiprop": "url|size|mime|sha1|extmetadata", "iiurlwidth": 1600})
+    folder = image_folder()
+    folder.mkdir(parents=True, exist_ok=True)
+    for pick in candidates(list((pages.get("query") or {}).get("pages", {}).values()), 1.5, []):
+        path = folder / f"{pick['sha1']}.jpg"
+        if path.exists() or save_safe_copy(pick["url"], path):
+            return DocumentImage(path, pick["title"], pick["artist"], pick["licence"])
+    logger.info("Chosen photo %r is not usable (missing, not a permitted licence, or not a large JPEG)", title)
+    return None
+
+
+# the best Commons candidates for a query with small thumbnails, for a writer to look at and choose one by its File: title
+def photo_candidates(query, count=5):
+    words = query_words(query)
+    pool = candidates(search(" ".join(words) + f" filemime:image/jpeg filew:>{MIN_WIDTH}"), 1.5, []) if words else []
+    folder = image_folder() / "thumbnails"
+    folder.mkdir(parents=True, exist_ok=True)
+    with ThreadPoolExecutor(max_workers=count) as executor:
+        saved = list(executor.map(lambda pick: thumbnail_of(pick, folder), pool[:count]))
+    return [{"title": "File:" + pick["title"], "about": pick.get("about", "")[:200], "licence": pick["licence"], "artist": pick["artist"],
+             "thumbnail": thumbnail} for pick, thumbnail in zip(pool, saved) if thumbnail]
+
+
+# a small local copy of a candidate photo, None when it cannot be fetched
+def thumbnail_of(pick, folder):
+    thumbnail = folder / f"{pick['sha1']}.jpg"
+    small = re.sub(r"/\d+px-", f"/{THUMBNAIL_WIDTH}px-", pick["url"])
+    return thumbnail if thumbnail.exists() or (save_safe_copy(small, thumbnail) and shrunk(thumbnail)) else None
+
+
+# the thumbnail scaled down to the thumbnail width, for sources that send the full image instead
+def shrunk(path):
+    with Image.open(path) as picture:
+        picture.thumbnail((THUMBNAIL_WIDTH, THUMBNAIL_WIDTH))
+        picture.convert("RGB").save(path, "JPEG", quality=82)
+    return True
+
+
 # the words of a photo query, cut to the length a search accepts
 def query_words(query):
     return re.sub(r"[^\w\s,.-]", " ", query)[:MAX_QUERY_LENGTH].split()
@@ -137,6 +179,8 @@ def query_words(query):
 
 # picks an unused photo from the remembered or searched pool, reusing the best one only when every photo is used
 def find_image(query: str, ratio: float, used=frozenset(), searched=None) -> DocumentImage | None:
+    if query.strip().lower().startswith("file:"):
+        return named_photo(query.strip())
     words = query_words(query)
     if not words:
         return None

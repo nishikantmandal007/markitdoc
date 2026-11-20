@@ -114,7 +114,7 @@ def long_photo_queries(meta, lines):
     for number, text in enumerate(lines, 1):
         for found in PHOTO_QUERY.finditer(text):
             query = next(group for group in found.groups() if group).strip()
-            if len(query.split()) > MAX_PHOTO_QUERY_WORDS:
+            if len(query.split()) > MAX_PHOTO_QUERY_WORDS and not query.lower().startswith("file:"):
                 findings.append(Finding(number, "error", f"photo query '{query}' is too long to find a photo",
                                         "name the subject in 2-4 words, proper name first, e.g. 'Lisbon tram 28' or 'Golden Gate Bridge fog'"))
     return findings

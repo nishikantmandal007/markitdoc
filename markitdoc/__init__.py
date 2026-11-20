@@ -9,5 +9,6 @@ from markitdoc.options import Options
 from markitdoc.rendering import FORMATS, render
 from markitdoc.themes.brands import BrandHooks, brand_summary, register_brand, registered_brands
 from markitdoc.themes.themes import Theme, available_themes, load_theme
+from markitdoc.visuals.images import photo_candidates
 
 logging.getLogger("markitdoc").addHandler(logging.NullHandler())
