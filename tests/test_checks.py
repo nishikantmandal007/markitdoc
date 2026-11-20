@@ -86,3 +86,11 @@ def test_should_report_charts_that_would_be_left_out():
     assert check_document("# Report\n\n" + chart.format(values="[5, 3]")) == []
     for values in ('["5%", 3]', "[5]", "[5, 3, 1]"):
         assert [finding.severity for finding in check_document("# Report\n\n" + chart.format(values=values))] == ["error"]
+
+
+def test_should_ask_for_short_photo_queries_only_when_photos_are_on():
+    long_query = "modern surveillance camera mounted on urban lamppost"
+    markdown = f"---\nimages: true\n---\n# City\n\n![{long_query}](figure)\n\n::: {{.cover image=\"Lisbon tram 28\"}}\ntitle: City\n:::\n"
+
+    assert [(finding.line, finding.severity) for finding in check_document(markdown) if "photo query" in finding.message] == [(6, "error")]
+    assert not [finding for finding in check_document(markdown.replace("images: true", "images: false")) if "photo query" in finding.message]

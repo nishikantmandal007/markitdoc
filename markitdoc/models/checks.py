@@ -27,6 +27,8 @@ from markitdoc.visuals.diagrams import problems_in_diagram
 from markitdoc.visuals.infographics import problems_in_infographic
 
 FRONT_KEY_LINE = re.compile(r"^markitdoc\s*:", re.IGNORECASE)
+PHOTO_QUERY = re.compile(r'image="([^"]+)"|^\s*image:\s*(.+)$|!\[([^\]]+)\]\(figure\)')
+MAX_PHOTO_QUERY_WORDS = 6
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,20 @@ def bad_picture_ratios(lines):
     return findings
 
 
+# an error for each photo query too long to find a photo: a search needs every word, so scene descriptions find nothing
+def long_photo_queries(meta, lines):
+    if str(meta.get("images", "")).lower() not in ("true", "yes", "on"):
+        return []
+    findings = []
+    for number, text in enumerate(lines, 1):
+        for found in PHOTO_QUERY.finditer(text):
+            query = next(group for group in found.groups() if group).strip()
+            if len(query.split()) > MAX_PHOTO_QUERY_WORDS:
+                findings.append(Finding(number, "error", f"photo query '{query}' is too long to find a photo",
+                                        "name the subject in 2-4 words, proper name first, e.g. 'Lisbon tram 28' or 'Golden Gate Bridge fog'"))
+    return findings
+
+
 # problems in a markdown document, never raising: unknown keys, unbalanced ::: fences, the style problems, with style files
 # searched in folders, and a note for each feature the output format approximates or ignores
 def check_document(markdown, folders=(), output_format="pdf") -> list[Finding]:
@@ -144,5 +160,5 @@ def check_document(markdown, folders=(), output_format="pdf") -> list[Finding]:
     end = next((number for number, text in enumerate(lines[1:], 2) if text.strip() == "---"), 0) if lines[:1] == ["---"] else 0
     findings += [Finding(*item) for item in reference_findings(lines, end, meta, folders)] + [Finding(*item) for item in latex_findings(lines, end)]
     findings += [Finding(*item) for item in support_findings(markdown, output_format)]
-    findings += unknown_names(meta, front_matter_yaml(markdown) or {}, lines, end) + broken_visuals(lines) + bad_picture_ratios(lines)
+    findings += unknown_names(meta, front_matter_yaml(markdown) or {}, lines, end) + broken_visuals(lines) + bad_picture_ratios(lines) + long_photo_queries(meta, lines)
     return sorted(findings, key=lambda finding: finding.line)
