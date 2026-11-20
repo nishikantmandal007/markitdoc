@@ -91,3 +91,15 @@ def test_should_match_master_text_whatever_its_punctuation():
     from markitdoc.pptx.brand_cover import letters_of
 
     assert letters_of("Compliant Data, Boundless Potential") == letters_of("Compliant  Data Boundless Potential")
+
+
+def test_should_give_a_brand_deck_without_a_master_its_logo_footer_and_colours(globex, tmp_path):
+    deck = Presentation(markitdoc.render(COMPANY_COVER, "pptx", tmp_path / "deck.pptx", template="globex"))
+    content = deck.slides[1]
+    names = [shape.name for shape in content.shapes]
+
+    assert "Logo" in names and names.count("Accent bar") == 2
+    assert any(shape.name == "Footer" and "acme.example" in shape.text_frame.text for shape in content.shapes)
+    title = next(shape for shape in content.shapes if shape.has_text_frame and shape.text_frame.text == "Results")
+    assert str(title.text_frame.paragraphs[0].runs[0].font.color.rgb) == "0F766E"
+    assert any(shape.name == "Tagline" for shape in deck.slides[0].shapes)

@@ -45,6 +45,7 @@ DOCUMENT_PHOTO_RATIOS = {"cover": 16 / 9, "chapter": 16 / 9, "feature": 16 / 9}
 
 COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT = 5.0, 1.8
 PARTNER_ROW_HEIGHT, PARTNER_GAP, PARTNER_ROW_SHARE = 1.2, 0.6, 0.7
+COMPANY_COVER_PHOTO_RATIO, COMPANY_COVER_SPACE = 3.0, 60
 
 
 # converts inline source text into styled runs
@@ -94,6 +95,7 @@ def block_photo(writer, image, alt):
 # draws the cover block with its title, image, logo, and subtitle
 def draw_cover(writer, block, image):
     slots = block.slots
+    company = slots.get("variant") == "company"
     if brand_hooks(writer.theme.name).docx_cover:
         draw_brand_cover(writer, slots)
         return
@@ -101,10 +103,10 @@ def draw_cover(writer, block, image):
         width, height = logo_box(writer.theme.logo, COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT)
         add_picture(writer, str(writer.theme.logo), width, writer.theme.brand or "Logo", height).alignment = WD_ALIGN_PARAGRAPH.LEFT
     if image:
-        photo(writer, image[0], writer.width, writer.width / (16 / 9), slots.get("image", "Photograph"))
+        photo(writer, image[0], writer.width, writer.width / (COMPANY_COVER_PHOTO_RATIO if company else 16 / 9), slots.get("image", "Photograph"))
     else:
         spacer = writer.body.add_paragraph()
-        spacer.paragraph_format.space_before = Pt(150)
+        spacer.paragraph_format.space_before = Pt(COMPANY_COVER_SPACE if company else 150)
     if slots.get("kicker"):
         text_paragraph(writer, slots["kicker"].upper(), "Kicker")
     paragraph = writer.body.add_paragraph(style="Title")
@@ -118,7 +120,6 @@ def draw_cover(writer, block, image):
     meta = writer.body.add_paragraph()
     meta.paragraph_format.space_before = Pt(10)
     date = long_date(writer.meta.get("date", ""))
-    company = slots.get("variant") == "company"
     plain(writer, meta, "  ·  ".join(part for part in (date, "" if company else writer.theme.brand or "") if part), 10, "muted")
     if company:
         company_details(writer)

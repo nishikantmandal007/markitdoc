@@ -56,7 +56,7 @@ def draw_cover(deck, block, image):
         draw_group(deck, slide, group, SIDE_MARGIN, max(0.9, 6.6 - group.total), 11.2,
                    (WHITE, lifted(deck.theme.rgb("mood"), 0.55), SOFT_WHITE))
         return
-    roles = (WHITE, lifted(deck.theme.rgb("mood"), 0.55), SOFT_WHITE) if dark else ("ink", "mood", "body")
+    roles = (WHITE, lifted(deck.theme.rgb("mood"), 0.55), SOFT_WHITE) if dark else ("mood" if deck.theme.locked else "ink", "mood", "body")
     draw_group(deck, slide, group, SIDE_MARGIN, max(1.0, (6.3 - group.total) / 2 + 0.1), 11.2, roles)
     add_rect(deck, slide, SIDE_MARGIN, 6.55, CONTENT_WIDTH, 0.015, tint(deck, "mood", 0.4) if dark else "rule", "Cover rule")
     write_text(deck, slide, literal(long_date(deck.meta.get("date", ""))), SIDE_MARGIN, 6.7, 6, 14, SOFT_WHITE if dark else "muted", name="Date")
@@ -65,6 +65,11 @@ def draw_cover(deck, block, image):
     if deck.theme.logo:
         width, height = logo_box(deck.theme.logo, COVER_LOGO_WIDTH, COVER_LOGO_HEIGHT)
         add_image(slide, str(deck.theme.logo), SIDE_MARGIN, 0.45, width, height, deck.theme.brand or "Logo", "Logo")
+        if deck.theme.locked:
+            text_left = SIDE_MARGIN + width + 0.15
+            write_text(deck, slide, literal(deck.theme.brand), text_left, 0.42, 6, 16, WHITE if dark else "ink", bold=True, name="Brand name")
+            if deck.theme.tagline:
+                write_text(deck, slide, literal(deck.theme.tagline), text_left, 0.75, 6, 11, "mood", bold=True, name="Tagline")
     if slots.get("variant") == "company":
         company_details(deck, slide)
 

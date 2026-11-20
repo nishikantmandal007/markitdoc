@@ -228,3 +228,22 @@ class TestPhotoRelevance:
         titles = self.titles(monkeypatch, tmp_path, "heron in reeds", "heron_category_art.json")
 
         assert titles == ["Grey heron in reeds.jpg", "Yellow Herons and Reeds.jpg"]
+
+
+def test_should_use_only_relevant_photos_never_graphics(tmp_path, monkeypatch):
+    from markitdoc.visuals import images
+
+    pool = [{"title": "Smart city traffic diagram.png", "about": "smart city traffic", "sha1": "a", "licence": "CC BY 4.0", "artist": "A",
+             "depicts": True, "starred": False, "size": [2000, 1000]},
+            {"title": "Sunlit walkway with leafy trees.jpg", "about": "walkway trees", "sha1": "b", "licence": "CC BY 4.0", "artist": "B",
+             "depicts": False, "starred": False, "size": [2000, 1000]},
+            {"title": "Smart city traffic at night.jpg", "about": "smart city traffic night", "sha1": "c", "licence": "CC BY 4.0", "artist": "C",
+             "depicts": False, "starred": False, "size": [2000, 1000]}]
+    monkeypatch.setattr(images, "image_folder", lambda: tmp_path)
+    for one in pool:
+        (tmp_path / f"{one['sha1']}.jpg").write_bytes(b"x")
+
+    monkeypatch.setattr(images, "remembered_choices", lambda: {"smart city traffic night": pool})
+    assert images.find_image("smart city traffic night", 16 / 9).title == "Smart city traffic at night.jpg"
+    monkeypatch.setattr(images, "remembered_choices", lambda: {"smart city traffic night": pool[:2]})
+    assert images.find_image("smart city traffic night", 16 / 9) is None
