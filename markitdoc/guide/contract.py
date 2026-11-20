@@ -266,7 +266,9 @@ PHOTOS (only with images: true)
   event). Be specific: subject + setting + light, like "reed marsh at sunrise" or "stone bridge in fog", never abstract
   words like "growth", moods, people's or company names, user data or document content.
 - In normal pages, ![a concrete photographable subject](figure) on its own line becomes a captioned "Figure N"; its
-  text is also the photo search."""
+  text is also the photo search.
+- To use one exact Wikimedia Commons photo, write its file title instead of a query: image="File:Tram 28 Lisbon.jpg"
+  on a designed page, or ![File:Tram 28 Lisbon.jpg](figure) in normal pages."""
 SLIDE_EXTRAS = """SLIDE VISUALS
 - A timeline whose entries are date ranges ('Q1 2026 – Q3 2026', 'Jan – Apr 2027') becomes a Gantt chart; use one unit
   (quarters, months or years) for every entry. A figure whose value is a percentage gets a progress ring.
