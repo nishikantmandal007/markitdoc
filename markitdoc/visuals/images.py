@@ -34,6 +34,7 @@ ENOUGH_CANDIDATES = 3
 REMEMBERED_CHOICES = 8
 ABOUT_LENGTH = 600
 RELEVANT_SCORE = 3
+PHOTO_SUFFIXES = (".jpg", ".jpeg")
 STOP_WORDS = {"in", "at", "of", "the", "a", "an", "on", "with", "by", "and", "near", "under", "over"}
 NOT_A_SUBJECT = r"name|disambiguation|wikimedia|municipality|film|album|song|band"
 OFF_TOPIC = {
@@ -120,7 +121,10 @@ def find_image(query: str, ratio: float, used=frozenset()) -> DocumentImage | No
         pool = search_pool(words, ratio)
         if pool:
             remember_choice(key, pool)
-    pool = sorted(pool, key=lambda one: photo_score(one, words, ratio), reverse=True)
+    pool = sorted((one for one in pool if one["title"].lower().endswith(PHOTO_SUFFIXES) and photo_score(one, words, ratio)[0] >= RELEVANT_SCORE),
+                  key=lambda one: photo_score(one, words, ratio), reverse=True)
+    if not pool:
+        logger.info("No photo relevant enough for %r; the block is drawn without one", query)
     folder = image_folder()
     for pick in [one for one in pool if one["title"] not in used] + [one for one in pool if one["title"] in used]:
         path = folder / f"{pick['sha1']}.jpg"
@@ -257,7 +261,7 @@ def candidates(pages, ratio, words, starred=False, strict=False, depicts=False):
         artist = text("Artist") or "Unknown"
         title = page["title"].removeprefix("File:")
         url = info.get("thumburl") or info["url"]
-        if (info.get("mime") not in ("image/jpeg", "image/png") or info["width"] < 1200
+        if (info.get("mime") != "image/jpeg" or info["width"] < 1200
                 or not permitted(licence) or urlparse(url).hostname not in ALLOWED_HOSTS):
             continue
         title_words = re.findall(r"\w+", plain(title))
