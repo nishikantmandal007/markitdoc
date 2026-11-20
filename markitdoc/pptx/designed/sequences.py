@@ -216,12 +216,14 @@ def draw_comparison(deck, block, image):
     lead = slots.get("lead", "")
     lead_space = lead_room(deck, lead)
     groups = packed(lead_space)
-    if len(groups) > 1 and lead and len(packed(0)) == 1:
-        deck.note(f"Lead: {lead}")
+    moved_lead = lead if len(groups) > 1 and lead and len(packed(0)) == 1 else ""
+    if moved_lead:
         groups, lead, lead_space = packed(0), "", 0
     titles = slide_titles(slots["title"])
     for number, group in enumerate(groups):
         slide = deck.new_slide(next(titles))
+        if number == 0 and moved_lead:
+            deck.note(f"Lead: {moved_lead}")
         top = draw_lead(deck, slide, lead if number == 0 else "", BODY_TOP)
         size = (fitting_preset(COMPARISON_PRESETS, height_of, group, room_for(number, len(groups), lead_space)) or COMPARISON_PRESETS[-1])[0]
         rows = height_of(group, (size,))

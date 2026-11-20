@@ -139,5 +139,14 @@ def test_should_tell_the_writer_what_each_optional_part_offers():
     for name in markitdoc.FORMATS:
         writing = markitdoc.guide(name, level="writing")
         assert all(f"- {part}: {offer}" in writing for part, offer in markitdoc.GUIDE_PARTS.items())
-        assert len(writing.split("\nBrands you can use")[0]) < 5000
+        assert len(writing.split("\nBrands you can use")[0]) < 5600
     assert "citations with a bibliography" in markitdoc.GUIDE_PARTS["styles"]
+
+
+def test_should_brief_every_format_with_a_concrete_hierarchy_example():
+    examples = {"pdf": "{.figures}", "pptx": "{.comparison}", "docx": "> **Action:**"}
+    for fmt, example in examples.items():
+        writing = markitdoc.guide(fmt, level="writing")
+        assert "Budget the requested pages or slides." in writing
+        assert "exactly one dominant element" in writing
+        assert example in writing.split("MARKDOWN → READER", 1)[1]

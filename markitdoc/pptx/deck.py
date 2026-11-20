@@ -10,7 +10,7 @@ from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
-from markitdoc.markup.inline import literal, runs_of
+from markitdoc.markup.inline import literal, plain_text, runs_of
 from markitdoc.models.catalogue import Box
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.themes.themes import Theme
@@ -147,7 +147,12 @@ class Deck:
     # writes queued notes to the current slide before it changes
     def flush_notes(self):
         if self.slide is not None and self.notes:
+            from markitdoc.rendering import report_problem
+
             self.slide.notes_slide.notes_text_frame.text = "\n\n".join(self.notes)
+            excerpts = "; ".join(plain_text(note)[:110] for note in dict.fromkeys(self.notes))
+            report_problem(f"Slide {self.slide_count} shortened or moved text to speaker notes: {excerpts}. "
+                           "Shorten the copy or put backup detail in an appendix.")
         self.notes = []
 
     # creates and styles a slide with its title and footer
@@ -462,7 +467,8 @@ def fitted_items(deck, items, width, height, label):
         return items, size
     size = COMFORTABLE_SIZE - 2
     shown = [replace(item, source=key_sentences(deck, item.source, width - item_indent(item), height / len(items), size)) for item in items]
-    deck.note(f"{label}: " + " ".join(item.source for item in items))
+    if shown != items:
+        deck.note(f"{label}: " + " ".join(item.source for item in items))
     return shown, size
 
 

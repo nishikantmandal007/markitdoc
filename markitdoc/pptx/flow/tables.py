@@ -42,7 +42,10 @@ def shortened_row(deck, row, widths, size, limit):
     row = list(row)
     while row_height(deck, row, widths, size, False) > limit:
         position = max(range(len(row)), key=lambda column: deck.lines(row[column], widths[column] - 2 * CELL_SIDE, size))
-        row[position] = key_sentences(deck, row[position], widths[position] - 2 * CELL_SIDE, limit - 2 * CELL_VERTICAL, size)
+        shown = key_sentences(deck, row[position], widths[position] - 2 * CELL_SIDE, limit - 2 * CELL_VERTICAL, size)
+        if len(shown) >= len(row[position]):
+            break
+        row[position] = shown
     return tuple(row)
 
 

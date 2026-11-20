@@ -186,54 +186,52 @@ WRITING_HEADS = {
     "pptx": "SLIDE WRITING GUIDE (pptx).",
     "docx": "WORD WRITING GUIDE (docx).",
 }
+EDITORIAL_PLAN = """PLAN BEFORE DRAFTING
+Budget the requested pages or slides. Give each a role: lead states the conclusion, evidence proves it, comparison
+shows the difference, transition opens a new part, decision names the action. Combine jobs on short documents.
+Choose exactly one dominant element per designed page or slide: a headline, photo, key number, chart or diagram.
+Use equal cards for parallel findings. Show a sequence as steps, a trade-off side by side, and one result as a big number.
+Keep decision-changing caveats beside the evidence. Put audit detail, long tables and methods in an appendix."""
 STRUCTURES = {
-    "pdf": """STRUCTURE
-- Open a report with a cover block, then write normal markdown; pages break by themselves (about 450 words a page):
-  ::: {.cover}
-  kicker: Annual review
-  title: Restoring the River Valley
-  subtitle: One sentence on what the document covers.
-  :::
-  A letter or memo has no cover: start with '# Title' or the letter itself.
-- ## for sections, ### for subsections; never bold text as a heading. Hit the length the user asked for.
-- toc: true in the front matter for documents longer than about 8 pages; numbering: decimal numbers headings
-  1, 1.1 for technical, legal and policy documents.
-- Write steps, findings, comparisons and dates as numbered lists, tables or a diagram. Other designed pages (summary,
-  figures, timeline, chapter and more) are optional strong moments, about one per 6 pages: read the layouts part first.""",
-    "pptx": """HOW A DECK READS (16:9 slides)
-- Open with a cover block, then every ## heading starts a slide:
-  ::: {.cover}
-  kicker: Board update
-  title: Restoring the River Valley
-  subtitle: One sentence on what the deck covers.
-  :::
-- Write each ## as an action title: one sentence with the takeaway, at most about 12 words ('Enterprise drove 67% of
-  growth', not 'Revenue overview'). Reading only the titles must tell the story.
-- One message per slide, with ONE kind of evidence under its heading: 2-4 bullets written '- **Label** — explanation'
-  (they become cards; a short paragraph before them becomes a statement panel), up to 6 short bullets, one table of
-  at most 5 columns, one chart or one diagram. Layouts vary by themselves: write content, not layout.
-- Bullets of at most about 15 words; longer text is shortened on the slide and kept in the speaker notes.
-- A typical deck is 8-15 slides: cover, evidence slides, and a last slide with the decision or next step. For a
-  headline-numbers slide, a timeline, a comparison or photo slides, read the layouts part first.
-- In a table, cells written High, Medium, Low or None become Harvey balls (for ratings, not numbers).
-- Sample figures: say once that they are samples, never in every bullet.""",
-    "docx": """STRUCTURE (an editable Word file: real headings, editable tables, numbered lists, footnotes, page numbers)
-- Open a report with a cover block (it becomes a title page), then write normal markdown:
-  ::: {.cover}
-  kicker: Annual review
-  title: Restoring the River Valley
-  subtitle: One sentence on what the document covers.
-  :::
-  A letter or memo has no cover: start with '# Title' or the letter itself.
-- ## for sections, ### for subsections; the contents page lists them. Never bold text as a heading.
-- A page holds about 450 words (less with tables and charts): a 10-page document is about 3,500-4,000 words.
-  Do not pad; cut before you pass the page count the user asked for.
-- toc: true in the front matter for documents longer than about 8 pages; numbering: decimal numbers headings
-  1, 1.1 for technical, legal and policy documents. +++ on its own line starts a major part on a new page.
-- Charts, diagrams and equations become pictures with numbered captions; tables stay editable. In a table, cells
-  written High, Medium, Low or None become Harvey balls.
-- Write steps, findings, comparisons and dates as numbered lists or tables. Designed blocks (summary, figures,
-  timeline and more) become sections in the flow: read the layouts part first.""",
+    "pdf": """REPORTS
+- Let prose, lists and tables flow (roughly 450 words per page, less with visuals). Give the strongest proof room.
+- Use a cover for a report, '# Title' for a letter or memo, ## for sections and ### for subsections. For longer
+  reports add toc: true. For policies add numbering: decimal. For designed pages, read the layouts part first.
+
+MARKDOWN → READER
+::: {.figures}
+title: Flood days fell from 14 to 5
+5 days — Flooding in 2025 — Across all four towns.
+:::
+The 5 leads; the title supplies the comparison. Put the year-by-year series in an appendix.""",
+    "pptx": """DECKS (16:9)
+- Open with a cover; each ## heading begins a slide. Make it an action title of roughly 12 words. Reading just the
+  titles should tell the story. Close with the decision or next step.
+- Use process for steps, comparison for before/after, timeline for dates and figures for headline numbers.
+  Read the layouts part for their syntax. Use about 15 words per bullet and at most five columns per table.
+- Reserve speaker notes for delivery cues and examples. Use an appendix slide for backup evidence in the deck.
+  The renderer reports shortened text by slide and keeps the original in notes.
+
+MARKDOWN → READER
+::: {.comparison}
+title: Consent now happens before upload
+left: Before
+right: After
+Upload, then request consent — Request consent, then enable upload
+:::
+The two paths make the change visible at a glance. Leave migration details for the appendix.""",
+    "docx": """EDITABLE REPORTS AND MANUALS
+- Use a cover for a report, '# Title' for a memo, ## for sections and ### for subsections. Add toc: true in a longer
+  report and numbering: decimal for manuals. Use +++ on its own line for a major page break.
+- Plan about 450 words per page, fewer with charts or tables. Designed blocks become sections: read the layouts
+  part first. Tables remain editable. Shorten diagram labels rather than shrinking a busy diagram.
+
+MARKDOWN → READER
+## Escalate critical incidents within 15 minutes
+
+> **Action:** Page the incident commander when a critical incident is confirmed.
+
+The heading sets the deadline and the action box gives the first move. Put the contact roster in the appendix.""",
 }
 WRITING_MARKDOWN = """- Facts: never invent specific dates, years or figures; use what the user gave, well-known history, or clearly
   labelled sample figures.
@@ -337,10 +335,8 @@ def brands_rule():
 
 # the part a model reads before every document: front matter, structure for the format and the everyday markdown
 def writing_part(output_format):
-    head = (f"{WRITING_HEADS[output_format]} Read it before every document, then submit the finished markdown once. You choose "
-            "content and structure; the engine guarantees fit, contrast and typography, and prints a designed page that does not "
-            "fit as normal text.")
-    return "\n\n".join((head, front_matter_rules(), STRUCTURES[output_format] + "\n" + WRITING_MARKDOWN))
+    head = f"{WRITING_HEADS[output_format]} Plan and draft in the same turn, then submit the full Markdown."
+    return "\n\n".join((head, EDITORIAL_PLAN, front_matter_rules(), STRUCTURES[output_format] + "\n" + WRITING_MARKDOWN))
 
 
 # the part for designed pages and photos: block syntax, how to choose, every layout and a complete example

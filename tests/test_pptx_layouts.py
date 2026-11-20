@@ -419,3 +419,15 @@ def test_should_render_language_preview_as_a_pptx(tmp_path, monkeypatch, caplog)
 
     assert len(deck.slides) > 0
     assert not any("failed to draw" in record.getMessage() for record in caplog.records)
+
+
+def test_should_report_shortened_text_on_the_slide_that_keeps_it_in_notes(tmp_path):
+    import markitdoc
+
+    detail = "A long explanatory sentence that belongs in the technical appendix. " * 60
+    markdown = f"# First slide\n\n::: {{.keypoints}}\ntitle: Evidence\nlead: {detail}\nOne finding — A short explanation.\n:::"
+    report = []
+    slides = Presentation(markitdoc.render(markdown, "pptx", tmp_path / "report.pptx", report=report)).slides
+
+    assert report and all(message.startswith(f"Slide {len(slides)} ") for message in report)
+    assert detail.strip() in slides[-1].notes_slide.notes_text_frame.text

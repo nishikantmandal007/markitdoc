@@ -323,6 +323,10 @@ def draw_table(deck, titles, lead, piece):
         spare = BODY_TOP + BODY_HEIGHT - top - header - sum(rows_heights)
         rows_heights = [height + min(0.25, spare * 0.6 / len(rows)) for height in rows_heights] if spare > 0 else rows_heights
         add_table(deck, slide, piece.data, rows, widths, header, rows_heights, size, top)
+        for row, original in zip(rows, piece.data.rows[start + 1:]):
+            for shown, full in zip(row, original):
+                if shown != full:
+                    deck.note(f"Table cell: {full}")
         start += len(rows)
 
 

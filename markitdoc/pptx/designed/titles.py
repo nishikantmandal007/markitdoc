@@ -47,7 +47,8 @@ def fit_text(deck, source, width, height, label, cap=STANDARD_SIZE, style=""):
     size = next((size for size in BODY_SIZES if size <= cap and deck.text_height(source, width, size, style) <= height), None)
     if size:
         return source, size
-    deck.note(f"{label}: {source}")
+    if label:
+        deck.note(f"{label}: {source}")
     return key_sentences(deck, source, width, height, COMFORTABLE_SIZE - 2), COMFORTABLE_SIZE - 2
 
 
@@ -58,8 +59,10 @@ def lead_text(deck, source):
 
 # measures the space needed for the slide lead text
 def lead_room(deck, source):
-    shown, size = lead_text(deck, source)
-    return deck.text_height(shown, TEXT_WIDTH, size) + 0.35 if source else 0.0
+    if not source:
+        return 0.0
+    shown, size = fit_text(deck, source, TEXT_WIDTH, 1.3, "")
+    return deck.text_height(shown, TEXT_WIDTH, size) + 0.35
 
 
 # draws fitted lead text and returns the next available position
