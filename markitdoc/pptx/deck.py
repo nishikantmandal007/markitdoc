@@ -15,6 +15,7 @@ from markitdoc.models.catalogue import Box
 from markitdoc.pdf.pages import PdfPages
 from markitdoc.themes.themes import Theme
 from markitdoc.utils.helpers import MONO_FONT, lifted, office_font
+from markitdoc.visuals.logos import logo_box
 
 SLIDE_WIDTH, SLIDE_HEIGHT = 13.333, 7.5
 SIDE_MARGIN = 0.6
@@ -39,6 +40,7 @@ SOFT_WHITE = (226, 230, 240)
 LAYOUT_TITLE_ONLY = 5
 NO_GRID_TABLE_STYLE = "{2D5ABB26-0587-4C30-8999-92F81FD0307C}"
 BRAND_TITLE_WIDTH = 11.5
+SLIDE_LOGO_SIZE, ACCENT_BAR = 0.55, 0.07
 ENGINE_SOURCE = "engine default"
 SLIDE_ALIGNS = {"L": PP_ALIGN.LEFT, "C": PP_ALIGN.CENTER, "R": PP_ALIGN.RIGHT, "J": PP_ALIGN.JUSTIFY}
 
@@ -98,6 +100,7 @@ class Deck:
         self.photo_side, self.card_turn, self.last_cards = "right", 0, ""
         self.title_on_cover = False
         self.branded = theme.master is not None
+        self.brand_look = self.branded or theme.locked
         if self.branded:
             self.drop_slides_after(1)
 
@@ -166,10 +169,18 @@ class Deck:
         night = background != "paper"
         if self.branded and night:
             slide._element.set("showMasterSp", "0")
+        logo_on_slide = standard and not self.branded and self.theme.locked and self.theme.logo is not None and not night
         if title is not None and standard:
-            place_title(self, slide, title, WHITE if dark else "mood" if self.branded else "ink", width=BRAND_TITLE_WIDTH if self.branded else CONTENT_WIDTH,
-                        look=self.title_look)
+            place_title(self, slide, title, WHITE if dark else "mood" if self.brand_look else "ink",
+                        width=BRAND_TITLE_WIDTH if self.branded or logo_on_slide else CONTENT_WIDTH, look=self.title_look)
             add_rect(self, slide, SIDE_MARGIN, RULE_TOP, 1.2, 0.04, "mood", "Title rule")
+        if logo_on_slide:
+            width, height = logo_box(self.theme.logo, SLIDE_LOGO_SIZE, SLIDE_LOGO_SIZE)
+            logo = slide.shapes.add_picture(str(self.theme.logo), Inches(SLIDE_WIDTH - SIDE_MARGIN - width), Inches(TITLE_TOP), Inches(width), Inches(height))
+            logo.name = "Logo"
+        if standard and not self.branded and self.theme.locked and not night:
+            add_rect(self, slide, 0, SLIDE_HEIGHT - ACCENT_BAR, SLIDE_WIDTH * 0.82, ACCENT_BAR, "mood", "Accent bar")
+            add_rect(self, slide, SLIDE_WIDTH * 0.82, SLIDE_HEIGHT - ACCENT_BAR, SLIDE_WIDTH * 0.18, ACCENT_BAR, "second", "Accent bar")
         if footer or self.branded:
             draw_footer(self, slide, night)
         return slide
@@ -403,7 +414,7 @@ def draw_brand_footer(deck, slide, dark):
 
 # draws the branded or plain footer and slide number
 def draw_footer(deck, slide, dark=False):
-    if deck.branded:
+    if deck.branded or deck.theme.footer_text or deck.theme.header_note:
         return draw_brand_footer(deck, slide, dark)
     label = deck.title
     while len(label) > 1 and deck.lines(literal(label), 9.4, FOOTER_SIZE) > 1:
