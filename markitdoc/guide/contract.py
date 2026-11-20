@@ -307,7 +307,8 @@ def front_matter_rules():
 palette: <name>          ({DEFAULT_PALETTE} when left out)
 paper: {' | '.join(PAPERS)}      (warm = soft cream, editorial and long reads)
 fonts: <pair>
-images: true             (ONLY when the user asks for photos; then read the layouts part)
+images: true             (your call: photos help guides, places, history, products and brochures; leave them out
+                         of data reports, policies, legal texts and letters; with true, read the layouts part)
 ---
 Palettes, by subject: {palettes}.
 Fonts: {fonts}.
@@ -320,7 +321,8 @@ def brands_rule():
     if not brands:
         return ""
     lines = "\n".join(f"- {brand_summary(name)}" for name in brands)
-    return (f"\nBrands, used only when the user asks for one or the current document has it (the brand sets colours and fonts):\n"
+    return (f"\nBrands you can use: choose one when the user asks for it, the current document has it, or the document speaks for that\n"
+            f"organisation (its proposals, pitches, reports and letters). The brand sets colours and fonts:\n"
             f"{lines}")
 
 
@@ -344,7 +346,7 @@ def style_settings():
 ## More front matter
 text_size: {' | '.join(TEXT_SIZES)}; tables: {' | '.join(TABLE_STYLES)} (a line '{{.lined}}', '{{.striped}}' or '{{.boxed}}' directly
 under a table styles that table); header and footer text with the fields {{title}} {{section}} {{date}} {{page}} {{pages}};
-author; classification (a label on every page, e.g. Confidential); watermark (a faint diagonal word, only when asked);
+author; classification (a label on every page, e.g. Confidential); watermark (a faint diagonal word, e.g. Draft on a draft or Sample on a sample);
 date: YYYY-MM-DD; lang: en | de | fr | es; notes: section | page (footnotes at the end of each section or on their page).
 
 ## More markdown
