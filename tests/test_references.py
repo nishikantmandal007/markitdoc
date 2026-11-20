@@ -129,3 +129,18 @@ def test_should_use_section_pages_in_word_when_a_run_is_one_section(tmp_path):
         "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}instrText")]
 
     assert any("SECTIONPAGES" in code for code in codes)
+
+
+def test_should_cite_sources_written_in_the_front_matter_without_a_refs_file(tmp_path):
+    import fitz
+
+    import markitdoc
+
+    markdown = ("---\nrefs:\n  gdpr: {author: European Union, title: General Data Protection Regulation, year: 2016}\n"
+                "  ico: {author: Information Commissioner's Office, title: Guide to the UK GDPR, year: 2023}\nstyle: author-year\n---\n"
+                "# Retention policy\n\nKeep data no longer than needed [@gdpr], as the regulator explains [@ico].\n\n::: references\n:::\n")
+
+    assert [finding for finding in markitdoc.check_document(markdown) if finding.severity == "error"] == []
+    with fitz.open(markitdoc.render(markdown, "pdf", tmp_path / "policy.pdf")) as pdf:
+        text = "".join(page.get_text() for page in pdf)
+    assert "European Union" in text and "General Data Protection Regulation" in text and "[@gdpr]" not in text

@@ -16,15 +16,20 @@ REFERENCES_TITLE = "References"
 UNNUMBERED_MARK = " {.unnumbered}"
 
 
-# the refs file entries as {key: entry}, the problem found (empty when none), its style: value and the keys of the entries skipped as malformed; the file is read from the first style folder
+# the refs entries as {key: entry}, written inline under refs: or in a refs.yml file read from the first style folder, the problem found
+# (empty when none), the style: value and the keys of the entries skipped as malformed
 def load_refs(meta, folders):
-    name = str(meta.get("refs") or "").strip()
-    if not name:
-        return {}, "", "", []
-    try:
-        data = yaml.safe_load((Path(folders[0]) if folders else Path()).joinpath(name).read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as error:
-        return {}, f"cannot read {name}: {str(error).splitlines()[0][:80]}", "", []
+    written = meta.get("refs")
+    if isinstance(written, dict):
+        data, name = dict(written), "refs"
+    else:
+        name = str(written or "").strip()
+        if not name:
+            return {}, "", "", []
+        try:
+            data = yaml.safe_load((Path(folders[0]) if folders else Path()).joinpath(name).read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as error:
+            return {}, f"cannot read {name}: {str(error).splitlines()[0][:80]}", "", []
     if not isinstance(data, dict):
         return {}, f"{name} must map each key to an entry with author, title, year", "", []
     style = str(data.pop("style", "")).strip()

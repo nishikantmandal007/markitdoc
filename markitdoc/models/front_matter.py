@@ -20,6 +20,9 @@ def front_matter(markdown):
             key, value = line.split(":", 1)
             key, value = key.strip().lower(), value.strip().strip("'\"").strip()
             meta[key] = value if key in FREE_TEXT_SETTINGS else value.lower()
+    inline_refs = front_matter_yaml(markdown).get("refs") if meta.get("refs") == "" else None
+    if isinstance(inline_refs, dict):
+        meta["refs"] = inline_refs
     return meta, "\n".join(lines[end + 1:])
 
 

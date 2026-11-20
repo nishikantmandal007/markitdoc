@@ -33,13 +33,13 @@ Front matter and *.style.yml share one schema, top-level keys: {', '.join(keys)}
 - use: [house]  style files, applied in order, later wins. text: {{font: serif, size: 10.5pt, align: justify}} body defaults.
 - set: rules by element, e.g. h2: {{font: display, color: accent}}. Elements: {' '.join(STYLE_SELECTORS)}; sub-part: table.header, paragraph.first.
 - styles: named styles used as {{.pull}} on a block or [words]{{.term}} in text, e.g. pull: {{based-on: quote, size: l, align: center}}.
-- colors / fonts: names usable anywhere ('brand: "#0F766E"'). fields: constants used as {{client}}. allow: {{raw: false}} forbids raw keys. refs: refs.yml.{page}
+- colors / fonts: names usable anywhere ('brand: "#0F766E"'). fields: constants used as {{client}}. allow: {{raw: false}} forbids raw keys. refs: sources inline or a refs.yml file.{page}
 Attributes: {{#id .class key=value key="two words" flag}}. Spans and headings take them on the same line, other blocks on their own line below.
 Text keys: {', '.join(STYLE_PROPERTIES)}{dropcap}. Box keys: {', '.join(key for key in BOX_PROPERTIES if '-' not in key)}.
 Values: size {' '.join(SCALE_WORDS)} or 12pt; padding {' '.join(PADDING_MM)}; radius {' '.join(RADIUS_MM)}; length 1/2, 50%, 4mm; border {' '.join(BORDER_WORDS)} plus a width and a colour.
 Colours: {' '.join(STYLE_COLOR_ROLES)}, a name under colors:, or #hex. weight normal|bold; align {' '.join(STYLE_ALIGNS)}; caps small|all; tracking {' '.join(TRACKING_POINTS)}.
 Blocks: '::: box {{border=thin padding=m bg=surface}}' ... ':::' and '::: columns {{ratio=2:1}}' (ratios {' '.join(COLUMN_RATIOS)}; the second half starts at the middle block).
 Images: ![alt](images/gauge.jpg){{#gauge width=1/2 side={'|'.join(IMAGE_SIDES)} caption="Alder, 2024"}}.
-References: give a heading, figure, chart, table caption or equation an {{#id}}; [@id] reads 'Figure 3'{pages}; [@key] cites an entry of refs.yml
+References: give a heading, figure, chart, table caption or equation an {{#id}}; [@id] reads 'Figure 3'{pages}; [@key] cites an entry of refs
   (style: numeric|author-year){lists}.
 Not fully supported in {output_format}: {notes or 'nothing, everything above is full'}."""

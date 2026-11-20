@@ -366,6 +366,10 @@ date: YYYY-MM-DD; lang: en | de | fr | es; notes: section | page (footnotes at t
 - Containers: {', '.join(f"'::: {{.{name}}}'" for name in FLOW_CONTAINERS)}: box = shaded panel, sidebar = narrow panel on the
   right, columns = two columns split at ### headings.
 - Definition list: a term on one line, then ': definition' on the next. Column alignment with |:---|:---:|---:|.
+- Citations: list the sources in the front matter and cite them as [@key]; a '::: references' block places the bibliography:
+  refs:
+    gdpr: {{author: European Union, title: General Data Protection Regulation, year: 2016, url: "https://eur-lex.europa.eu/eli/reg/2016/679/oj"}}
+  style: author-year (or numeric)
 - LaTeX in $...$ and $$ blocks: \\frac, \\sqrt, \\sum, Greek letters.
 """
 
